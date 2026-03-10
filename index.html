@@ -1,438 +1,670 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Paulo Gonzales</title>
-  <meta content="" name="description">
-  <meta content="" name="keywords">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <!-- Favicons -->
-  <link href="assets/img/favicon.png" rel="icon">
-  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+    :root {
+      --bg:       #F7F5F0;
+      --ink:      #1A1916;
+      --muted:    #8A8780;
+      --accent:   #2B6CB0;
+      --rule:     #E0DDD8;
+      --serif:    'DM Serif Display', Georgia, serif;
+      --mono:     'DM Mono', monospace;
+      --sans:     'DM Sans', sans-serif;
+      --max:      760px;
+    }
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Raleway:300,300i,400,400i,500,500i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
+    html { scroll-behavior: smooth; }
 
-  <!-- Vendor CSS Files -->
-  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="assets/vendor/icofont/icofont.min.css" rel="stylesheet">
-  <link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
-  <link href="assets/vendor/venobox/venobox.css" rel="stylesheet">
-  <link href="assets/vendor/owl.carousel/assets/owl.carousel.min.css" rel="stylesheet">
-  <link href="assets/vendor/aos/aos.css" rel="stylesheet">
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  <!-- Template Main CSS File -->
-  <link href="assets/css/style.css" rel="stylesheet">
+    /* ── Layout ── */
+    .container {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
 
-  <!-- =======================================================
-  * Template Name: MyResume - v2.2.0
-  * Template URL: https://bootstrapmade.com/free-html-bootstrap-template-my-resume/
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
+    section { padding: 5rem 0; }
+    section + section { border-top: 1px solid var(--rule); }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: rgba(247,245,240,0.85);
+      border-bottom: 1px solid var(--rule);
+    }
+    nav .inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 1.1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--ink); }
+
+    /* ── Hero ── */
+    #hero {
+      padding-top: 9rem;
+      padding-bottom: 5rem;
+      border-top: none;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.4rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.1s;
+    }
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.6rem, 6vw, 4rem);
+      line-height: 1.15;
+      font-weight: 400;
+      max-width: 680px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.25s;
+    }
+    h1 em {
+      font-style: italic;
+      color: var(--muted);
+    }
+    .hero-sub {
+      margin-top: 1.6rem;
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 500px;
+      font-weight: 300;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.4s;
+    }
+    .hero-cta {
+      margin-top: 2.4rem;
+      display: flex;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.55s;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.65rem 1.3rem;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .btn-primary:hover { background: #2d2b27; }
+    .btn-ghost {
+      border: 1px solid var(--rule);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--muted); color: var(--ink); }
+
+    /* ── Section headings ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--rule);
+    }
+    h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    /* ── About ── */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+    .about-text p { color: #3d3b38; line-height: 1.8; margin-bottom: 1rem; font-weight: 300; }
+    .about-text p:last-child { margin-bottom: 0; }
+    .skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .skill-tag {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      color: var(--muted);
+      background: transparent;
+      transition: all 0.2s;
+    }
+    .skill-tag:hover { border-color: var(--accent); color: var(--accent); }
+    .skills-section-title {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+
+    /* ── Work History ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 2rem;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-date {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding-top: 0.2rem;
+      line-height: 1.5;
+    }
+    .timeline-content h3 {
+      font-family: var(--sans);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--ink);
+    }
+    .timeline-content .company {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      margin: 0.2rem 0 0.7rem;
+      letter-spacing: 0.02em;
+    }
+    .timeline-content p {
+      font-size: 0.92rem;
+      color: #5a5855;
+      line-height: 1.75;
+      font-weight: 300;
+    }
+
+    /* ── Projects ── */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5px;
+      background: var(--rule);
+      border: 1px solid var(--rule);
+    }
+    .project-card {
+      background: var(--bg);
+      padding: 2rem;
+      transition: background 0.2s;
+      cursor: default;
+    }
+    .project-card:hover { background: #F0EDE7; }
+    .project-num {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--rule);
+      letter-spacing: 0.1em;
+      margin-bottom: 1.2rem;
+    }
+    .project-card h3 {
+      font-family: var(--sans);
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .project-card p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.7;
+      font-weight: 300;
+    }
+    .project-footer {
+      margin-top: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .project-tags {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .project-tag {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      padding: 0.2rem 0.5rem;
+      background: var(--rule);
+      border-radius: 2px;
+      color: var(--muted);
+    }
+    .project-link {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      margin-left: 1rem;
+      transition: opacity 0.2s;
+    }
+    .project-link:hover { opacity: 0.7; }
+
+    /* ── Contact ── */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+    .contact-intro p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.8;
+      font-weight: 300;
+    }
+    .contact-links {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .contact-link-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+    .contact-link-item:hover { color: var(--ink); }
+    .contact-link-item span.label { color: var(--ink); width: 70px; flex-shrink: 0; }
+    form { display: flex; flex-direction: column; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    input, textarea {
+      font-family: var(--sans);
+      font-size: 0.92rem;
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 2px;
+      padding: 0.7rem 0.9rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      font-weight: 300;
+    }
+    input::placeholder, textarea::placeholder { color: var(--rule); }
+    input:focus, textarea:focus { border-color: var(--muted); }
+    .btn-submit {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      border-radius: 2px;
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      align-self: flex-start;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover { background: #2d2b27; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 2rem 0;
+    }
+    footer .inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    footer p {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .about-grid, .contact-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+      .projects-grid { grid-template-columns: 1fr; }
+      .timeline-item { grid-template-columns: 1fr; gap: 0.3rem; }
+      .timeline-date { padding-top: 0; }
+      .nav-links { display: none; }
+    }
+  </style>
 </head>
-
 <body>
 
-  <!-- ======= Mobile nav toggle button ======= -->
-  <button type="button" class="mobile-nav-toggle d-xl-none"><i class="icofont-navigation-menu"></i></button>
-
-  <!-- ======= Header ======= -->
-  <header id="header" class="d-flex flex-column justify-content-center">
-
-    <nav class="nav-menu">
-      <ul>
-        <li class="active"><a href="#hero"><i class="bx bx-home"></i> <span>Home</span></a></li>
-        <li><a href="#about"><i class="bx bx-user"></i> <span>About</span></a></li>
-        <li><a href="#resume"><i class="bx bx-file-blank"></i> <span>Resume</span></a></li>
-        <!-- <li><a href="#portfolio"><i class="bx bx-book-content"></i> <span>Projects</span></a></li> -->
+  <!-- NAV -->
+  <nav>
+    <div class="inner">
+      <a class="nav-logo" href="#">YN.dev</a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#work">Work</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#contact">Contact</a></li>
       </ul>
-    </nav><!-- .nav-menu -->
-
-  </header><!-- End Header -->
-
-  <!-- ======= Hero Section ======= -->
-  <section id="hero" class="d-flex flex-column justify-content-center">
-    <div class="container" data-aos="zoom-in" data-aos-delay="100">
-      <h1>Paulo Gonzales</h1>
-      <p>I'm a <span class="typed" data-typed-items="Developer, Photographer, Videographer, Fisherman"></span></p>
-      <div class="social-links">
-        <a href="https://www.instagram.com/paulo_g_p/" class="instagram"><i class="bx bxl-instagram"></i></a>
-        <a href="https://www.linkedin.com/in/paulo-gonzales/" class="linkedin"><i class="bx bxl-linkedin"></i></a>
-      </div>
     </div>
-  </section><!-- End Hero -->
+  </nav>
 
-  <main id="main">
-
-    <!-- ======= About Section ======= -->
-    <section id="about" class="about">
-      <div class="container" data-aos="fade-up">
-
-        <div class="section-title">
-          <h2>About</h2>
-        </div>
-
-        <div class="row">
-          <div class="col-lg-4">
-            <img src="assets/img/profile-img.jpg" class="img-fluid" alt="">
-          </div>
-          <div class="col-lg-8 pt-4 pt-lg-0 content">
-            <h3>Software Engineer</h3>
-            <p class="font-italic">
-              My primary software experience is with web applications, but I am interested in working with Machine Learning.
-            </p>
-            <div class="row">
-              <div class="col-lg-6">
-                <ul>
-                  <li><i class="icofont-rounded-right"></i> <strong>Current Employer:</strong> Moody Bible Institute</li>
-                  <li><i class="icofont-rounded-right"></i> <strong>Email:</strong> gonzales.paulo19@gmail.com</li>
-                  <li><i class="icofont-rounded-right"></i> <strong>Phone:</strong> 805 766 9613</li>
-                  <li><i class="icofont-rounded-right"></i> <strong>City:</strong> City : Chicago, IL</li>
-                </ul>
-              </div>
-              <div class="col-lg-6">
-                <ul>
-                  <li><i class="icofont-rounded-right"></i> <strong>Alma Mater:</strong> University of California, San Diego</li>
-                  <li><i class="icofont-rounded-right"></i> <strong>Graduation Year:</strong> 2017</li>
-                  <li><i class="icofont-rounded-right"></i> <strong>Degree:</strong> BA Cognitive Science with a minor in Computer Science</li>
-                </ul>
-              </div>
-            </div>
-            <p>
-              I am an avid photographer, videographer and fisherman. I enjoy street photography, nature landscapes and event photography. I get to take lots of photos
-              and create videos for my church. I also highly enjoy fishing and I am lucky to live in Chicago where there are lots of salmon and bass! Soccer, basketball 
-              and tennis are also sports I enjoy, and I am a big fan of Liverpool FC.
-            </p>
-          </div>
-        </div>
-
-      </div>
-    </section><!-- End About Section -->
-
-    <!-- ======= Skills Section ======= -->
-    <section id="skills" class="skills section-bg">
-      <div class="container" data-aos="fade-up">
-
-        <div class="section-title">
-          <h2>Skills</h2>
-          <p>Most of my work experience has been with web applications. I have experience with full stack development.</p>
-        </div>
-
-        <div class="row skills-content">
-
-          <div class="col-lg-6">
-
-            <div class="progress">
-              <span class="skill">HTML <i class="val">80%</i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-            <div class="progress">
-              <span class="skill">CSS <i class="val">60%</i></i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-            <div class="progress">
-              <span class="skill">JavaScript <i class="val">80%</i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-          </div>
-
-          <div class="col-lg-6">
-
-            <div class="progress">
-              <span class="skill">C#/.NET <i class="val">70%</i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-            <div class="progress">
-              <span class="skill">SQL/MySQL <i class="val">70%</i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-            <div class="progress">
-              <span class="skill">PHP <i class="val">60%</i></span>
-              <div class="progress-bar-wrap">
-                <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-    </section><!-- End Skills Section -->
-
-    <!-- ======= Resume Section ======= -->
-    <section id="resume" class="resume">
-      <div class="container" data-aos="fade-up">
-
-        <div class="section-title">
-          <h2>Resume</h2>
-        </div>
-
-        <div class="row">
-          <div class="col-lg-6">
-            <h3 class="resume-title">Education</h3>
-            <div class="resume-item">
-              <h4>B.A. Cognitive Science with Computer Science minor</h4>
-              <h5>2013 - 2017</h5>
-              <p><em>University of California, San Diego</em></p>
-            </div>
-          </div>
-          <div class="col-lg-6">
-            <h3 class="resume-title">Professional Experience</h3>
-            <div class="resume-item">
-              <h4>Software Developer</h4>
-              <h5>2021 - Present</h5>
-              <p><em>Moody Bible Institute, Chicago, IL</em></p>
-              <ul>
-                <li>At Moody Bible Institute, I work for the Enterprise Applications team that supports our three branches: Education, Radio and Publishing.</li>
-                <li>We work as a small team that includes business analysts, system analysts and developers. Tasks that I have worked on include donation event support, feature implementations, and legacy application maintenance.</li>
-                <li>A major project that I have worked on is implementing Stripe payment features with our existing payment flow. In particular, I have added API endpoints in the front (Vue) and back (.NET) ends, and their respective UI.</li>
-                <li>Another major project I have done is overhauling our identity management system that the whole institute uses from Angular to Vue. </li>
-                <li>Our stack includes microservices in C#/.NET, SQL Server, and a front end that uses Vue and Angular.</li>
-              </ul>
-            </div>
-            <div class="resume-item">
-              <h4>Software Engineer</h4>
-              <h5>2018 - 2021</h5>
-              <p><em>Ignidus Technology Inc, San Diego, CA</em></p>
-              <ul>
-                <li>At Ignidus, I worked on an insurance platform for agents and underwriters to perform their duties.</li>
-                <li>We worked under the Agile methodology with 2 week sprints. Tasks that I have worked on include bug fixes, SQL reports, end to end features, and platform updates.</li>
-                <li>A major project that I have worked on is a set of backend APIs for mobile applications. We utilized Google Firebase and Wallet Passes. APIs include logging in with 2 factor authentication and data display.</li>
-                <li>Another major project I've done is a Queueing system for backend services. We employed PHP-Redis to distribute heavy platform processes through multiple AWS servers.</li>
-                <li>Our stack includes PHP, MySQL, JavaScript, JQuery, and AWS. </li>
-              </ul>
-            </div>
-            <div class="resume-item">
-              <h4>Web Developer</h4>
-              <h5>2017 - 2018</h5>
-              <p><em>UNC Lineberger Comprehensive Cancer Center, Chapel Hill, NC</em></p>
-              <ul>
-                <li>My primary task at Lineberger was to create a web application version of their Java based Laboratory Inventory Management System (LIMS).</li>
-                <li>We utilized NodeJS and JQuery to fetch data from an Oracle database. </li>
-                <li>I worked with one other developer to accomplish this task and we had to learn a lot on the fly as we were the only "web experts". </li>
-                <li>The main implementation included creating APIs in NodeJS to pull data from Lineberger's massive dataset, and then creating an intuitive and performant front end to replace the legacy Java application.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section><!-- End Resume Section -->
-
-    <!-- ======= Portfolio Section ======= -->
-    <section id="portfolio" class="portfolio section-bg" hidden>
-      <div class="container" data-aos="fade-up">
-
-        <div class="section-title">
-          <h2>Projects</h2>
-          <p>My time at UCSD has given me chances to work on projects written in various programming languages. I also got to volunteer for a non-profit organization that my church began.</p>
-        </div>
-
-        <div class="row">
-          <div class="col-lg-12 d-flex justify-content-center" data-aos="fade-up" data-aos-delay="100">
-            <ul id="portfolio-flters">
-              <li data-filter="*" class="filter-active">All</li>
-              <li data-filter=".filter-app">App</li>
-              <li data-filter=".filter-card">Card</li>
-              <li data-filter=".filter-web">Web</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="row portfolio-container" data-aos="fade-up" data-aos-delay="200">
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-app">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-1.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>App 1</h4>
-                <p>App</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-1.jpg" data-gall="portfolioGallery" class="venobox" title="App 1"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-web">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-2.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Web 3</h4>
-                <p>Web</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-2.jpg" data-gall="portfolioGallery" class="venobox" title="Web 3"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-app">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-3.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>App 2</h4>
-                <p>App</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-3.jpg" data-gall="portfolioGallery" class="venobox" title="App 2"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-card">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-4.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Card 2</h4>
-                <p>Card</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-4.jpg" data-gall="portfolioGallery" class="venobox" title="Card 2"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-web">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-5.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Web 2</h4>
-                <p>Web</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-5.jpg" data-gall="portfolioGallery" class="venobox" title="Web 2"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-app">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-6.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>App 3</h4>
-                <p>App</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-6.jpg" data-gall="portfolioGallery" class="venobox" title="App 3"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-card">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-7.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Card 1</h4>
-                <p>Card</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-7.jpg" data-gall="portfolioGallery" class="venobox" title="Card 1"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-card">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-8.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Card 3</h4>
-                <p>Card</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-8.jpg" data-gall="portfolioGallery" class="venobox" title="Card 3"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-lg-4 col-md-6 portfolio-item filter-web">
-            <div class="portfolio-wrap">
-              <img src="assets/img/portfolio/portfolio-9.jpg" class="img-fluid" alt="">
-              <div class="portfolio-info">
-                <h4>Web 3</h4>
-                <p>Web</p>
-                <div class="portfolio-links">
-                  <a href="assets/img/portfolio/portfolio-9.jpg" data-gall="portfolioGallery" class="venobox" title="Web 3"><i class="bx bx-plus"></i></a>
-                  <a href="portfolio-details.html" data-gall="portfolioDetailsGallery" data-vbtype="iframe" class="venobox" title="Portfolio Details"><i class="bx bx-link"></i></a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </section><!-- End Portfolio Section -->
-
-  <!-- ======= Footer ======= -->
-  <footer id="footer">
+  <!-- HERO -->
+  <section id="hero">
     <div class="container">
-      <h3>Paulo Gonzales</h3>
-      <p>Thank you for checking out my website!</p>
-      <div class="social-links">
-        <a href="https://www.instagram.com/paulo_g_p/" class="instagram"><i class="bx bxl-instagram"></i></a>
-        <a href="https://www.linkedin.com/in/paulo-gonzales/" class="linkedin"><i class="bx bxl-linkedin"></i></a>
-      </div>
-      <div class="copyright">
-        &copy; Copyright <strong><span>MyResume</span></strong>. All Rights Reserved
-      </div>
-      <div class="credits">
-        <!-- All the links in the footer should remain intact. -->
-        <!-- You can delete the links only if you purchased the pro version. -->
-        <!-- Licensing information: [license-url] -->
-        <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/free-html-bootstrap-template-my-resume/ -->
-        Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a>
+      <p class="eyebrow">Available for opportunities</p>
+      <p class="hero-sub">I specialize in building reliable, scalable software — from APIs to interfaces — with a focus on clarity and long-term maintainability.</p>
+      <div class="hero-cta">
+        <a href="#projects" class="btn btn-primary">View my work ↓</a>
+        <a href="#contact" class="btn btn-ghost">Get in touch</a>
       </div>
     </div>
-  </footer><!-- End Footer -->
+  </section>
 
-  <a href="#" class="back-to-top"><i class="bx bx-up-arrow-alt"></i></a>
-  <div id="preloader"></div>
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="container">
+      <p class="section-label reveal">About</p>
+      <div class="about-grid reveal">
+        <div class="about-text">
+          <h2>A bit about me.</h2>
+          <p>I'm a software engineer based in Tokyo, Japan. I enjoy creating solutions for life's daily frustrations for myself and for others.</p>
+          <p>At work, I am depended on to take care of any and all tasks. Managing and maintaining legacy code, debugging obscure issues, 
+            starting new projects, and mentoring younger developers. Of course, I enjoy learning about the cutting edge, but I also find joy in 
+            getting deep into established software.</p>
+          <p>Outside of work, I'm often volunteering for a non-profit organization called International Student Mentor Program. There, I leverage
+            my skills to provide solutions for our mentors and the students that we serve. I also enjoy reading books, watching and playing sports,
+            going fishing, doing photography, being out in nature, and eating good food.
+          </p>
+        </div>
+        <div>
+          <p class="skills-section-title">Languages & Frameworks</p>
+          <div class="skills-list" style="margin-bottom: 1.5rem;">
+            <span class="skill-tag">C# & .NET</span>
+            <span class="skill-tag">JavaScript</span>
+            <span class="skill-tag">Vue</span>
+            <span class="skill-tag">Node.js</span>
+            <span class="skill-tag">PHP</span>
+            <span class="skill-tag">SQL</span>
+          </div>
+          <p class="skills-section-title">Tools & Platforms</p>
+          <div class="skills-list">
+            <span class="skill-tag">AWS</span>
+            <span class="skill-tag">Docker</span>
+            <span class="skill-tag">PostgreSQL</span>
+            <span class="skill-tag">Redis</span>
+            <span class="skill-tag">GitHub Actions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <!-- Vendor JS Files -->
-  <script src="assets/vendor/jquery/jquery.min.js"></script>
-  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/vendor/jquery.easing/jquery.easing.min.js"></script>
-  <script src="assets/vendor/php-email-form/validate.js"></script>
-  <script src="assets/vendor/waypoints/jquery.waypoints.min.js"></script>
-  <script src="assets/vendor/counterup/counterup.min.js"></script>
-  <script src="assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-  <script src="assets/vendor/venobox/venobox.min.js"></script>
-  <script src="assets/vendor/owl.carousel/owl.carousel.min.js"></script>
-  <script src="assets/vendor/typed.js/typed.min.js"></script>
-  <script src="assets/vendor/aos/aos.js"></script>
+  <!-- WORK HISTORY -->
+  <section id="work">
+    <div class="container">
+      <p class="section-label reveal">Work History</p>
+      <div class="timeline reveal">
 
-  <!-- Template Main JS File -->
-  <script src="assets/js/main.js"></script>
+        <div class="timeline-item">
+          <div class="timeline-date">2021 — 2025</div>
+          <div class="timeline-content">
+            <h3>Software Developer</h3>
+            <p class="company">Moody Bible Institute</p>
+            <p>Led backend development for a core data platform serving 2M+ users. Redesigned the ingestion pipeline, reducing processing latency by 40%. Mentored junior engineers and drove adoption of new testing standards across the team.</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-date">2018 — 2021</div>
+          <div class="timeline-content">
+            <h3>Software Engineer</h3>
+            <p class="company">Ignidus Technology Inc (Now known as ISC Engineering)</p>
+            <p>Built and maintained RESTful APIs for a SaaS product. Collaborated closely with design and product to ship features on a two-week release cycle. Introduced end-to-end testing that reduced production incidents by 30%.</p>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-date">2017 — 2018</div>
+          <div class="timeline-content">
+            <h3>Web Developer</h3>
+            <p class="company">UNC Lineberger Comprehensive Cancer Center</p>
+            <p>Supported full-stack development on internal tooling and client-facing dashboards. Gained strong foundations in React, Python, and agile workflows.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="projects">
+    <div class="container">
+      <p class="section-label reveal">Projects</p>
+      <div class="projects-grid reveal">
+
+        <div class="project-card">
+          <p class="project-num">01</p>
+          <h3>Project Alpha</h3>
+          <p>A CLI tool for visualizing dependency graphs in large monorepos. Parses lockfiles and generates an interactive SVG output.</p>
+          <div class="project-footer">
+            <div class="project-tags">
+              <span class="project-tag">Go</span>
+              <span class="project-tag">SVG</span>
+            </div>
+            <a class="project-link" href="#">GitHub ↗</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <p class="project-num">02</p>
+          <h3>Datastream</h3>
+          <p>Real-time event pipeline built with Kafka and Go. Handles 50k events/sec with exactly-once delivery guarantees.</p>
+          <div class="project-footer">
+            <div class="project-tags">
+              <span class="project-tag">Kafka</span>
+              <span class="project-tag">Go</span>
+            </div>
+            <a class="project-link" href="#">GitHub ↗</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <p class="project-num">03</p>
+          <h3>Noted</h3>
+          <p>A minimalist markdown notes app with local-first storage, end-to-end encryption, and optional cloud sync.</p>
+          <div class="project-footer">
+            <div class="project-tags">
+              <span class="project-tag">React</span>
+              <span class="project-tag">SQLite</span>
+            </div>
+            <a class="project-link" href="#">Live ↗</a>
+          </div>
+        </div>
+
+        <div class="project-card">
+          <p class="project-num">04</p>
+          <h3>OpenBench</h3>
+          <p>Open-source benchmarking toolkit for REST APIs. Supports scripted scenarios, percentile reporting, and CI integration.</p>
+          <div class="project-footer">
+            <div class="project-tags">
+              <span class="project-tag">TypeScript</span>
+              <span class="project-tag">Node</span>
+            </div>
+            <a class="project-link" href="#">GitHub ↗</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="container">
+      <p class="section-label reveal">Contact</p>
+      <div class="contact-layout reveal">
+        <div class="contact-intro">
+          <h2>Let's talk.</h2>
+          <p>Whether you have a role in mind, a project to collaborate on, or just want to say hello — my inbox is open.</p>
+          <div class="contact-links">
+            <a class="contact-link-item" href="mailto:you@email.com">
+              <span class="label">Email</span> you@email.com
+            </a>
+            <a class="contact-link-item" href="https://github.com/yourhandle" target="_blank">
+              <span class="label">GitHub</span> @yourhandle
+            </a>
+            <a class="contact-link-item" href="https://linkedin.com/in/yourhandle" target="_blank">
+              <span class="label">LinkedIn</span> /in/yourhandle
+            </a>
+          </div>
+        </div>
+        <form onsubmit="handleSubmit(event)">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input id="name" type="text" placeholder="Jane Smith" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="jane@company.com" required />
+          </div>
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" rows="5" placeholder="What's on your mind?" required></textarea>
+          </div>
+          <button type="submit" class="btn-submit">Send message →</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="inner">
+      <p>© 2025 Your Name</p>
+      <p>Built with care.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+
+    // Form placeholder
+    function handleSubmit(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('.btn-submit');
+      btn.textContent = 'Sent ✓';
+      btn.disabled = true;
+    }
+  </script>
 
 </body>
-
 </html>

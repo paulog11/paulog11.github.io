@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日本語 Quick Assist</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1410;
+    --paper: #f5f0e8;
+    --aged: #e8e0cc;
+    --red: #c0392b;
+    --red-soft: #e8d5d3;
+    --muted: #7a6e62;
+    --border: #c8bfaf;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Subtle paper texture via pseudo */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 680px;
+    padding: 0 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    padding: 36px 0 28px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .title-jp {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--red);
+  }
+
+  .title-en {
+    font-size: 0.8rem;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* API Key section */
+  .api-section {
+    background: var(--aged);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    transition: opacity 0.3s;
+  }
+
+  .api-section label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .api-section input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 4px 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--ink);
+    outline: none;
+    min-width: 0;
+  }
+
+  .api-section input:focus {
+    border-bottom-color: var(--red);
+  }
+
+  .api-section .save-btn {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 6px 14px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: background 0.15s;
+  }
+  .api-section .save-btn:hover { background: var(--red); }
+
+  .api-saved {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+
+  /* Context toggles */
+  .context-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .ctx-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 6px 14px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.76rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .ctx-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .ctx-btn.active {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  /* Input area */
+  .input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 16px;
+    font-family: 'Sora', sans-serif;
+    font-size: 1rem;
+    color: var(--ink);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+    line-height: 1.5;
+  }
+
+  textarea:focus { border-color: var(--ink); }
+  textarea::placeholder { color: var(--muted); font-weight: 300; }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .ask-btn {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+
+  .ask-btn:hover { background: #a93226; }
+  .ask-btn:active { transform: scale(0.98); }
+  .ask-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+  .hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* Results */
+  .results {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .result-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 14px 18px;
+    animation: slideIn 0.2s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card:nth-child(1) { animation-delay: 0.05s; }
+  .result-card:nth-child(2) { animation-delay: 0.1s; }
+  .result-card:nth-child(3) { animation-delay: 0.15s; }
+  .result-card:nth-child(4) { animation-delay: 0.2s; }
+  .result-card:nth-child(5) { animation-delay: 0.25s; }
+  .result-card:nth-child(6) { animation-delay: 0.3s; }
+
+  .result-jp {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+    cursor: pointer;
+    user-select: all;
+    transition: color 0.1s;
+  }
+  .result-jp:active { color: var(--red); }
+
+  .result-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .result-reading {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .result-en {
+    font-size: 0.85rem;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  .result-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+    border-top: 1px solid var(--aged);
+    padding-top: 6px;
+    margin-top: 8px;
+  }
+
+  .register-tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 1px;
+    font-family: 'DM Mono', monospace;
+    margin-left: 4px;
+  }
+
+  .tag-casual { background: #dff0d8; color: #3c763d; }
+  .tag-polite { background: #d9edf7; color: #31708f; }
+  .tag-formal { background: #f2dede; color: #a94442; }
+
+  .loading {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 20px 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: pulse 1.2s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  .error-msg {
+    color: var(--red);
+    font-size: 0.84rem;
+    padding: 12px 0;
+    border-top: 1px solid var(--red-soft);
+  }
+
+  /* Show mode - big display for showing to someone */
+  .show-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+  .show-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .show-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: white;
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    cursor: pointer;
+  }
+
+  .show-overlay.active { display: flex; }
+
+  .show-overlay .tap-hint {
+    position: absolute;
+    bottom: 30px;
+    font-size: 0.75rem;
+    color: #aaa;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .show-items {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .show-item {
+    text-align: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .show-item .jp {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 2.4rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .show-item .en {
+    font-size: 1rem;
+    color: #666;
+  }
+
+  .show-item .reading {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  /* divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <span class="title-jp">日本語</span>
+    <span class="title-en">Quick Assist</span>
+  </header>
+
+  <!-- API Key -->
+  <div class="api-section" id="apiSection">
+    <label>API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+    <button class="save-btn" onclick="saveKey()">Save</button>
+  </div>
+
+  <!-- Context -->
+  <div class="context-bar">
+    <span style="font-size:0.72rem;color:var(--muted);align-self:center;margin-right:4px;font-family:'DM Mono',monospace;">CONTEXT</span>
+    <button class="ctx-btn active" data-ctx="casual">Casual</button>
+    <button class="ctx-btn" data-ctx="polite">Polite</button>
+    <button class="ctx-btn" data-ctx="formal">Formal</button>
+    <button class="ctx-btn" data-ctx="taxi">Taxi / Transport</button>
+    <button class="ctx-btn" data-ctx="shop">Shopping</button>
+    <button class="ctx-btn" data-ctx="restaurant">Restaurant</button>
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <textarea id="query" placeholder="What do you want to say? e.g. 'I'd like to get off at the next stop'" rows="3"></textarea>
+    <div class="input-row">
+      <button class="ask-btn" id="askBtn" onclick="ask()">Translate →</button>
+      <span class="hint">tap any Japanese text to select it</span>
+    </div>
+  </div>
+
+  <div id="output"></div>
+</div>
+
+<!-- Show overlay for displaying to someone else -->
+<div class="show-overlay" id="showOverlay" onclick="closeShow()">
+  <div class="show-items" id="showItems"></div>
+  <span class="tap-hint">Tap anywhere to close</span>
+</div>
+
+<script>
+  let apiKey = localStorage.getItem('nihongo_api_key') || '';
+  let currentCtx = 'casual';
+  let lastResults = [];
+
+  // Init API key display
+  if (apiKey) {
+    document.getElementById('apiSection').innerHTML = `
+      <label>API Key</label>
+      <span class="api-saved">●●●●●●●● saved</span>
+      <button class="save-btn" onclick="clearKey()">Clear</button>
+    `;
+  }
+
+  function saveKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val) return;
+    apiKey = val;
+    localStorage.setItem('nihongo_api_key', val);
+    document.getElementById('apiSection').innerHTML = `
+      <label>API Key</label>
+      <span class="api-saved">●●●●●●●● saved</span>
+      <button class="save-btn" onclick="clearKey()">Clear</button>
+    `;
+  }
+
+  function clearKey() {
+    apiKey = '';
+    localStorage.removeItem('nihongo_api_key');
+    document.getElementById('apiSection').innerHTML = `
+      <label>API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off">
+      <button class="save-btn" onclick="saveKey()">Save</button>
+    `;
+  }
+
+  // Context buttons
+  document.querySelectorAll('.ctx-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCtx = btn.dataset.ctx;
+    });
+  });
+
+  // Enter to submit
+  document.getElementById('query').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+  });
+
+  async function ask() {
+    const query = document.getElementById('query').value.trim();
+    if (!query) return;
+    if (!apiKey) { showError('Please enter your Anthropic API key above.'); return; }
+
+    const btn = document.getElementById('askBtn');
+    btn.disabled = true;
+    const out = document.getElementById('output');
+    out.innerHTML = `<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+
+    const contextMap = {
+      casual: 'casual conversation between friends or peers',
+      polite: 'polite everyday interaction (standard です/ます)',
+      formal: 'formal or business setting (keigo)',
+      taxi: 'talking to a taxi driver in Japan',
+      shop: 'shopping at a Japanese store',
+      restaurant: 'at a Japanese restaurant'
+    };
+
+    const systemPrompt = `You are a Japanese language assistant for a conversation aid app. The user is intermediate level.
+Return ONLY a JSON array of 3-6 phrases/words to express what the user wants to say.
+Context: ${contextMap[currentCtx]}.
+Each item: { "jp": "Japanese text", "reading": "hiragana reading", "en": "short English", "register": "casual|polite|formal", "note": "optional short tip, max 8 words" }
+No explanations, no markdown, only the raw JSON array.`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: query }]
+        })
+      });
+
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const text = data.content[0].text.trim().replace(/```json|```/g,'');
+      const items = JSON.parse(text);
+      lastResults = items;
+      renderResults(items);
+    } catch(e) {
+      showError('Error: ' + e.message);
+    }
+
+    btn.disabled = false;
+  }
+
+  function renderResults(items) {
+    const out = document.getElementById('output');
+    const tagMap = { casual: 'tag-casual', polite: 'tag-polite', formal: 'tag-formal' };
+
+    let html = `<div style="display:flex;align-items:center;margin-bottom:12px;">
+      <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:0.08em;">RESULTS</span>
+      <button class="show-btn" onclick="openShow()">Show to someone ↗</button>
+    </div><div class="results">`;
+
+    items.forEach(item => {
+      const tagClass = tagMap[item.register] || 'tag-polite';
+      html += `<div class="result-card">
+        <div class="result-jp">${item.jp}</div>
+        <div class="result-row">
+          <span class="result-reading">${item.reading || ''}</span>
+          <span class="result-en">${item.en}</span>
+          <span class="register-tag ${tagClass}">${item.register}</span>
+        </div>
+        ${item.note ? `<div class="result-note">${item.note}</div>` : ''}
+      </div>`;
+    });
+
+    html += `</div>`;
+    out.innerHTML = html;
+  }
+
+  function openShow() {
+    const overlay = document.getElementById('showOverlay');
+    const items = document.getElementById('showItems');
+    items.innerHTML = lastResults.map(item => `
+      <div class="show-item">
+        <div class="jp">${item.jp}</div>
+        <div class="reading">${item.reading || ''}</div>
+        <div class="en">${item.en}</div>
+      </div>
+    `).join('');
+    overlay.classList.add('active');
+  }
+
+  function closeShow() {
+    document.getElementById('showOverlay').classList.remove('active');
+  }
+
+  function showError(msg) {
+    document.getElementById('output').innerHTML = `<div class="error-msg">${msg}</div>`;
+  }
+</script>
+</body>
+</html>
