@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flip 7 🃏</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #1a0a2e;
+    --surface: #2d1b4e;
+    --surface2: #3d2860;
+    --accent1: #ff6b6b;
+    --accent2: #ffd93d;
+    --accent3: #6bcb77;
+    --accent4: #4d96ff;
+    --accent5: #ff9ff3;
+    --text: #fff;
+    --text-muted: rgba(255,255,255,0.55);
+    --radius: 16px;
+    --card-w: 80px;
+    --card-h: 112px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.45);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(109,40,217,0.28) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(255,107,107,0.18) 0%, transparent 70%);
+  }
+  #app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+  /* ── STARS BG ── */
+  .stars {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 50% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 60% 90%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 35%, rgba(255,255,255,0.5) 0%, transparent 100%);
+  }
+
+  /* ── TITLE SCREEN ── */
+  .title-screen {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 32px; padding: 40px 20px;
+  }
+  .title-logo {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(64px, 12vw, 120px);
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent2) 0%, var(--accent1) 40%, var(--accent5) 80%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 24px rgba(255,107,107,0.5));
+    animation: titleBounce 2s ease-in-out infinite;
+  }
+  @keyframes titleBounce {
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-12px) rotate(2deg); }
+  }
+  .title-subtitle {
+    font-size: 20px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .title-cards-preview {
+    display: flex; gap: 12px; perspective: 600px;
+  }
+  .preview-card {
+    width: 64px; height: 90px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fredoka One', cursive; font-size: 28px; color: #1a0a2e;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    animation: previewFloat 2s ease-in-out infinite;
+  }
+  .preview-card:nth-child(1) { background: #ff6b6b; animation-delay: 0s; }
+  .preview-card:nth-child(2) { background: #ffd93d; animation-delay: 0.2s; }
+  .preview-card:nth-child(3) { background: #6bcb77; animation-delay: 0.4s; }
+  .preview-card:nth-child(4) { background: #4d96ff; animation-delay: 0.6s; }
+  .preview-card:nth-child(5) { background: #ff9ff3; animation-delay: 0.8s; }
+  .preview-card:nth-child(6) { background: #ff6b6b; animation-delay: 1.0s; }
+  .preview-card:nth-child(7) { background: var(--accent2); animation-delay: 1.2s; font-size: 36px; }
+  @keyframes previewFloat {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .player-setup { width: 100%; max-width: 520px; }
+  .setup-label {
+    font-size: 14px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--accent4); margin-bottom: 12px;
+  }
+  .player-inputs { display: flex; flex-direction: column; gap: 10px; }
+  .player-input-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border-radius: 12px; padding: 10px 14px;
+    border: 2px solid transparent; transition: border-color 0.2s;
+  }
+  .player-input-row:focus-within { border-color: var(--accent4); }
+  .player-color-dot {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  }
+  .player-input-row input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 16px; font-weight: 700;
+  }
+  .player-input-row input::placeholder { color: var(--text-muted); }
+  .player-count-control {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+  }
+  .count-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface2); border: 2px solid var(--accent4);
+    color: var(--accent4); font-size: 22px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; font-weight: 900; line-height: 1;
+  }
+  .count-btn:hover { background: var(--accent4); color: var(--bg); }
+  .count-label { font-size: 18px; font-weight: 800; }
+
+  .btn-primary {
+    padding: 16px 48px; border-radius: 50px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent5));
+    border: none; color: #fff; font-family: 'Fredoka One', cursive;
+    font-size: 24px; cursor: pointer; letter-spacing: 1px;
+    box-shadow: 0 8px 32px rgba(255,107,107,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 12px 40px rgba(255,107,107,0.55); }
+  .btn-primary:active { transform: translateY(0) scale(0.98); }
+
+  /* ── RULES SUMMARY ── */
+  .rules-box {
+    max-width: 520px; width: 100%;
+    background: var(--surface); border-radius: var(--radius);
+    padding: 18px 22px; font-size: 13px; line-height: 1.7;
+    color: var(--text-muted); border: 1px solid rgba(255,255,255,0.07);
+  }
+  .rules-box strong { color: var(--text); }
+  .rules-title {
+    font-family: 'Fredoka One', cursive; font-size: 18px;
+    color: var(--accent2); margin-bottom: 8px;
+  }
+
+  /* ── GAME SCREEN ── */
+  .game-screen {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 900px; padding: 16px;
+    display: flex; flex-direction: column; gap: 16px; min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .game-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border-radius: var(--radius);
+    padding: 12px 20px; flex-wrap: wrap; gap: 8px;
+  }
+  .game-logo-sm {
+    font-family: 'Fredoka One', cursive; font-size: 28px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent1));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .deck-info { font-size: 13px; color: var(--text-muted); font-weight: 700; }
+  .deck-info span { color: var(--accent4); }
+  .round-badge {
+    background: var(--accent4); color: var(--bg);
+    font-size: 13px; font-weight: 900; padding: 4px 14px; border-radius: 20px;
+    font-family: 'Fredoka One', cursive; letter-spacing: 1px;
+  }
+
+  /* ── SCORE BAR ── */
+  .score-bar {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .score-chip {
+    flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border-radius: 12px; padding: 8px 14px;
+    border: 2px solid transparent; transition: border-color 0.3s, transform 0.2s;
+    min-width: 120px;
+  }
+  .score-chip.active-player {
+    border-color: var(--accent2);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255,217,61,0.25);
+  }
+  .score-chip.busted { opacity: 0.5; }
+  .score-chip.frozen { border-color: #93c5fd; }
+  .score-chip-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .score-chip-name { font-size: 13px; font-weight: 800; white-space: nowrap; }
+  .score-chip-pts {
+    margin-left: auto; font-family: 'Fredoka One', cursive;
+    font-size: 18px; line-height: 1;
+  }
+  .score-progress {
+    width: 100%; height: 4px; background: rgba(255,255,255,0.1);
+    border-radius: 2px; margin-top: 4px;
+  }
+  .score-progress-fill {
+    height: 100%; border-radius: 2px; transition: width 0.6s ease;
+  }
+
+  /* ── DECK AREA ── */
+  .deck-area {
+    display: flex; align-items: center; justify-content: center; gap: 24px;
+    padding: 12px;
+  }
+  .deck-pile {
+    width: var(--card-w); height: var(--card-h);
+    border-radius: 12px; cursor: pointer;
+    position: relative; flex-shrink: 0;
+  }
+  .deck-pile-stack {
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6c3db5, #3d2860);
+    border: 2px solid rgba(255,255,255,0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .deck-pile-stack::before {
+    content: '🃏'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 36px;
+  }
+  .deck-pile:not(.disabled):hover .deck-pile-stack {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 12px 32px rgba(109,40,217,0.6);
+  }
+  .deck-pile.disabled { cursor: not-allowed; opacity: 0.5; }
+  .deck-pile-label {
+    position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 800; color: var(--text-muted);
+    white-space: nowrap; text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .flip-area {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; min-height: calc(var(--card-h) + 16px);
+  }
+  .last-drawn-card { perspective: 600px; }
+
+  /* ── CARD ── */
+  .card {
+    width: var(--card-w); height: var(--card-h);
+    border-radius: 12px; flex-shrink: 0; position: relative;
+  }
+  .card-inner {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
+  }
+  .card.is-flipping .card-inner { transform: rotateY(180deg); }
+  .card-front, .card-back {
+    position: absolute; inset: 0; border-radius: 12px;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .card-back {
+    background: linear-gradient(135deg, #6c3db5, #3d2860);
+    border: 2px solid rgba(255,255,255,0.15);
+    font-size: 32px;
+  }
+  .card-front {
+    transform: rotateY(180deg);
+    flex-direction: column; gap: 2px; padding: 6px;
+    font-family: 'Fredoka One', cursive;
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #1a0a2e;
+  }
+  .card-front .card-corner {
+    position: absolute; font-size: 13px; font-weight: 900; line-height: 1;
+    color: rgba(26,10,46,0.7);
+  }
+  .card-front .card-corner.tl { top: 5px; left: 7px; }
+  .card-front .card-corner.br { bottom: 5px; right: 7px; transform: rotate(180deg); }
+  .card-front .card-main { font-size: 36px; line-height: 1; }
+  .card-front .card-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; }
+
+  /* Card colors by value — 0-12 grouped in bands */
+  .card-num-0  .card-front { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: #fff; }
+  .card-num-0  .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-1  .card-front { background: linear-gradient(135deg, #fda4af, #f43f5e); color: #fff; }
+  .card-num-1  .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-2  .card-front { background: linear-gradient(135deg, #ff9f43, #ee5a24); }
+  .card-num-3  .card-front { background: linear-gradient(135deg, #ffd93d, #f9ca24); }
+  .card-num-4  .card-front { background: linear-gradient(135deg, #6bcb77, #26de81); }
+  .card-num-5  .card-front { background: linear-gradient(135deg, #4d96ff, #0652dd); color: #fff; }
+  .card-num-5  .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-6  .card-front { background: linear-gradient(135deg, #ff9ff3, #fd79a8); }
+  .card-num-7  .card-front { background: linear-gradient(135deg, #ffd93d, #ff6b6b); }
+  .card-num-8  .card-front { background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; }
+  .card-num-8  .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-9  .card-front { background: linear-gradient(135deg, #e879f9, #9333ea); color: #fff; }
+  .card-num-9  .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-10 .card-front { background: linear-gradient(135deg, #34d399, #059669); color: #fff; }
+  .card-num-10 .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-11 .card-front { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #fff; }
+  .card-num-11 .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-num-12 .card-front { background: linear-gradient(135deg, #fbbf24, #ef4444); color: #fff; animation: card12glow 1s ease-in-out infinite alternate; }
+  .card-num-12 .card-front .card-corner { color: rgba(255,255,255,0.8); }
+  @keyframes card12glow { from { box-shadow: 0 0 12px 4px rgba(251,191,36,0.5); } to { box-shadow: 0 0 28px 10px rgba(239,68,68,0.65); } }
+
+  /* Score Modifier cards — orange theme */
+  .card-modifier .card-front { background: linear-gradient(135deg, #fb923c, #ea580c); color: #fff; }
+  .card-modifier .card-front .card-corner { color: rgba(255,255,255,0.8); }
+  /* Action cards */
+  .card-action-freeze      .card-front { background: linear-gradient(135deg, #74b9ff, #0984e3); color: #fff; }
+  .card-action-freeze      .card-front .card-corner { color: rgba(255,255,255,0.7); }
+  .card-action-flipthree   .card-front { background: linear-gradient(135deg, #55efc4, #00b894); color: #1a0a2e; }
+  .card-action-secondchance .card-front { background: linear-gradient(135deg, #fdba74, #f59e0b); color: #1a0a2e; }
+
+  .card-already-flipped .card-inner { transform: rotateY(180deg); }
+
+  /* Player hand area */
+  .player-hand-area {
+    background: var(--surface); border-radius: var(--radius); padding: 14px 16px;
+    border: 2px solid transparent; transition: border-color 0.3s;
+  }
+  .player-hand-area.active { border-color: var(--accent2); }
+  .player-hand-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .player-hand-name {
+    font-family: 'Fredoka One', cursive; font-size: 18px;
+  }
+  .player-hand-total {
+    margin-left: auto; font-family: 'Fredoka One', cursive;
+    font-size: 22px; padding: 2px 14px; border-radius: 20px;
+    background: var(--surface2);
+  }
+  .player-hand-total.busted { background: var(--accent1); animation: bustedShake 0.4s ease; }
+  .player-hand-total.has7 { background: var(--accent3); color: #1a0a2e; }
+  @keyframes bustedShake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .hand-cards { display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; }
+  .hand-card { transform-origin: bottom center; }
+
+  .status-tag {
+    font-size: 11px; font-weight: 900; padding: 3px 10px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .status-tag.frozen { background: #93c5fd; color: #1e3a8a; }
+  .status-tag.stopped { background: var(--accent3); color: #064e3b; }
+  .status-tag.busted { background: var(--accent1); color: #7f1d1d; }
+  .status-tag.active { background: var(--accent2); color: #78350f; animation: activePulse 1s ease-in-out infinite; }
+  @keyframes activePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* ── TURN PANEL ── */
+  .turn-panel {
+    background: var(--surface2); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .turn-info { flex: 1; min-width: 200px; }
+  .turn-whose { font-family: 'Fredoka One', cursive; font-size: 20px; }
+  .turn-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .turn-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn-flip {
+    padding: 12px 28px; border-radius: 50px;
+    background: linear-gradient(135deg, var(--accent4), #6c3db5);
+    border: none; color: #fff; font-family: 'Fredoka One', cursive;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(77,150,255,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-flip:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(77,150,255,0.5); }
+  .btn-flip:active { transform: translateY(0); }
+  .btn-flip:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-stop {
+    padding: 12px 28px; border-radius: 50px;
+    background: linear-gradient(135deg, var(--accent3), #00b894);
+    border: none; color: #1a0a2e; font-family: 'Fredoka One', cursive;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(107,203,119,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-stop:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(107,203,119,0.5); }
+  .btn-stop:active { transform: translateY(0); }
+  .btn-stop:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-next {
+    padding: 12px 28px; border-radius: 50px;
+    background: linear-gradient(135deg, var(--accent2), #ff9f43);
+    border: none; color: #1a0a2e; font-family: 'Fredoka One', cursive;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(255,217,61,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-next:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,217,61,0.5); }
+  .btn-next:active { transform: translateY(0); }
+
+  .btn-skip {
+    padding: 12px 28px; border-radius: 50px;
+    background: linear-gradient(135deg, #93c5fd, #3b82f6);
+    border: none; color: #1a0a2e; font-family: 'Fredoka One', cursive;
+    font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(147,197,253,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-skip:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(147,197,253,0.5); }
+  .btn-skip:active { transform: translateY(0); }
+    padding: 8px 18px; border-radius: 50px;
+    background: var(--surface); border: 2px solid rgba(255,255,255,0.15);
+    color: var(--text-muted); font-family: 'Nunito', sans-serif;
+    font-size: 13px; font-weight: 800; cursor: pointer;
+    transition: all 0.15s; letter-spacing: 0.5px;
+  }
+  .btn-sm:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── FLIP THREE OVERLAY ── */
+  .flipthree-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .flipthree-panel {
+    background: var(--surface); border-radius: 24px;
+    padding: 32px; max-width: 480px; width: 90%;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    animation: panelIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+  }
+  @keyframes panelIn {
+    from { transform: scale(0.7) translateY(40px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .flipthree-title {
+    font-family: 'Fredoka One', cursive; font-size: 28px; color: var(--accent3);
+    margin-bottom: 8px;
+  }
+  .flipthree-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+  .target-list { display: flex; flex-direction: column; gap: 8px; }
+  .target-btn {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    background: var(--surface2); border: 2px solid transparent;
+    border-radius: 12px; padding: 12px 16px; cursor: pointer;
+    transition: all 0.15s; color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 16px; font-weight: 700;
+  }
+  .target-btn:hover { border-color: var(--accent3); transform: translateX(4px); }
+  .target-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── ROUND SUMMARY ── */
+  .round-summary-overlay {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .round-summary-panel {
+    background: var(--surface); border-radius: 24px;
+    padding: 32px; max-width: 520px; width: 90%;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+    animation: panelIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .summary-title {
+    font-family: 'Fredoka One', cursive; font-size: 32px;
+    text-align: center; margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent1));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .summary-subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .summary-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .summary-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface2); border-radius: 12px; padding: 12px 16px;
+  }
+  .summary-row.winner-row { border: 2px solid var(--accent2); }
+  .summary-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+  .summary-name { font-weight: 800; font-size: 16px; }
+  .summary-detail { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+  .summary-pts {
+    margin-left: auto; font-family: 'Fredoka One', cursive;
+    font-size: 22px; text-align: right;
+  }
+  .summary-pts .pts-delta {
+    font-size: 13px; font-weight: 800; color: var(--accent3); display: block;
+  }
+  .summary-pts .pts-delta.zero { color: var(--text-muted); }
+  .round-winner-banner {
+    text-align: center; font-size: 14px; font-weight: 700;
+    color: var(--accent2); margin-bottom: 20px;
+  }
+
+  /* ── GAME OVER ── */
+  .gameover-overlay {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gameover-panel {
+    background: var(--surface); border-radius: 24px;
+    padding: 40px 32px; max-width: 520px; width: 90%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+    animation: panelIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .gameover-trophy { font-size: 72px; margin-bottom: 16px; display: block; animation: trophyBounce 1s ease-in-out infinite; }
+  @keyframes trophyBounce { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg) scale(1.1); } }
+  .gameover-winner {
+    font-family: 'Fredoka One', cursive; font-size: 38px; line-height: 1.1;
+    margin-bottom: 6px;
+  }
+  .gameover-sub { color: var(--text-muted); font-size: 16px; margin-bottom: 28px; }
+  .gameover-final { margin-bottom: 28px; }
+
+  /* ── EVENT TOAST ── */
+  .event-toast {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 100; pointer-events: none;
+  }
+  .toast-inner {
+    background: var(--surface2); border-radius: 50px;
+    padding: 12px 28px; font-family: 'Fredoka One', cursive;
+    font-size: 20px; white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+  }
+  @keyframes toastIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+
+  /* ── CONFETTI ── */
+  .confetti-container {
+    position: fixed; inset: 0; pointer-events: none; z-index: 99; overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute; width: 10px; height: 10px;
+    border-radius: 2px; animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ── MISC ── */
+  .text-center { text-align: center; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    :root { --card-w: 64px; --card-h: 90px; }
+    .card-front .card-main { font-size: 28px; }
+    .game-screen { padding: 8px; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script>
+// ── SOUND ENGINE (Web Audio API — no external files) ──────────────────────────
+const Audio = (() => {
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  // Master gain so we can mute globally
+  let masterGain = null;
+  function getMaster() {
+    const c = getCtx();
+    if (!masterGain) {
+      masterGain = c.createGain();
+      masterGain.gain.value = 0.7;
+      masterGain.connect(c.destination);
+    }
+    return masterGain;
+  }
+
+  function osc(type, freq, startTime, duration, gainVal = 0.4, c = null) {
+    c = c || getCtx();
+    const g = c.createGain();
+    g.gain.setValueAtTime(gainVal, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    g.connect(getMaster());
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, startTime);
+    o.connect(g);
+    o.start(startTime);
+    o.stop(startTime + duration + 0.01);
+    return { osc: o, gain: g };
+  }
+
+  function sweep(type, freqStart, freqEnd, startTime, duration, gainVal = 0.35) {
+    const c = getCtx();
+    const g = c.createGain();
+    g.gain.setValueAtTime(gainVal, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    g.connect(getMaster());
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freqStart, startTime);
+    o.frequency.exponentialRampToValueAtTime(freqEnd, startTime + duration);
+    o.connect(g);
+    o.start(startTime);
+    o.stop(startTime + duration + 0.01);
+  }
+
+  function noise(startTime, duration, gainVal = 0.15, filterFreq = 2000) {
+    const c = getCtx();
+    const bufSize = c.sampleRate * duration;
+    const buf = c.createBuffer(1, bufSize, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const filt = c.createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = filterFreq;
+    filt.Q.value = 1.5;
+    const g = c.createGain();
+    g.gain.setValueAtTime(gainVal, startTime);
+    g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(getMaster());
+    src.start(startTime);
+    src.stop(startTime + duration + 0.01);
+  }
+
+  const sounds = {
+    // Crisp card whoosh + thud when flipping
+    cardFlip() {
+      const c = getCtx(); const t = c.currentTime;
+      sweep('sine', 800, 300, t, 0.12, 0.2);
+      noise(t + 0.05, 0.08, 0.08, 1800);
+      osc('sine', 180, t + 0.1, 0.12, 0.15, c);
+    },
+
+    // Satisfying "ding" for a clean number draw
+    draw() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('sine', 523, t, 0.06, 0.3, c);
+      osc('sine', 659, t + 0.03, 0.08, 0.2, c);
+    },
+
+    // High-value card (8-12) — slightly richer tone
+    drawHigh() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('triangle', 440, t, 0.05, 0.35, c);
+      osc('sine',     660, t + 0.02, 0.06, 0.25, c);
+      osc('sine',     880, t + 0.04, 0.07, 0.15, c);
+    },
+
+    // Stop voluntarily — gentle resolved chord
+    stop() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('sine', 392, t,       0.15, 0.3, c);
+      osc('sine', 523, t + 0.05, 0.15, 0.25, c);
+      osc('sine', 659, t + 0.10, 0.15, 0.2, c);
+    },
+
+    // Bust — descending dissonant sweep + buzz
+    bust() {
+      const c = getCtx(); const t = c.currentTime;
+      sweep('sawtooth', 400, 80, t, 0.4, 0.3);
+      sweep('square',   350, 60, t + 0.03, 0.35, 0.15);
+      noise(t, 0.15, 0.12, 400);
+    },
+
+    // Freeze — icy shimmer
+    freeze() {
+      const c = getCtx(); const t = c.currentTime;
+      [1047, 1319, 1568, 2093].forEach((f, i) => {
+        osc('sine', f, t + i * 0.06, 0.25, 0.18, c);
+      });
+      sweep('sine', 2200, 800, t + 0.1, 0.4, 0.1);
+    },
+
+    // Skip frozen turn — short ice-crack click
+    skipFrozen() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('triangle', 1200, t, 0.05, 0.25, c);
+      osc('sine',      600, t + 0.04, 0.06, 0.15, c);
+    },
+
+    // Flip Three — rapid triple thump
+    flipThree() {
+      const c = getCtx(); const t = c.currentTime;
+      [0, 0.1, 0.2].forEach(delay => {
+        sweep('triangle', 300, 150, t + delay, 0.12, 0.3);
+        noise(t + delay, 0.08, 0.1, 600);
+      });
+    },
+
+    // Score modifier — coin-like jingle
+    modifier() {
+      const c = getCtx(); const t = c.currentTime;
+      [1047, 1319, 1568].forEach((f, i) => {
+        osc('sine', f, t + i * 0.07, 0.18, 0.22, c);
+      });
+    },
+
+    // x2 modifier — bigger fanfare
+    modifierX2() {
+      const c = getCtx(); const t = c.currentTime;
+      [523, 659, 784, 1047].forEach((f, i) => {
+        osc('sine', f, t + i * 0.06, 0.22, 0.28, c);
+      });
+      sweep('triangle', 200, 400, t + 0.1, 0.3, 0.15);
+    },
+
+    // Second Chance — magical sparkle
+    secondChance() {
+      const c = getCtx(); const t = c.currentTime;
+      [880, 1108, 1320, 1760, 2217].forEach((f, i) => {
+        osc('sine', f, t + i * 0.05, 0.2, 0.2, c);
+      });
+      sweep('sine', 400, 1600, t, 0.35, 0.1);
+    },
+
+    // Second Chance triggered (saved from bust) — relieved ascending
+    secondChanceSaved() {
+      const c = getCtx(); const t = c.currentTime;
+      sweep('sine', 200, 600, t, 0.25, 0.25);
+      osc('sine', 880, t + 0.2, 0.25, 0.3, c);
+      osc('sine', 1047, t + 0.35, 0.25, 0.25, c);
+    },
+
+    // Flip 7 achieved — triumphant fanfare
+    flip7() {
+      const c = getCtx(); const t = c.currentTime;
+      // Rising arpeggio
+      [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => {
+        osc('sine',     f, t + i * 0.07, 0.5 - i * 0.03, 0.35, c);
+        osc('triangle', f * 2, t + i * 0.07, 0.3, 0.15, c);
+      });
+      // Big chord at the top
+      [523, 659, 784, 1047].forEach((f, i) => {
+        osc('sine', f, t + 0.55, 0.8, 0.3 - i * 0.05, c);
+      });
+    },
+
+    // Round end — gentle resolution
+    roundEnd() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('sine', 392, t, 0.3, 0.3, c);
+      osc('sine', 494, t + 0.15, 0.3, 0.25, c);
+      osc('sine', 523, t + 0.3, 0.5, 0.3, c);
+    },
+
+    // Game over — victory fanfare
+    gameOver() {
+      const c = getCtx(); const t = c.currentTime;
+      const melody = [523,523,523,523,415,466,523];
+      melody.forEach((f, i) => {
+        const dur = i === melody.length - 1 ? 0.8 : 0.18;
+        osc('sine',     f, t + i * 0.22, dur, 0.4, c);
+        osc('triangle', f * 2, t + i * 0.22, dur * 0.7, 0.15, c);
+      });
+    },
+
+    // UI click — subtle tick
+    click() {
+      const c = getCtx(); const t = c.currentTime;
+      osc('sine', 440, t, 0.04, 0.2, c);
+    },
+  };
+
+  return {
+    play(name, ...args) {
+      try { sounds[name] && sounds[name](...args); } catch(e) {}
+    },
+    get muted() { return masterGain ? masterGain.gain.value < 0.01 : false; },
+    toggleMute() {
+      const m = getMaster();
+      m.gain.value = m.gain.value > 0.01 ? 0 : 0.7;
+    },
+  };
+})();
+
+const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+// ── DECK DEFINITION ──────────────────────────────────────────────────────────
+const PLAYER_COLORS = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9ff3'];
+
+function buildDeck() {
+  const deck = [];
+  // Numbered cards 0-12: 0 appears 1×, 1 appears 1×, N≥2 appears N×
+  // 1 + 1 + 2+3+4+5+6+7+8+9+10+11+12 = 2 + 77 = 79 number cards
+  deck.push({ type: 'number', value: 0, id: 'n0_0' });
+  deck.push({ type: 'number', value: 1, id: 'n1_0' });
+  for (let val = 2; val <= 12; val++) {
+    for (let i = 0; i < val; i++) {
+      deck.push({ type: 'number', value: val, id: `n${val}_${i}` });
+    }
+  }
+  // Score Modifier cards (orange): +2, +4, +6, +8, +10, x2 — 1 each = 6 total
+  const modifiers = [
+    { special: 'mod_plus2',  label: '+2',  modValue: 2,  isMultiplier: false },
+    { special: 'mod_plus4',  label: '+4',  modValue: 4,  isMultiplier: false },
+    { special: 'mod_plus6',  label: '+6',  modValue: 6,  isMultiplier: false },
+    { special: 'mod_plus8',  label: '+8',  modValue: 8,  isMultiplier: false },
+    { special: 'mod_plus10', label: '+10', modValue: 10, isMultiplier: false },
+    { special: 'mod_x2',    label: '×2',  modValue: 2,  isMultiplier: true  },
+  ];
+  modifiers.forEach((m, i) => deck.push({ type: 'modifier', ...m, id: `mod_${i}`, value: 0 }));
+  // Action cards: 3× Freeze, 3× Flip Three, 3× Second Chance = 9 total
+  for (let i = 0; i < 3; i++) deck.push({ type: 'action', special: 'freeze',       id: `fr_${i}`,  value: 0 });
+  for (let i = 0; i < 3; i++) deck.push({ type: 'action', special: 'flipthree',    id: `ft_${i}`,  value: 0 });
+  for (let i = 0; i < 3; i++) deck.push({ type: 'action', special: 'secondchance', id: `sc_${i}`,  value: 0 });
+  // Total: 79 + 6 + 9 = 94 cards ✓
+  return shuffle(deck);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── APP ──────────────────────────────────────────────────────────────────────
+const App = {
+  setup() {
+    // ── STATE: SETUP ──
+    const screen = ref('title'); // 'title' | 'game' | 'gameover'
+    const playerCount = ref(3);
+    const playerNames = ref(['Alice','Bob','Carol','Dave','Eve']);
+    const WIN_SCORE = 200;
+
+    // ── STATE: GAME ──
+    const deck = ref([]);
+    const discardPile = ref([]);
+    const players = ref([]);
+    const currentPlayerIdx = ref(0);
+    const dealerIdx = ref(0);
+    const round = ref(1);
+    const roundPhase = ref('dealing'); // 'dealing' | 'playing' | 'summary'
+    const dealingPlayerIdx = ref(0);   // whose turn it is to be dealt to
+    const pendingActionCard = ref(null); // action card drawn mid-deal that needs resolving
+    const lastDrawnCard = ref(null);
+    const lastDrawnFlipping = ref(false);
+    const showingSummary = ref(false);
+    const summaryData = ref(null);
+    const gameOverData = ref(null);
+    const toast = ref(null);
+    const toastTimer = ref(null);
+    const flipThreeData = ref(null);
+    const showConfetti = ref(false);
+    const confettiPieces = ref([]);
+    const isAnimating = ref(false);
+
+    // ── COMPUTED ──
+    const currentPlayer = computed(() => players.value[currentPlayerIdx.value]);
+    const activePlayers = computed(() => players.value.filter(p => !p.stopped && !p.busted && !p.frozen));
+    const deckRemaining = computed(() => deck.value.length);
+
+    function cardClass(card) {
+      if (card.type === 'number') return `card card-num-${card.value}`;
+      if (card.type === 'modifier') return 'card card-modifier';
+      if (card.special === 'freeze')        return 'card card-action-freeze';
+      if (card.special === 'flipthree')     return 'card card-action-flipthree';
+      if (card.special === 'secondchance')  return 'card card-action-secondchance';
+      return 'card';
+    }
+    function cardMain(card) {
+      if (card.type === 'number') return card.value;
+      if (card.type === 'modifier') return card.label;
+      if (card.special === 'freeze')        return '❄️';
+      if (card.special === 'flipthree')     return '×3';
+      if (card.special === 'secondchance')  return '2nd';
+      return '?';
+    }
+    function cardLabel(card) {
+      if (card.type === 'number') return '';
+      if (card.type === 'modifier') return card.isMultiplier ? 'Multiplier' : 'Score +';
+      if (card.special === 'freeze')        return 'Freeze';
+      if (card.special === 'flipthree')     return 'Flip 3';
+      if (card.special === 'secondchance')  return '2nd Chance';
+      return '';
+    }
+    function cardCorner(card) {
+      if (card.type === 'number') return card.value;
+      if (card.type === 'modifier') return card.label;
+      if (card.special === 'freeze')        return '❄';
+      if (card.special === 'flipthree')     return '×3';
+      if (card.special === 'secondchance')  return '2nd';
+      return '';
+    }
+
+    // Count only unique NUMBER cards for Flip 7 bonus (0-12, no modifiers or actions)
+    function uniqueNumberCount(player) {
+      const seen = new Set();
+      for (const c of player.hand) {
+        if (c.type === 'number') seen.add(c.value);
+      }
+      return seen.size;
+    }
+
+    // Score = sum of number card values, then apply modifiers in order
+    function handTotal(player) {
+      let base = player.hand.reduce((s, c) => s + (c.type === 'number' ? c.value : 0), 0);
+      // Apply flat modifiers first, then multiplier
+      let flat = 0, hasX2 = false;
+      for (const c of player.hand) {
+        if (c.type === 'modifier') {
+          if (c.isMultiplier) hasX2 = true;
+          else flat += c.modValue;
+        }
+      }
+      let total = base + flat;
+      if (hasX2) total *= 2;
+      return total;
+    }
+
+    // ── SETUP GAME ──
+    function startGame() {
+      const names = playerNames.value.slice(0, playerCount.value);
+      players.value = names.map((name, i) => ({
+        id: i,
+        name,
+        color: PLAYER_COLORS[i],
+        hand: [],
+        totalScore: 0,
+        stopped: false,
+        busted: false,
+        frozen: false,
+        frozenTurns: 0,
+        hasSecondChance: false,
+      }));
+      deck.value = buildDeck();
+      discardPile.value = [];
+      dealerIdx.value = 0;
+      currentPlayerIdx.value = 0;
+      round.value = 1;
+      roundPhase.value = 'dealing';
+      dealingPlayerIdx.value = 0;
+      pendingActionCard.value = null;
+      showingSummary.value = false;
+      gameOverData.value = null;
+      lastDrawnCard.value = null;
+      flipThreeData.value = null;
+      screen.value = 'game';
+    }
+
+    function resetRound() {
+      players.value.forEach(p => {
+        // Cards from players' hands go to discard pile
+        discardPile.value.push(...p.hand);
+        p.hand = [];
+        p.stopped = false;
+        p.busted = false;
+        p.frozen = false;
+        p.frozenTurns = 0;
+        p.hasSecondChance = false;
+        p.flip7Bonus = false;
+      });
+      // Do NOT rebuild the deck — keep using remaining deck + discard pile across rounds
+      // If deck is empty, reshuffle discard now
+      if (deck.value.length === 0) {
+        deck.value = shuffle(discardPile.value);
+        discardPile.value = [];
+        showToast('Deck reshuffled from discard! 🔀');
+      }
+      // Dealer rotates each round
+      dealerIdx.value = (dealerIdx.value + 1) % players.value.length;
+      currentPlayerIdx.value = dealerIdx.value;
+      roundPhase.value = 'dealing';
+      // Dealing starts with player after dealer
+      dealingPlayerIdx.value = (dealerIdx.value + 1) % players.value.length;
+      pendingActionCard.value = null;
+      lastDrawnCard.value = null;
+      flipThreeData.value = null;
+    }
+
+    // ── TOAST ──
+    function showToast(msg) {
+      if (toastTimer.value) clearTimeout(toastTimer.value);
+      toast.value = msg;
+      toastTimer.value = setTimeout(() => { toast.value = null; }, 2100);
+    }
+
+    // ── CONFETTI ──
+    function fireConfetti() {
+      const pieces = [];
+      const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9ff3','#fff','#a78bfa'];
+      for (let i = 0; i < 60; i++) {
+        pieces.push({
+          id: i,
+          left: Math.random() * 100,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          duration: 1.5 + Math.random() * 2,
+          delay: Math.random() * 0.8,
+          size: 8 + Math.random() * 10,
+          rotate: Math.random() * 360,
+        });
+      }
+      confettiPieces.value = pieces;
+      showConfetti.value = true;
+      setTimeout(() => { showConfetti.value = false; confettiPieces.value = []; }, 4000);
+    }
+
+    // ── DEAL NEXT CARD (dealing phase) ──
+    async function dealNextCard() {
+      if (isAnimating.value) return;
+      if (deck.value.length === 0) {
+        deck.value = shuffle(discardPile.value);
+        discardPile.value = [];
+      }
+      isAnimating.value = true;
+      const card = deck.value.shift();
+      Audio.play('cardFlip');
+      lastDrawnCard.value = { ...card };
+      lastDrawnFlipping.value = true;
+      await nextTick();
+      setTimeout(async () => {
+        lastDrawnFlipping.value = false;
+        await nextTick();
+        setTimeout(() => {
+          processDealCard(card);
+          isAnimating.value = false;
+        }, 350);
+      }, 50);
+    }
+
+    function processDealCard(card) {
+      if (card.type === 'action' || card.type === 'modifier') {
+        // Pause dealing — resolve/apply card, then continue
+        discardPile.value.push(card);
+        pendingActionCard.value = card;
+        const target = players.value[dealingPlayerIdx.value];
+        handleDealAction(card, target);
+      } else {
+        // Number card — give to current dealingPlayer
+        const player = players.value[dealingPlayerIdx.value];
+        const hasDupe = player.hand.some(c => c.type === 'number' && c.value === card.value);
+        if (hasDupe) {
+          // Check Second Chance
+          if (player.hasSecondChance) {
+            player.hasSecondChance = false;
+            // Remove the Second Chance card from hand, discard the duplicate
+            const scIdx = player.hand.findIndex(c => c.special === 'secondchance');
+            if (scIdx !== -1) player.hand.splice(scIdx, 1);
+            discardPile.value.push(card);
+            Audio.play('secondChanceSaved');
+            showToast(`🌟 ${player.name} used Second Chance! Duplicate ${card.value} discarded.`);
+            advanceDealingPlayer();
+            return;
+          }
+          player.busted = true;
+          player.hand.push({ ...card, flipped: true });
+          discardPile.value.push(card);
+          Audio.play('bust');
+          showToast(`💥 ${player.name} busted! (duplicate ${card.value})`);
+        } else {
+          player.hand.push({ ...card, flipped: true });
+          discardPile.value.push(card);
+          Audio.play(card.value >= 8 ? 'drawHigh' : 'draw');
+          checkFlip7(player);
+        }
+        advanceDealingPlayer();
+      }
+    }
+
+    function handleDealAction(card, target) {
+      if (card.type === 'modifier') {
+        // Modifier cards go straight into the player's hand during deal, no pause needed
+        target.hand.push({ ...card, flipped: true });
+        Audio.play(card.isMultiplier ? 'modifierX2' : 'modifier');
+        pendingActionCard.value = null;
+        advanceDealingPlayer();
+      } else if (card.special === 'freeze') {
+        Audio.play('freeze');
+        showToast(`❄️ Freeze card mid-deal! ${target.name} picks a target.`);
+        target.hand.push({ ...card, flipped: true });
+        const others = players.value.filter(p => p.id !== target.id && !p.busted);
+        if (others.length === 1) {
+          others[0].frozen = true;
+          others[0].frozenTurns = 2;
+          showToast(`❄️ ${others[0].name} is frozen!`);
+          pendingActionCard.value = null;
+          advanceDealingPlayer();
+        } else if (others.length === 0) {
+          pendingActionCard.value = null;
+          advanceDealingPlayer();
+        } else {
+          flipThreeData.value = { type: 'freeze', actingPlayer: target, cardsLeft: 0, isDeal: true };
+        }
+      } else if (card.special === 'flipthree') {
+        target.hand.push({ ...card, flipped: true });
+        const others = players.value.filter(p => p.id !== target.id && !p.busted && !p.frozen);
+        if (others.length === 0) {
+          showToast('No valid Flip Three targets!');
+          pendingActionCard.value = null;
+          advanceDealingPlayer();
+        } else if (others.length === 1) {
+          Audio.play('flipThree');
+          showToast(`×3 ${others[0].name} must flip 3!`);
+          flipThreeData.value = { type: 'flipthree', targetPlayerIdx: others[0].id, cardsLeft: 3, originalPlayerIdx: target.id, isDeal: true };
+        } else {
+          Audio.play('flipThree');
+          flipThreeData.value = { type: 'flipthree-pick', actingPlayer: target, possibleTargets: others, isDeal: true };
+        }
+      } else if (card.special === 'secondchance') {
+        // Second Chance: if this player busts later, they discard the duplicate and stay in
+        target.hand.push({ ...card, flipped: true });
+        target.hasSecondChance = true;
+        Audio.play('secondChance');
+        showToast(`🌟 ${target.name} has a Second Chance card!`);
+        pendingActionCard.value = null;
+        advanceDealingPlayer();
+      }
+    }
+
+    function advanceDealingPlayer() {
+      const n = players.value.length;
+      let next = (dealingPlayerIdx.value + 1) % n;
+      let loops = 0;
+      // Skip busted players during deal
+      while (players.value[next].busted && loops < n) { next = (next + 1) % n; loops++; }
+      // Check if we've gone all the way around back to dealer (or everyone dealt)
+      // Dealing ends when we've dealt to every non-busted player once
+      // Track by comparing to dealerIdx: we stop when next would wrap past the dealer
+      dealingPlayerIdx.value = next;
+      // Check if deal is complete: everyone has been dealt one card (or busted)
+      // Simple check: all non-busted players have ≥1 card
+      const allDealt = players.value.every(p => p.busted || p.hand.length >= 1);
+      if (allDealt) {
+        roundPhase.value = 'playing';
+        // First player to act is player after dealer
+        currentPlayerIdx.value = (dealerIdx.value + 1) % players.value.length;
+        // Advance past any already-done players
+        skipToActivePlayer();
+        showToast('Dealing done! Press your luck begins 🎲');
+      }
+    }
+
+    function skipToActivePlayer() {
+      let idx = currentPlayerIdx.value;
+      let tries = 0;
+      while ((players.value[idx].stopped || players.value[idx].busted) && tries < players.value.length) {
+        idx = (idx + 1) % players.value.length;
+        tries++;
+      }
+      currentPlayerIdx.value = idx;
+    }
+
+    // Check if player achieved Flip 7 (7 unique number cards)
+    function checkFlip7(player) {
+      if (uniqueNumberCount(player) === 7) {
+        Audio.play('flip7');
+        showToast(`🎉 FLIP 7! ${player.name} has all 7 unique numbers! +15 bonus!`);
+        fireConfetti();
+        player.flip7Bonus = true;
+        // End round immediately for everyone
+        players.value.forEach(p => { if (!p.busted) p.stopped = true; });
+        endRound(player);
+        return true;
+      }
+      return false;
+    }
+
+    // ── DRAW CARD (press-your-luck phase) ──
+    async function drawCard() {
+      if (isAnimating.value) return;
+      const player = flipThreeData.value && flipThreeData.value.type === 'flipthree'
+        ? players.value[flipThreeData.value.targetPlayerIdx]
+        : currentPlayer.value;
+
+      if (deck.value.length === 0) {
+        if (discardPile.value.length === 0) { showToast('No cards left!'); return; }
+        deck.value = shuffle(discardPile.value);
+        discardPile.value = [];
+        showToast('Deck reshuffled! 🔀');
+      }
+
+      isAnimating.value = true;
+      const card = deck.value.shift();
+      Audio.play('cardFlip');
+      lastDrawnCard.value = { ...card };
+      lastDrawnFlipping.value = true;
+
+      await nextTick();
+      setTimeout(async () => {
+        lastDrawnFlipping.value = false;
+        await nextTick();
+        setTimeout(() => {
+          processCard(card, player);
+          isAnimating.value = false;
+        }, 350);
+      }, 50);
+    }
+
+    function processCard(card, player) {
+      if (card.type === 'number') {
+        const hasDupe = player.hand.some(c => c.type === 'number' && c.value === card.value);
+        if (hasDupe) {
+          // Second Chance saves them
+          if (player.hasSecondChance) {
+            player.hasSecondChance = false;
+            const scIdx = player.hand.findIndex(c => c.special === 'secondchance');
+            if (scIdx !== -1) player.hand.splice(scIdx, 1);
+            discardPile.value.push(card);
+            Audio.play('secondChanceSaved');
+            showToast(`🌟 ${player.name} used Second Chance! Duplicate ${card.value} discarded.`);
+            // Flip three countdown
+            if (flipThreeData.value && flipThreeData.value.type === 'flipthree') {
+              flipThreeData.value.cardsLeft--;
+              if (flipThreeData.value.cardsLeft <= 0) { flipThreeData.value = null; nextTurn(); }
+            }
+            return;
+          }
+          player.busted = true;
+          player.hand.push({ ...card, flipped: true });
+          discardPile.value.push(card);
+          Audio.play('bust');
+          showToast(`💥 ${player.name} busted! (duplicate ${card.value})`);
+          advanceAfterCard(player);
+          return;
+        }
+        player.hand.push({ ...card, flipped: true });
+        discardPile.value.push(card);
+        Audio.play(card.value >= 8 ? 'drawHigh' : 'draw');
+        if (checkFlip7(player)) return;
+        if (flipThreeData.value && flipThreeData.value.type === 'flipthree') {
+          flipThreeData.value.cardsLeft--;
+          if (flipThreeData.value.cardsLeft <= 0) {
+            flipThreeData.value = null;
+            nextTurn();
+          }
+          return;
+        }
+        // Normal draw — stay on player's turn
+      } else {
+        // Action or modifier card
+        discardPile.value.push(card);
+        handleSpecial(card, player);
+      }
+    }
+
+    function handleSpecial(card, player) {
+      if (card.type === 'modifier') {
+        player.hand.push({ ...card, flipped: true });
+        Audio.play(card.isMultiplier ? 'modifierX2' : 'modifier');
+        showToast(`🟠 ${player.name} gets a ${card.label} modifier!`);
+      } else if (card.special === 'freeze') {
+        Audio.play('freeze');
+        showToast(`❄️ Freeze card! ${player.name} picks a target.`);
+        player.hand.push({ ...card, flipped: true });
+        const others = players.value.filter(p => p.id !== player.id && !p.busted && !p.stopped);
+        if (others.length === 1) {
+          others[0].frozen = true;
+          others[0].frozenTurns = 2;
+          showToast(`❄️ ${others[0].name} is frozen for 2 turns!`);
+          advanceAfterCard(player);
+        } else if (others.length === 0) {
+          advanceAfterCard(player);
+        } else {
+          flipThreeData.value = { type: 'freeze', actingPlayer: player, cardsLeft: 0 };
+        }
+      } else if (card.special === 'flipthree') {
+        player.hand.push({ ...card, flipped: true });
+        const others = players.value.filter(p => p.id !== player.id && !p.busted && !p.stopped && !p.frozen);
+        if (others.length === 0) {
+          showToast('No valid targets for Flip Three!');
+          advanceAfterCard(player);
+          return;
+        }
+        Audio.play('flipThree');
+        if (others.length === 1) {
+          showToast(`×3 ${others[0].name} must flip 3 cards!`);
+          flipThreeData.value = { type: 'flipthree', targetPlayerIdx: others[0].id, cardsLeft: 3, originalPlayerIdx: player.id };
+        } else {
+          flipThreeData.value = { type: 'flipthree-pick', actingPlayer: player, possibleTargets: others };
+        }
+      } else if (card.special === 'secondchance') {
+        player.hand.push({ ...card, flipped: true });
+        player.hasSecondChance = true;
+        Audio.play('secondChance');
+        showToast(`🌟 ${player.name} has a Second Chance! One bust forgiven.`);
+      }
+    }
+
+    function pickFreezeTarget(targetPlayer) {
+      targetPlayer.frozen = true;
+      targetPlayer.frozenTurns = 2;
+      showToast(`❄️ ${targetPlayer.name} is frozen for 2 turns!`);
+      const isDeal = flipThreeData.value && flipThreeData.value.isDeal;
+      const actingPlayer = flipThreeData.value.actingPlayer;
+      flipThreeData.value = null;
+      pendingActionCard.value = null;
+      if (isDeal) { advanceDealingPlayer(); } else { advanceAfterCard(actingPlayer); }
+    }
+
+    function pickFlipThreeTarget(targetPlayer) {
+      const acting = flipThreeData.value.actingPlayer;
+      const isDeal = flipThreeData.value.isDeal;
+      showToast(`×3 ${targetPlayer.name} must flip 3 cards!`);
+      flipThreeData.value = { type: 'flipthree', targetPlayerIdx: targetPlayer.id, cardsLeft: 3, originalPlayerIdx: acting.id, isDeal };
+    }
+
+    function advanceAfterCard(player) {
+      if (flipThreeData.value && flipThreeData.value.type === 'flipthree') return; // handled elsewhere
+      nextTurn();
+    }
+
+    function stopTurn() {
+      if (isAnimating.value) return;
+      Audio.play('stop');
+      currentPlayer.value.stopped = true;
+      showToast(`✋ ${currentPlayer.value.name} stops!`);
+      nextTurn();
+    }
+
+    function nextTurn() {
+      flipThreeData.value = null;
+      const stillPlaying = players.value.filter(p => !p.stopped && !p.busted);
+      if (stillPlaying.length === 0) {
+        endRound();
+        return;
+      }
+      let idx = (currentPlayerIdx.value + 1) % players.value.length;
+      let tries = 0;
+      while ((players.value[idx].stopped || players.value[idx].busted) && tries < players.value.length) {
+        idx = (idx + 1) % players.value.length;
+        tries++;
+      }
+      // Land on this player — even if frozen, we stop here so they can press "Skip Turn"
+      currentPlayerIdx.value = idx;
+      lastDrawnCard.value = null;
+    }
+
+    // Called by the frozen player to skip their turn
+    function skipFrozenTurn() {
+      const p = currentPlayer.value;
+      if (!p || !p.frozen) return;
+      p.frozenTurns--;
+      if (p.frozenTurns <= 0) p.frozen = false;
+      Audio.play('skipFrozen');
+      showToast(`❄️ ${p.name} skips their frozen turn!`);
+      nextTurn();
+    }
+
+    function endRound(flip7Player = null) {
+      roundPhase.value = 'summary';
+      const rows = players.value.map(p => {
+        const total = handTotal(p);
+        let earned = 0;
+        let status = '';
+        if (p.busted) {
+          status = 'Busted! (duplicate)'; earned = 0;
+        } else {
+          earned = total;
+          if (p.flip7Bonus) {
+            earned += 15;
+            status = `Flip 7 Bonus! ${total} + 15 = ${earned}`;
+          } else {
+            status = p.stopped ? `Stopped — scored ${total}` : `In play — scored ${total}`;
+          }
+        }
+        return { player: p, handTotal: total, earned, status };
+      });
+
+      // Apply scores
+      rows.forEach(r => { r.player.totalScore += r.earned; r.player.flip7Bonus = false; });
+
+      const winners = players.value.filter(p => p.totalScore >= WIN_SCORE);
+      summaryData.value = { rows, roundNum: round.value, flip7Player };
+
+      if (winners.length > 0) {
+        const champion = winners.reduce((a, b) => a.totalScore > b.totalScore ? a : b);
+        gameOverData.value = { champion, players: [...players.value].sort((a,b) => b.totalScore - a.totalScore) };
+        Audio.play('gameOver');
+        fireConfetti();
+      } else {
+        Audio.play('roundEnd');
+      }
+
+      showingSummary.value = true;
+    }
+
+    function continueSummary() {
+      showingSummary.value = false;
+      if (gameOverData.value) {
+        screen.value = 'gameover';
+        return;
+      }
+      round.value++;
+      resetRound();
+    }
+
+    function playerStatus(p) {
+      if (p.busted) return 'busted';
+      if (p.frozen) return 'frozen';
+      if (p.stopped) return 'stopped';
+      if (p.id === currentPlayerIdx.value) return 'active';
+      return null;
+    }
+
+    const isFlipThreePickTarget = computed(() =>
+      flipThreeData.value && flipThreeData.value.type === 'flipthree-pick'
+    );
+    const isFreezePickTarget = computed(() =>
+      flipThreeData.value && flipThreeData.value.type === 'freeze'
+    );
+    const isFlipThreeForceFlip = computed(() =>
+      flipThreeData.value && flipThreeData.value.type === 'flipthree'
+    );
+
+    const canFlip = computed(() => {
+      if (isAnimating.value) return false;
+      if (isFlipThreePickTarget.value || isFreezePickTarget.value) return false;
+      if (roundPhase.value === 'dealing') return !pendingActionCard.value;
+      if (isFlipThreeForceFlip.value) return true;
+      const p = currentPlayer.value;
+      if (!p || p.stopped || p.busted || p.frozen) return false;
+      return true;
+    });
+
+    const canStop = computed(() => {
+      if (isAnimating.value) return false;
+      if (roundPhase.value === 'dealing') return false;
+      if (isFlipThreePickTarget.value || isFreezePickTarget.value || isFlipThreeForceFlip.value) return false;
+      const p = currentPlayer.value;
+      if (!p || p.stopped || p.busted || p.frozen) return false;
+      return true;
+    });
+
+    const canSkipFrozen = computed(() => {
+      if (roundPhase.value !== 'playing') return false;
+      if (isAnimating.value) return false;
+      const p = currentPlayer.value;
+      return p && p.frozen && !p.stopped && !p.busted;
+    });
+
+    const turnInstructions = computed(() => {
+      if (roundPhase.value === 'dealing') {
+        if (pendingActionCard.value) return `Action card mid-deal — resolving...`;
+        const name = players.value[dealingPlayerIdx.value]?.name;
+        return `Dealing to ${name}... (${players.value[dealerIdx.value].name} is dealer)`;
+      }
+      if (isFlipThreePickTarget.value) return `${flipThreeData.value.actingPlayer.name} played Flip Three — pick a target!`;
+      if (isFreezePickTarget.value) return `${flipThreeData.value.actingPlayer.name} played Freeze — pick a target!`;
+      if (isFlipThreeForceFlip.value) {
+        const t = players.value[flipThreeData.value.targetPlayerIdx];
+        return `${t.name} must flip ${flipThreeData.value.cardsLeft} more card(s)!`;
+      }
+      const p = currentPlayer.value;
+      if (!p) return '';
+      if (p.frozen) return `${p.name} is frozen ❄️ — ${p.frozenTurns} turn(s) remaining. Press Skip to pass.`;
+      return `${p.name}'s turn — Flip a card or Stop`;
+    });
+
+    const activePlayerName = computed(() => {
+      if (roundPhase.value === 'dealing') return players.value[dealerIdx.value]?.name + ' (Dealer)';
+      if (isFlipThreeForceFlip.value) return players.value[flipThreeData.value.targetPlayerIdx]?.name;
+      if (isFlipThreePickTarget.value) return flipThreeData.value.actingPlayer?.name;
+      if (isFreezePickTarget.value) return flipThreeData.value.actingPlayer?.name;
+      return currentPlayer.value?.name;
+    });
+
+    const isMuted = ref(false);
+    function toggleMute() { Audio.toggleMute(); isMuted.value = Audio.muted; Audio.play('click'); }
+
+    function addPlayer() { if (playerCount.value < 5) playerCount.value++; }
+    function removePlayer() { if (playerCount.value > 2) playerCount.value--; }
+
+    return {
+      screen, playerCount, playerNames, players,
+      currentPlayerIdx, dealerIdx, round, roundPhase, showingSummary, summaryData, gameOverData,
+      lastDrawnCard, lastDrawnFlipping, toast, flipThreeData, pendingActionCard,
+      showConfetti, confettiPieces, isAnimating, isMuted,
+      isFlipThreePickTarget, isFreezePickTarget, isFlipThreeForceFlip,
+      canFlip, canStop, canSkipFrozen, turnInstructions, activePlayerName,
+      deckRemaining, WIN_SCORE,
+      cardClass, cardMain, cardLabel, cardCorner, handTotal, uniqueNumberCount, playerStatus,
+      startGame, drawCard, dealNextCard, stopTurn, skipFrozenTurn, continueSummary,
+      toggleMute, addPlayer, removePlayer,
+      pickFreezeTarget, pickFlipThreeTarget,
+      resetAll() { screen.value = 'title'; },
+    };
+  },
+
+  template: `
+    <div class="stars"></div>
+
+    <!-- CONFETTI -->
+    <div v-if="showConfetti" class="confetti-container">
+      <div v-for="p in confettiPieces" :key="p.id" class="confetti-piece" :style="{
+        left: p.left + '%', top: '-20px',
+        width: p.size + 'px', height: p.size + 'px',
+        background: p.color,
+        transform: 'rotate(' + p.rotate + 'deg)',
+        animationDuration: p.duration + 's',
+        animationDelay: p.delay + 's',
+      }"></div>
+    </div>
+
+    <!-- TOAST -->
+    <div v-if="toast" class="event-toast">
+      <div class="toast-inner">{{ toast }}</div>
+    </div>
+
+    <!-- ── TITLE SCREEN ── -->
+    <div v-if="screen === 'title'" class="title-screen">
+      <div class="title-logo">Flip 7</div>
+      <div class="title-subtitle">The Card Game of Risky Math</div>
+
+      <div class="title-cards-preview">
+        <div v-for="n in [0,2,4,6,8,10,12]" :key="n" class="preview-card">{{ n }}</div>
+      </div>
+
+      <!-- Player count + names -->
+      <div class="player-setup">
+        <div class="setup-label">Players</div>
+        <div class="player-count-control">
+          <button class="count-btn" @click="removePlayer">−</button>
+          <span class="count-label">{{ playerCount }} Players</span>
+          <button class="count-btn" @click="addPlayer">+</button>
+        </div>
+        <div class="player-inputs">
+          <div v-for="i in playerCount" :key="i" class="player-input-row">
+            <div class="player-color-dot" :style="{ background: ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff9ff3'][i-1] }"></div>
+            <input :placeholder="['Alice','Bob','Carol','Dave','Eve'][i-1]" v-model="playerNames[i-1]" maxlength="16" />
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" @click="startGame">Let's Play! 🃏</button>
+
+      <div class="rules-box">
+        <div class="rules-title">📋 How to Play</div>
+        The <strong>Dealer</strong> deals one card face-up to each player. If an <strong>Action or Modifier card</strong> appears mid-deal, pause and resolve it, then continue dealing.
+        <br><br>
+        After dealing, take turns <strong>Flipping</strong> more cards or <strong>Stopping</strong>. Score the <strong>total value</strong> of your number cards (modified by any Modifier cards). Draw a <strong>duplicate number</strong> and you <strong>bust</strong>, scoring 0.
+        <br><br>
+        Collect all <strong>7 unique number cards</strong> (any seven different values 0–12) to trigger <strong>Flip 7</strong> — round ends immediately, you earn <strong>+15 bonus!</strong> Modifiers and Actions don't count toward the 7-card bonus.
+        <br><br>
+        <strong>🟠 Score Modifiers:</strong> +2, +4, +6, +8, +10 (add to score) · ×2 (doubles your score)<br>
+        <strong>Action cards:</strong> ❄️ Freeze (skip someone 2 turns, press <em>Skip Turn</em> when frozen) · ×3 Flip Three (someone draws 3) · 🌟 Second Chance (survive one bust)<br><br>
+        <strong>Deck: 94 cards</strong> — numbers 0–12 (N copies of each N), 6 modifiers, 9 actions. First to <strong>200 points</strong> wins!
+      </div>
+    </div>
+
+    <!-- ── GAME SCREEN ── -->
+    <div v-if="screen === 'game'" class="game-screen">
+
+      <!-- Header -->
+      <div class="game-header">
+        <div class="game-logo-sm">Flip 7</div>
+        <div class="round-badge">Round {{ round }}</div>
+        <div class="deck-info">Deck: <span>{{ deckRemaining }}</span></div>
+        <button class="btn-sm" @click="toggleMute" style="font-size:16px; padding: 6px 12px;">{{ isMuted ? '🔇' : '🔊' }}</button>
+        <button class="btn-sm" @click="resetAll">✕ Quit</button>
+      </div>
+
+      <!-- Score bar -->
+      <div class="score-bar">
+        <div v-for="(p, i) in players" :key="p.id" class="score-chip"
+          :class="{ 'active-player': i === currentPlayerIdx && !showingSummary, 'busted': p.busted, 'frozen': p.frozen }">
+          <div class="score-chip-dot" :style="{ background: p.color }"></div>
+          <div>
+            <div class="score-chip-name">{{ p.name }}</div>
+            <div class="score-progress">
+              <div class="score-progress-fill" :style="{ width: Math.min(100, p.totalScore / WIN_SCORE * 100) + '%', background: p.color }"></div>
+            </div>
+          </div>
+          <div class="score-chip-pts">{{ p.totalScore }}</div>
+        </div>
+      </div>
+
+      <!-- Turn panel -->
+      <div class="turn-panel">
+        <div class="turn-info">
+          <div class="turn-whose">{{ activePlayerName }}</div>
+          <div class="turn-sub">{{ turnInstructions }}</div>
+        </div>
+        <div class="turn-actions">
+          <template v-if="canSkipFrozen">
+            <button class="btn-skip" @click="skipFrozenTurn">❄️ Skip Turn</button>
+          </template>
+          <template v-else>
+            <button v-if="roundPhase === 'dealing'" class="btn-flip" :disabled="!canFlip" @click="dealNextCard">🃏 Deal</button>
+            <button v-else class="btn-flip" :disabled="!canFlip" @click="drawCard">🃏 Flip</button>
+            <button class="btn-stop" :disabled="!canStop" @click="stopTurn">✋ Stop</button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Last drawn card display -->
+      <div v-if="lastDrawnCard" class="deck-area">
+        <div class="last-drawn-card">
+          <div :class="cardClass(lastDrawnCard) + (lastDrawnFlipping ? '' : ' is-flipping card-already-flipped')">
+            <div class="card-inner">
+              <div class="card-back">🃏</div>
+              <div class="card-front">
+                <div class="card-corner tl">{{ cardCorner(lastDrawnCard) }}</div>
+                <div class="card-main">{{ cardMain(lastDrawnCard) }}</div>
+                <div v-if="cardLabel(lastDrawnCard)" class="card-label">{{ cardLabel(lastDrawnCard) }}</div>
+                <div class="card-corner br">{{ cardCorner(lastDrawnCard) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player hands -->
+      <div v-for="(p, i) in players" :key="p.id" class="player-hand-area"
+        :class="{ active: i === currentPlayerIdx }">
+        <div class="player-hand-header">
+          <div class="player-hand-name" :style="{ color: p.color }">{{ p.name }}</div>
+          <span v-if="playerStatus(p)" class="status-tag" :class="playerStatus(p)">
+            {{ playerStatus(p) === 'active' ? '▶ Your Turn' : playerStatus(p) }}
+          </span>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+            <div style="font-size:12px; color: var(--text-muted); font-weight:800;">
+              {{ uniqueNumberCount(p) }}<span style="opacity:0.5">/7 unique</span>
+            </div>
+            <div class="player-hand-total"
+              :class="{ busted: p.busted, has7: uniqueNumberCount(p) === 7 && !p.busted }">
+              {{ handTotal(p) }} pts
+            </div>
+          </div>
+        </div>
+        <div class="hand-cards">
+          <div v-if="p.hand.length === 0" style="color: rgba(255,255,255,0.25); font-size:13px; padding: 4px;">No cards yet</div>
+          <div v-for="card in p.hand" :key="card.id" class="hand-card">
+            <div :class="cardClass(card) + ' is-flipping card-already-flipped'" style="transform-origin: bottom center;">
+              <div class="card-inner">
+                <div class="card-back">🃏</div>
+                <div class="card-front">
+                  <div class="card-corner tl">{{ cardCorner(card) }}</div>
+                  <div class="card-main">{{ cardMain(card) }}</div>
+                  <div v-if="cardLabel(card)" class="card-label">{{ cardLabel(card) }}</div>
+                  <div class="card-corner br">{{ cardCorner(card) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FREEZE TARGET PICKER ── -->
+    <div v-if="isFreezePickTarget" class="flipthree-overlay">
+      <div class="flipthree-panel">
+        <div class="flipthree-title">❄️ Freeze!</div>
+        <div class="flipthree-sub">Pick a player to freeze for 2 turns:</div>
+        <div class="target-list">
+          <button v-for="t in flipThreeData.actingPlayer && players.filter(p =>
+              p.id !== flipThreeData.actingPlayer.id && !p.busted && !p.stopped)"
+            :key="t.id" class="target-btn" @click="pickFreezeTarget(t)">
+            <div class="target-dot" :style="{ background: t.color }"></div>
+            {{ t.name }} ({{ handTotal(t) }} pts in hand)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FLIP THREE TARGET PICKER ── -->
+    <div v-if="isFlipThreePickTarget" class="flipthree-overlay">
+      <div class="flipthree-panel">
+        <div class="flipthree-title">×3 Flip Three!</div>
+        <div class="flipthree-sub">Pick a player to flip 3 cards:</div>
+        <div class="target-list">
+          <button v-for="t in flipThreeData.possibleTargets" :key="t.id"
+            class="target-btn" @click="pickFlipThreeTarget(t)">
+            <div class="target-dot" :style="{ background: t.color }"></div>
+            {{ t.name }} ({{ handTotal(t) }} pts in hand)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ROUND SUMMARY ── -->
+    <div v-if="showingSummary && summaryData" class="round-summary-overlay">
+      <div class="round-summary-panel">
+        <div class="summary-title">Round {{ summaryData.roundNum }} Over!</div>
+        <div class="summary-subtitle">Scores for this round</div>
+        <div class="summary-rows">
+          <div v-for="r in summaryData.rows" :key="r.player.id" class="summary-row"
+            :class="{ 'winner-row': r.earned === Math.max(...summaryData.rows.map(x=>x.earned)) && r.earned > 0 }">
+            <div class="summary-dot" :style="{ background: r.player.color }"></div>
+            <div>
+              <div class="summary-name">{{ r.player.name }}</div>
+              <div class="summary-detail">{{ r.status }}</div>
+            </div>
+            <div class="summary-pts">
+              {{ r.player.totalScore }}
+              <span class="pts-delta" :class="{ zero: r.earned === 0 }">+{{ r.earned }}</span>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center">
+          <button class="btn-next" @click="continueSummary">
+            {{ gameOverData ? '🏆 See Winner' : 'Next Round →' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GAME OVER ── -->
+    <div v-if="screen === 'gameover' && gameOverData" class="gameover-overlay">
+      <div class="gameover-panel">
+        <span class="gameover-trophy">🏆</span>
+        <div class="gameover-winner" :style="{ color: gameOverData.champion.color }">
+          {{ gameOverData.champion.name }} Wins!
+        </div>
+        <div class="gameover-sub">with {{ gameOverData.champion.totalScore }} points</div>
+        <div class="gameover-final summary-rows">
+          <div v-for="(p, i) in gameOverData.players" :key="p.id" class="summary-row"
+            :class="{ 'winner-row': i === 0 }">
+            <div style="font-family:'Fredoka One',cursive; font-size:18px; width:28px; color: var(--text-muted)">{{ i+1 }}.</div>
+            <div class="summary-dot" :style="{ background: p.color }"></div>
+            <div class="summary-name">{{ p.name }}</div>
+            <div class="summary-pts" style="margin-left:auto">{{ p.totalScore }}</div>
+          </div>
+        </div>
+        <button class="btn-primary" @click="resetAll" style="width:100%">Play Again 🃏</button>
+      </div>
+    </div>
+  `
+};
+
+createApp(App).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #app {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: #F5F1EA;
+  -webkit-font-smoothing: antialiased;
+}

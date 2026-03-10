@@ -6,6 +6,7 @@ css/.DS_Store
 fonts/.DS_Store
 img/.DS_Store
 js/.DS_Store
+node_modules/
 node_modules/.DS_Store
 node_modules/@jridgewell/.DS_Store
 node_modules/@nodelib/.DS_Store
