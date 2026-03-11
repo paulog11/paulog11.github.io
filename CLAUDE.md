@@ -24,8 +24,9 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 ## Adding a New App Card
 Add an entry to the `apps` array in `App.vue`:
 ```js
-{ id: 'my-app', title: 'My App', subtitle: 'Description', description: '...', tags: ['Tag'], icon: 'emoji', url: './projects/my-app/', comingSoon: false }
+{ id: 'my-app', title: 'My App', subtitle: 'Description', description: '...', tags: ['Tag'], icon: 'emoji', url: './projects/my-app/dist/index.html', comingSoon: false }
 ```
+Card URLs should point to `./projects/<name>/dist/index.html` (relative paths for GitHub Pages).
 
 ## Subprojects
 - `projects/algo-lab/` — algorithm simulation lab ([CLAUDE.md](projects/algo-lab/CLAUDE.md))

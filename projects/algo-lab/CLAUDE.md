@@ -1,6 +1,6 @@
 # Algo Lab
 
-Canvas-based algorithm simulation lab with 4 tabbed visualizations.
+Canvas-based algorithm simulation lab with 5 tabbed visualizations.
 
 ## Tech Stack
 - Vue 3 (Composition API), Vite 5, HTML5 Canvas 2D
@@ -14,6 +14,7 @@ Canvas-based algorithm simulation lab with 4 tabbed visualizations.
 | Boids | `--accent-boids` #7eb8f7 | Flocking algorithm + Shinjuku Station B1F pedestrian mode |
 | N-Body | `--accent-nbody` #f7a96e | Gravitational simulation, click to add bodies, presets (Figure-8, Orbit) |
 | Trisolaris | `--accent-tri` #e8c87a | Three-body problem narrative from Liu Cixin's novel, 5 event scenarios |
+| Droplet | `--accent-droplet` #7af0f0 | Droplet Attack from "The Dark Forest", 5 phase narrative, fleet destruction |
 | Big Bang | `--accent-bang` #c084fc | Universe fine-tuning explorer, 10 physical constants, 10 outcomes |
 
 ## Key Files
@@ -21,7 +22,7 @@ Canvas-based algorithm simulation lab with 4 tabbed visualizations.
 - `src/styles/global.css` — theme, accent colors, controls bar, info badge, cursor
 - `src/composables/useRK4.js` — shared RK4 physics integrator + `hexToRgb` utility
 - `src/components/simulations/` — one Vue component per simulation
-- Helper subdirectories: `boids/station.js`, `trisolaris/events.js`, `bigbang/constants.js`
+- Helper subdirectories: `boids/station.js`, `trisolaris/events.js`, `droplet/events.js`, `droplet/fleet.js`, `bigbang/constants.js`
 
 ## Commands
 - `npm run dev` — local dev server

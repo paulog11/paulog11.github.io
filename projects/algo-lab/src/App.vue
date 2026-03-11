@@ -28,6 +28,7 @@
       <BoidsSimulation   v-if="activeTab === 'boids'"      :mouse="mouse" />
       <NBodySimulation   v-if="activeTab === 'nbody'"      />
       <TrisolarisSimulation v-if="activeTab === 'trisolaris'" />
+      <DropletSimulation  v-if="activeTab === 'droplet'"     />
       <BigBangSimulation v-if="activeTab === 'bigbang'"    />
     </div>
   </div>
@@ -39,11 +40,13 @@ import BoidsSimulation     from './components/simulations/BoidsSimulation.vue'
 import NBodySimulation     from './components/simulations/NBodySimulation.vue'
 import TrisolarisSimulation from './components/simulations/TrisolarisSimulation.vue'
 import BigBangSimulation   from './components/simulations/BigBangSimulation.vue'
+import DropletSimulation   from './components/simulations/DropletSimulation.vue'
 
 const tabs = [
   { id: 'boids',      label: 'Boids',      color: 'var(--accent-boids)' },
   { id: 'nbody',      label: 'N-Body',     color: 'var(--accent-nbody)' },
   { id: 'trisolaris', label: 'Trisolaris', color: 'var(--accent-tri)'   },
+  { id: 'droplet',    label: 'Droplet',    color: 'var(--accent-droplet)' },
   { id: 'bigbang',    label: 'Big Bang',   color: 'var(--accent-bang)'  },
 ]
 
