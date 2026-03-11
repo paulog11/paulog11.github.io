@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "cp index.source.html index.html",
     "dev": "vite",
+    "prebuild": "cp index.source.html index.html",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && rm -f assets/index-*.js assets/index-*.css && cp dist/assets/* assets/ && cp dist/index.html ."
+    "deploy": "cp index.source.html index.html && vite build && rm -f assets/index-*.js assets/index-*.css && cp dist/assets/* assets/ && cp dist/index.html index.html"
   },
   "dependencies": {
     "vue": "^3.5.0"

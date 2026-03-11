@@ -11,6 +11,8 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 - `App.vue` — main landing page, contains `apps` array defining all card entries
 - `components/AppCard.vue` — reusable card component (icon, title, tags, coming-soon state)
 - `main.js` / `style.css` — Vue entry point and global Tailwind styles
+- `index.source.html` — permanent Vite entry template (references `./main.js`); never overwritten by deploy
+- `index.html` — at rest this is the built output for GitHub Pages; `predev`/`prebuild` hooks restore it from `index.source.html` before Vite runs
 - `vite.config.js` — Vite config with `base: './'`
 - `tailwind.config.js` — custom theme (ink/parchment/warm/muted/accent colors, fade-up animation)
 
@@ -19,7 +21,9 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 - `npm run deploy` — build + copy dist output to root for GitHub Pages
 
 ## Deploy Workflow
-`npm run deploy` does: `vite build` → clean old hashed assets → copy `dist/assets/*` to `assets/` → copy `dist/index.html` to root. Built assets are committed to git (no CI build step). Always use relative paths.
+`npm run deploy` does: restore `index.source.html` → `vite build` → clean old hashed assets → copy `dist/assets/*` to `assets/` → copy `dist/index.html` to root. Built assets are committed to git (no CI build step). Always use relative paths.
+
+**Important:** `index.source.html` is the canonical Vite entry. The `predev`/`prebuild`/`deploy` scripts all restore `index.html` from it before Vite runs. Do NOT manually edit `index.html` — edit `index.source.html` instead.
 
 ## Adding a New App Card
 Add an entry to the `apps` array in `App.vue`:
