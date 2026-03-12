@@ -47,7 +47,12 @@
 
       <!-- Bottom bar -->
       <div class="bb-bottom-bar">
-        <button class="ctrl-btn" @click="bigBang">⟳ Big Bang</button>
+        <div class="bb-view-toggle">
+          <button class="bb-view-btn" :class="{ active: activeView === 'atom' }" @click="switchView('atom')">Atom</button>
+          <button class="bb-view-btn" :class="{ active: activeView === 'celestial' }" @click="switchView('celestial')">Celestial</button>
+        </div>
+        <div class="bb-divider"></div>
+        <button class="ctrl-btn" @click="resetSim">⟳ {{ activeView === 'atom' ? 'Big Bang' : 'Seed Universe' }}</button>
         <div class="bb-divider"></div>
         <div class="bb-zoom-controls">
           <button class="bb-zoom-btn" @click="zoom(-0.25)">−</button>
@@ -73,6 +78,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS } from './bigbang/constants.js'
+import { createCelestialField, celestialPhysicsStep, drawCelestialBodies } from './bigbang/celestial.js'
 
 const canvasEl  = ref(null)
 const canvasWrap = ref(null)
@@ -83,8 +89,11 @@ const constValues = reactive(Object.fromEntries(BB_CONSTANTS.map(c => [c.id, 0])
 const zoomLevel   = ref(1.0)
 const bbTime      = ref(0)
 const bbPhase     = ref('bang')
+const activeView  = ref('atom')
 let   particles   = []
+let   celestialBodies = []
 let   stars       = []
+let   celestialTime = 0
 
 // ── COMPUTED ──────────────────────────────────────────────
 const outcomeKey = computed(() => {
@@ -109,17 +118,36 @@ const tuningLabel = computed(() => {
 })
 
 const epochLabel = computed(() => {
+  if (activeView.value === 'celestial') return 'Cosmic Structure Formation'
   const ep = EPOCHS.find(([s,e]) => bbTime.value >= s && bbTime.value < e)
   return ep ? ep[2] : 'Structure Formation'
 })
 
+// ── VIEW SWITCHING ───────────────────────────────────────
+function switchView(view) {
+  activeView.value = view
+  if (view === 'celestial') {
+    celestialBodies = createCelestialField(W, H, constValues)
+    celestialTime = 0
+  }
+}
+
+function resetSim() {
+  if (activeView.value === 'atom') {
+    bigBang()
+  } else {
+    celestialBodies = createCelestialField(W, H, constValues)
+    celestialTime = 0
+  }
+}
+
 // ── CONSTANT CONTROLS ─────────────────────────────────────
 function onConstChange(id, val) {
   constValues[id] = val
-  bigBang()
+  resetSim()
 }
-function resetConst(id) { constValues[id] = 0; bigBang() }
-function resetAll()     { BB_CONSTANTS.forEach(c => { constValues[c.id] = 0 }); bigBang() }
+function resetConst(id) { constValues[id] = 0; resetSim() }
+function resetAll()     { BB_CONSTANTS.forEach(c => { constValues[c.id] = 0 }); resetSim() }
 
 function formatDev(v)      { return (v >= 0 ? '+' : '') + v.toFixed(1) }
 function deviationClass(v) {
@@ -316,13 +344,29 @@ function loop() {
   animId = requestAnimationFrame(loop)
   ctx.fillStyle='rgba(3,2,10,0.4)'; ctx.fillRect(0,0,W,H)
   drawBG()
-  for (let s=0;s<3;s++) physicsStep(0.004/3)
-  drawOutcomeViz(); drawFlash()
-  ctx.save()
-  ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
-  for (const p of particles) drawParticle(p)
-  ctx.restore()
-  if (particles.length===0) bigBang()
+
+  if (activeView.value === 'atom') {
+    for (let s=0;s<3;s++) physicsStep(0.004/3)
+    drawOutcomeViz(); drawFlash()
+    ctx.save()
+    ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
+    for (const p of particles) drawParticle(p)
+    ctx.restore()
+    if (particles.length===0) bigBang()
+  } else {
+    const dt = 0.016
+    celestialTime += dt
+    celestialBodies = celestialPhysicsStep(celestialBodies, dt, constValues, W, H)
+    drawOutcomeViz()
+    ctx.save()
+    ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
+    drawCelestialBodies(ctx, celestialBodies, W, H, zoomLevel.value, celestialTime)
+    ctx.restore()
+    if (celestialBodies.length === 0) {
+      celestialBodies = createCelestialField(W, H, constValues)
+      celestialTime = 0
+    }
+  }
 }
 
 function resize() {
@@ -452,6 +496,14 @@ canvas { display: block; width: 100%; height: 100%; }
   background: rgba(7,8,15,0.75); border: 1px solid rgba(192,132,252,0.1);
   border-radius: 12px; padding: 10px 16px; backdrop-filter: blur(12px);
 }
+.bb-view-toggle { display:flex; gap:0; border:1px solid rgba(192,132,252,0.15); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.bb-view-btn {
+  font-family: 'Space Mono',monospace; font-size: 8px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 6px 12px; background: none; border: none;
+  color: rgba(255,255,255,0.3); cursor: none; transition: all 0.2s; outline: none;
+}
+.bb-view-btn.active { background: rgba(192,132,252,0.12); color: var(--accent-bang); }
+.bb-view-btn:hover:not(.active) { color: rgba(255,255,255,0.5); }
 .bb-divider { width:1px; height:20px; background:rgba(192,132,252,0.1); flex-shrink:0; }
 .bb-zoom-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 .bb-zoom-btn {
