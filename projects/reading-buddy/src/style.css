@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-forest-950 text-silver-200 font-body antialiased;
+    margin: 0;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-forest-950;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-forest-700 rounded-full;
+  }
+}

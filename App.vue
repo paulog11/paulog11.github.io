@@ -115,6 +115,16 @@ const apps = ref([
     url: './projects/ported-games/flip7/dist/index.html',
     comingSoon: false,
   },
+  {
+    id: 'reading-buddy',
+    title: 'Reading Buddy',
+    subtitle: 'Book Companion',
+    description: 'Track your reading with progressive character reveals and chapter-by-chapter companion guides.',
+    tags: ['Reading', 'Literature'],
+    icon: '📚',
+    url: './projects/reading-buddy/dist/index.html',
+    comingSoon: false,
+  },
 ])
 
 function handleSelect(app) {
