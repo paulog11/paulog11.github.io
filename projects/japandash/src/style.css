@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Noto Sans JP', 'DM Sans', system-ui, sans-serif;
+    background-color: #F7F3EC;
+    color: #2C2C2C;
+  }
+
+  /* Ruby (furigana) styling */
+  ruby rt {
+    font-size: 0.55em;
+    color: #8A8580;
+  }
+}

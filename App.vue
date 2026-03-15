@@ -92,8 +92,8 @@ const apps = ref([
     description: 'Track your Japanese progress across kanji, grammar, and vocabulary in one place.',
     tags: ['Language', 'Analytics'],
     icon: '日',
-    url: null,
-    comingSoon: true,
+    url: './projects/japandash/dist/index.html',
+    comingSoon: false,
   },
   {
     id: 'algo-lab',
