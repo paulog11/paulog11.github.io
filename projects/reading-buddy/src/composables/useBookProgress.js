@@ -139,6 +139,28 @@ export function useBookProgress(book) {
     return visibleCharacterKeys.value.map((key) => getCharacterProfile(key))
   })
 
+  // Timeline data for the three brothers
+  const brothersTimeline = computed(() => {
+    const result = { dmitri: [], ivan: [], alyosha: [] }
+    for (const chapter of allChapters.value) {
+      if (!unlockedChapterIds.value.has(chapter.id)) continue
+      for (const brotherKey of ['dmitri', 'ivan', 'alyosha']) {
+        const details = chapter.characterDetails[brotherKey]
+        if (details?.timeline) {
+          for (const entry of details.timeline) {
+            result[brotherKey].push({ ...entry, chapterId: chapter.id })
+          }
+        }
+      }
+    }
+    return result
+  })
+
+  // Flat list of unlocked chapters (for timeline rendering)
+  const unlockedChaptersFlat = computed(() => {
+    return allChapters.value.filter((c) => unlockedChapterIds.value.has(c.id))
+  })
+
   return {
     book,
     allChapters,
@@ -149,5 +171,7 @@ export function useBookProgress(book) {
     progress,
     visibleCharacterKeys,
     characterProfiles,
+    brothersTimeline,
+    unlockedChaptersFlat,
   }
 }

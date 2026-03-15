@@ -1,5 +1,7 @@
 <script setup>
+import { ref } from 'vue'
 import CharacterGrid from './CharacterGrid.vue'
+import BrothersTimeline from './BrothersTimeline.vue'
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -7,9 +9,13 @@ const props = defineProps({
   progress: { type: Number, required: true },
   nextChapter: { type: Object, default: null },
   hasStarted: { type: Boolean, required: true },
+  brothersTimeline: { type: Object, required: true },
+  unlockedChapters: { type: Array, required: true },
 })
 
 const emit = defineEmits(['unlock-next'])
+
+const activeView = ref('characters')
 </script>
 
 <template>
@@ -35,9 +41,9 @@ const emit = defineEmits(['unlock-next'])
     <!-- Active reading state -->
     <div v-else>
       <!-- Progress bar -->
-      <div class="mb-6">
+      <div class="mb-4">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="font-serif text-xl text-silver-100">Characters</h2>
+          <h2 class="font-serif text-xl text-silver-100">Reading Progress</h2>
           <span class="text-xs font-mono text-silver-500">
             {{ Math.round(progress * 100) }}% read
           </span>
@@ -48,6 +54,32 @@ const emit = defineEmits(['unlock-next'])
             :style="{ width: `${progress * 100}%` }"
           />
         </div>
+      </div>
+
+      <!-- View toggle -->
+      <div class="flex gap-2 mb-4">
+        <button
+          @click="activeView = 'characters'"
+          :class="[
+            'text-sm px-3 py-1.5 rounded-lg transition-colors font-mono',
+            activeView === 'characters'
+              ? 'bg-forest-700 text-silver-100 ring-1 ring-forest-600'
+              : 'text-silver-400 hover:text-silver-200',
+          ]"
+        >
+          Characters
+        </button>
+        <button
+          @click="activeView = 'timeline'"
+          :class="[
+            'text-sm px-3 py-1.5 rounded-lg transition-colors font-mono',
+            activeView === 'timeline'
+              ? 'bg-forest-700 text-silver-100 ring-1 ring-forest-600'
+              : 'text-silver-400 hover:text-silver-200',
+          ]"
+        >
+          Timeline
+        </button>
       </div>
 
       <!-- Unlock next chapter button -->
@@ -63,19 +95,26 @@ const emit = defineEmits(['unlock-next'])
         </button>
       </div>
 
-      <!-- Character grid -->
-      <CharacterGrid
-        :characters="characterProfiles"
-        :allCharacters="book.characters"
-      />
+      <!-- Characters view -->
+      <template v-if="activeView === 'characters'">
+        <CharacterGrid
+          :characters="characterProfiles"
+          :allCharacters="book.characters"
+        />
+        <div
+          v-if="characterProfiles.length === 0"
+          class="text-center py-12 text-silver-500"
+        >
+          <p>No characters revealed yet. Unlock chapters to see them appear.</p>
+        </div>
+      </template>
 
-      <!-- Empty characters state -->
-      <div
-        v-if="characterProfiles.length === 0"
-        class="text-center py-12 text-silver-500"
-      >
-        <p>No characters revealed yet. Unlock chapters to see them appear.</p>
-      </div>
+      <!-- Timeline view -->
+      <BrothersTimeline
+        v-else-if="activeView === 'timeline'"
+        :timelineData="brothersTimeline"
+        :chapters="unlockedChapters"
+      />
     </div>
   </div>
 </template>

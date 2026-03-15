@@ -14,6 +14,8 @@ const {
   nextChapter,
   progress,
   characterProfiles,
+  brothersTimeline,
+  unlockedChaptersFlat,
 } = useBookProgress(bookData)
 
 const hasStarted = computed(() => unlockedChapterIds.value.size > 0)
@@ -104,6 +106,8 @@ function handleReset() {
             :progress="progress"
             :nextChapter="nextChapter"
             :hasStarted="hasStarted"
+            :brothersTimeline="brothersTimeline"
+            :unlockedChapters="unlockedChaptersFlat"
             @unlock-next="handleUnlockNext"
           />
         </div>
