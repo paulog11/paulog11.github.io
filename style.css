@@ -4,7 +4,12 @@
 
 html, body, #app {
   height: 100%;
-  overflow: hidden;
+}
+
+@media (min-height: 700px) {
+  html, body, #app {
+    overflow: hidden;
+  }
 }
 
 body {

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-parchment font-body overflow-hidden">
+  <div class="min-h-full flex flex-col bg-parchment font-body">
 
     <!-- ── Top bar ── -->
     <header class="flex items-center justify-between px-8 py-5 border-b border-warm shrink-0">
@@ -18,7 +18,7 @@
     </header>
 
     <!-- ── Main ── -->
-    <main class="flex-1 flex flex-col items-center justify-center px-6 overflow-hidden">
+    <main class="flex-1 flex flex-col items-center justify-center px-6 py-8 overflow-y-auto">
 
       <!-- Page title -->
       <div class="text-center mb-10 animate-fade-up" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
