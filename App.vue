@@ -125,6 +125,16 @@ const apps = ref([
     url: './projects/reading-buddy/dist/index.html',
     comingSoon: false,
   },
+  {
+    id: 'venue-search',
+    title: 'Venue Search',
+    subtitle: 'Tokyo Event Spaces',
+    description: 'Find rentable event spaces in Tokyo — parties, workshops, meetups, corporate events, and more.',
+    tags: ['Search', 'Tokyo'],
+    icon: '🏛',
+    url: './projects/venue-search/dist/index.html',
+    comingSoon: false,
+  },
 ])
 
 function handleSelect(app) {

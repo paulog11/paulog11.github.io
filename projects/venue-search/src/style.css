@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  font-family: 'Noto Sans JP', 'DM Sans', system-ui, sans-serif;
+  background-color: #F5F2ED;
+  color: #2C2C2C;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
