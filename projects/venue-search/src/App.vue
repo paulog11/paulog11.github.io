@@ -24,9 +24,12 @@ function handleReset() {
           <h1 class="font-display font-bold text-xl text-ink">会場探し</h1>
           <p class="text-xs text-muted mt-0.5">Tokyo Venue Search</p>
         </div>
-        <span v-if="hasSearched" class="text-xs text-muted font-mono bg-paper px-2.5 py-1 rounded-md border border-sand">
-          {{ resultCount }} curated venue{{ resultCount === 1 ? '' : 's' }}
-        </span>
+        <div class="flex items-center gap-3">
+          <span v-if="hasSearched" class="text-xs text-muted font-mono bg-paper px-2.5 py-1 rounded-md border border-sand">
+            {{ resultCount }} curated venue{{ resultCount === 1 ? '' : 's' }}
+          </span>
+          <a href="../../../" class="font-mono text-xs text-muted hover:text-ink transition-colors">← Home</a>
+        </div>
       </div>
     </header>
 

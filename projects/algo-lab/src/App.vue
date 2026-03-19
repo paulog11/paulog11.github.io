@@ -21,6 +21,7 @@
         {{ tab.label }}
         <span class="underline"></span>
       </button>
+      <a href="../../../" class="nav-home">← Home</a>
     </nav>
 
     <!-- Simulation panels — only the active one is mounted -->
@@ -67,3 +68,20 @@ function onMouseMove(e) {
 onMounted(()  => window.addEventListener('mousemove', onMouseMove))
 onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 </script>
+
+<style scoped>
+.nav-home {
+  margin-left: auto;
+  padding: 0 20px;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-home:hover { color: var(--text); }
+</style>

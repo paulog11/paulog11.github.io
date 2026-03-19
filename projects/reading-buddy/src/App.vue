@@ -55,6 +55,10 @@ function handleReset() {
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <a
+          href="../../../"
+          class="text-xs text-silver-500 hover:text-silver-300 transition-colors px-2 py-1"
+        >← Home</a>
         <button
           v-if="hasStarted && !showResetConfirm"
           @click="showResetConfirm = true"

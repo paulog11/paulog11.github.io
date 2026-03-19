@@ -11,6 +11,10 @@
           Japanese Learning Dashboard
         </p>
       </div>
+      <a
+        href="../../../"
+        class="p-2 rounded-lg font-mono text-[0.65rem] tracking-[0.1em] uppercase text-usuzumi hover:text-sumi hover:bg-koshi/60 transition-colors"
+      >← Home</a>
       <button
         class="p-2 rounded-lg text-usuzumi hover:text-sumi hover:bg-koshi/60 transition-colors"
         title="Settings"
