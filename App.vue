@@ -72,8 +72,8 @@ const apps = ref([
     description: 'Build precise vocabulary with context-driven word selection and spaced repetition.',
     tags: ['Language', 'Japanese'],
     icon: '語',
-    url: null,          // set to app URL when live
-    comingSoon: true,
+    url: './projects/right-word/nihongo-assist.html',
+    comingSoon: false,
   },
   {
     id: 'bible-hymn-kids',
@@ -82,8 +82,8 @@ const apps = ref([
     description: 'Interactive hymn and scripture learning experience designed for young learners.',
     tags: ['Education', 'Music'],
     icon: '♪',
-    url: null,
-    comingSoon: true,
+    url: './projects/bible-hymn/hymn-app.html',
+    comingSoon: false,
   },
   {
     id: 'japanese-dashboard',

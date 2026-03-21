@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hymn Time – Before the Throne of God Above</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sky:       #38BDEC;
+  --sky-dark:  #1A90C0;
+  --sky-light: #D6F2FF;
+  --sky-pale:  #EDF8FF;
+  --orange:    #FF8C2A;
+  --orange-dk: #D96A00;
+  --orange-lt: #FFE0BC;
+  --white:     #FFFFFF;
+  --text:      #1A4A5E;
+  --subtext:   #5A8FA8;
+  --green:     #4CAF7D;
+  --red:       #E05555;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--sky-pale);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* HEADER */
+.app-header {
+  background: linear-gradient(135deg, var(--sky-dark) 0%, var(--sky) 100%);
+  padding: 14px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 3px 12px rgba(26,90,94,0.2);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.app-header::after {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 160px; height: 160px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.header-icon { font-size: 2.2rem; }
+.header-title {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  color: white;
+  line-height: 1;
+}
+.header-sub { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 2px; }
+
+/* TABS */
+.tab-nav {
+  background: white;
+  display: flex;
+  border-bottom: 2px solid var(--sky-light);
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 8px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  border: none;
+  background: transparent;
+  color: var(--subtext);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tab-btn .tab-icon { font-size: 1.3rem; }
+.tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+
+/* SCROLL AREA */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 8px;
+}
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--sky-light); border-radius: 99px; }
+
+/* VERSE CARD */
+.verse-card {
+  background: white;
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 4px 24px rgba(56,189,236,0.12);
+  border: 2px solid var(--sky-light);
+  margin-bottom: 12px;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.verse-label {
+  font-family: 'Fredoka One', cursive;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sky);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.verse-label::before {
+  content: '';
+  width: 24px; height: 3px;
+  background: var(--orange);
+  border-radius: 99px;
+  display: inline-block;
+}
+
+/* LYRIC WORDS */
+.lyric-word {
+  display: inline-block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 3px 5px;
+  margin: 2px 2px;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
+  line-height: 1.35;
+}
+.lyric-word.active {
+  background: var(--orange);
+  color: white;
+  transform: scale(1.13);
+  box-shadow: 0 4px 12px rgba(255,140,42,0.45);
+}
+.lyric-word.sung { color: var(--subtext); }
+.lyric-word.tappable {
+  cursor: pointer;
+  text-decoration: underline dotted var(--sky);
+  text-underline-offset: 4px;
+}
+.lyric-word.tappable:hover { background: var(--sky-light); }
+
+/* VERSE DOTS */
+.verse-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+  flex-shrink: 0;
+}
+.verse-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--sky-light);
+  border: 2px solid var(--sky-light);
+  transition: all 0.3s;
+}
+.verse-dot.done { background: var(--sky); border-color: var(--sky); }
+.verse-dot.current { background: var(--orange); border-color: var(--orange); width: 28px; border-radius: 99px; }
+
+.hint-bar {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--subtext);
+  padding: 4px 0 6px;
+  flex-shrink: 0;
+}
+.hint-bar span { color: var(--sky-dark); font-weight: 700; text-decoration: underline dotted; }
+
+/* PLAYER BAR */
+.player-bar {
+  background: white;
+  border-top: 2px solid var(--sky-light);
+  padding: 10px 20px 14px;
+  flex-shrink: 0;
+  box-shadow: 0 -4px 20px rgba(56,189,236,0.12);
+}
+.player-inner { max-width: 560px; margin: 0 auto; }
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.time-label { font-size: 0.75rem; font-weight: 700; color: var(--subtext); min-width: 36px; text-align: center; }
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--sky-light);
+  border-radius: 99px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sky) 0%, var(--orange) 100%);
+  border-radius: 99px;
+  transition: width 0.1s linear;
+}
+.player-controls { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.btn-play {
+  width: 62px; height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dk) 100%);
+  border: 3px solid var(--orange-dk);
+  color: white;
+  font-size: 1.6rem;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--orange-dk), 0 6px 16px rgba(255,140,42,0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-play:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--orange-dk); }
+.btn-restart {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--sky-light);
+  border: 2px solid var(--sky);
+  color: var(--sky-dark);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-weight: 900;
+}
+.btn-restart:hover { background: var(--sky); color: white; }
+.now-playing { flex: 1; text-align: left; }
+.np-title { font-family: 'Fredoka One', cursive; font-size: 0.95rem; color: var(--text); }
+.np-sub { font-size: 0.75rem; color: var(--subtext); }
+
+/* POPUP */
+.popup-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 130px;
+  animation: fadeIn 0.2s;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.word-popup {
+  background: white;
+  border-radius: 28px;
+  padding: 24px 32px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  border: 3px solid var(--orange);
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 320px;
+  width: 90%;
+}
+@keyframes popIn {
+  from { transform: scale(0.6) translateY(40px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.popup-emoji { width: 5rem; height: 5rem; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }
+.popup-emoji img { width: 100%; height: 100%; object-fit: contain; }
+.popup-word { font-family: 'Fredoka One', cursive; font-size: 2rem; color: var(--orange); }
+.popup-desc { font-size: 1rem; color: var(--subtext); margin-top: 6px; line-height: 1.4; }
+.popup-close {
+  margin-top: 16px;
+  background: var(--sky-light);
+  border: none; border-radius: 99px;
+  padding: 8px 20px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  color: var(--sky-dark);
+  cursor: pointer;
+}
+
+/* REVIEW */
+.review-header { text-align: center; margin-bottom: 20px; }
+.review-title { font-family: 'Fredoka One', cursive; font-size: 2rem; color: var(--text); }
+.review-sub { font-size: 1rem; color: var(--subtext); margin-top: 4px; }
+.stars-row { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.star-icon { font-size: 2rem; transition: transform 0.3s; }
+.star-icon.earned { animation: starBounce 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes starBounce { from { transform: scale(0); } to { transform: scale(1); } }
+
+.q-card {
+  background: white; border-radius: 24px;
+  padding: 22px 20px;
+  box-shadow: 0 4px 20px rgba(56,189,236,0.1);
+  border: 2px solid var(--sky-light);
+  margin-bottom: 16px;
+}
+.q-progress { font-family:'Fredoka One',cursive; font-size:0.8rem; color:var(--sky); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
+.q-text { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1.5; margin-bottom: 20px; }
+.q-blank { display:inline-block; min-width:90px; border-bottom:4px solid var(--orange); text-align:center; color:var(--orange); padding:0 8px; }
+.q-instruction { font-size: 0.9rem; color: var(--subtext); margin-bottom: 12px; font-weight: 700; }
+
+.opt-btn {
+  width: 100%; display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; border-radius: 16px;
+  border: 3px solid var(--sky-light);
+  background: #FAFCFF;
+  cursor: pointer; margin-bottom: 8px;
+  transition: all 0.18s;
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.1rem; font-weight: 800;
+  color: var(--text); text-align: left;
+}
+.opt-btn:hover:not(:disabled) { border-color: var(--sky); background: var(--sky-pale); }
+.opt-btn:disabled { cursor: default; }
+.opt-btn.correct { border-color: var(--green); background: #EDFAF3; color: var(--green); }
+.opt-btn.wrong   { border-color: var(--red);   background: #FFF0F0; color: var(--red); }
+.opt-emoji { width: 2.2rem; height: 2.2rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.opt-emoji img { width: 100%; height: 100%; object-fit: contain; }
+.opt-result { margin-left: auto; font-size: 1.4rem; }
+
+.feedback-bar { text-align: center; padding: 14px 0 6px; animation: slideUp 0.3s ease both; }
+.feedback-msg { font-family: 'Fredoka One', cursive; font-size: 1.5rem; color: var(--text); }
+.feedback-hint { font-size: 0.9rem; color: var(--subtext); margin: 6px 0 14px; }
+.btn-next {
+  background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dk) 100%);
+  color: white; border: none; border-radius: 99px;
+  padding: 12px 32px;
+  font-family: 'Fredoka One', cursive; font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--orange-dk);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-next:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--orange-dk); }
+
+.score-card {
+  text-align: center; background: white;
+  border-radius: 28px; padding: 40px 24px;
+  box-shadow: 0 4px 32px rgba(56,189,236,0.15);
+  border: 2px solid var(--sky-light); margin-top: 8px;
+}
+.score-trophy { font-size: 5rem; margin-bottom: 16px; animation: bounce 0.8s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes bounce { from { transform: scale(0); } to { transform: scale(1); } }
+.score-num { font-family: 'Fredoka One', cursive; font-size: 3.5rem; color: var(--orange); }
+.score-praise { font-size: 1.2rem; color: var(--subtext); margin: 8px 0 24px; }
+.btn-retry {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-dark) 100%);
+  color: white; border: none; border-radius: 99px;
+  padding: 14px 36px;
+  font-family: 'Fredoka One', cursive; font-size: 1.2rem;
+  cursor: pointer; box-shadow: 0 4px 0 var(--sky-dark);
+}
+
+.btn-read-again {
+  background: var(--sky-light);
+  border: 2px solid var(--sky);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 0.85rem;
+  color: var(--sky-dark);
+  cursor: pointer;
+  margin-bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-read-again:hover { background: var(--sky); color: white; }
+
+.fade-enter-active { transition: opacity 0.2s; }
+.fade-leave-active { transition: opacity 0.15s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="app" style="display:flex;flex-direction:column;height:100vh;overflow:hidden;">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-icon">🕊️</div>
+    <div>
+      <div class="header-title">Hymn Time!</div>
+      <div class="header-sub">Before the Throne of God Above</div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tab-nav">
+    <button class="tab-btn" :class="{active:tab==='learn'}" @click="tab='learn'">
+      <span class="tab-icon">🎵</span>Learn
+    </button>
+    <button class="tab-btn" :class="{active:tab==='lyrics'}" @click="tab='lyrics'">
+      <span class="tab-icon">📖</span>Lyrics
+    </button>
+    <button class="tab-btn" :class="{active:tab==='review'}" @click="tab='review'">
+      <span class="tab-icon">⭐</span>Review
+    </button>
+  </nav>
+
+  <!-- ══════ LEARN TAB ══════ -->
+  <template v-if="tab==='learn'">
+    <div class="scroll-area">
+      <!-- Single active verse card, key forces re-animation on section change -->
+      <div class="verse-card" :key="'sec-'+currentSection">
+        <div class="verse-label">{{ sections[currentSection].label }}</div>
+        <div>
+          <template v-for="(word, gi) in sections[currentSection].words" :key="gi">
+            <br v-if="word.newline && gi > 0">
+            <span
+              class="lyric-word"
+              :class="{
+                active:   gi === activeWordIdx,
+                sung:     gi < activeWordIdx,
+                tappable: !!word.image
+              }"
+              @click="word.image && openPopup(word)"
+            >{{ word.text }}</span>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section progress dots -->
+    <div class="verse-dots">
+      <div
+        v-for="(s,si) in sections" :key="si"
+        class="verse-dot"
+        :class="{current: si===currentSection, done: si<currentSection}"
+      ></div>
+    </div>
+
+    <div class="hint-bar">💡 Tap <span>underlined words</span> to see a picture!</div>
+
+    <!-- Player -->
+    <div class="player-bar">
+      <div class="player-inner">
+        <div class="progress-wrap">
+          <span class="time-label">{{ fmtTime(currentTime) }}</span>
+          <div class="progress-track" @click="seekTo">
+            <div class="progress-fill" :style="{width: progressPct+'%'}"></div>
+          </div>
+          <span class="time-label">{{ fmtTime(duration) }}</span>
+        </div>
+        <div class="player-controls">
+          <button class="btn-restart" @click="restart">↺</button>
+          <button class="btn-play" @click="togglePlay">
+            <span v-if="!playing">▶</span>
+            <span v-else style="font-size:1.1rem">⏸</span>
+          </button>
+          <div class="now-playing">
+            <div class="np-title">{{ playing ? '🎵 Singing...' : 'Tap ▶ to play!' }}</div>
+            <div class="np-sub">{{ sections[currentSection].label }}</div>
+          </div>
+        </div>
+      </div>
+      <audio ref="audioEl"
+        @ended="onEnded"
+        @loadedmetadata="onMeta"
+        preload="auto">
+        <source src="hymn.mp3" type="audio/mpeg">
+      </audio>
+    </div>
+  </template>
+
+  <!-- ══════ LYRICS TAB ══════ -->
+  <div v-if="tab==='lyrics'" class="scroll-area" style="padding-bottom:24px;">
+    <div v-for="(sec,si) in sections" :key="si" class="verse-card">
+      <div class="verse-label">{{ sec.label }}</div>
+      <div>
+        <template v-for="(word,gi) in sec.words" :key="gi">
+          <br v-if="word.newline && gi > 0">
+          <span
+            class="lyric-word"
+            :class="{tappable: !!word.image}"
+            @click="word.image && openPopup(word)"
+          >{{ word.text }}</span>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ REVIEW TAB ══════ -->
+  <div v-if="tab==='review'" class="scroll-area" style="padding-bottom:24px;">
+    <div class="review-header">
+      <div class="review-title">Let's Practice! 🌟</div>
+      <div class="review-sub">Fill in the missing word</div>
+      <div class="stars-row">
+        <span v-for="i in questions.length" :key="i" class="star-icon" :class="{earned: i <= score}">
+          {{ i <= score ? '⭐' : '☆' }}
+        </span>
+      </div>
+    </div>
+
+    <template v-if="!reviewDone">
+      <div class="q-card">
+        <div class="q-progress">Question {{ currentQ+1 }} of {{ questions.length }}</div>
+        <div class="q-text">
+          {{ questions[currentQ].before }}
+          <span class="q-blank">{{ answered ? questions[currentQ].answer.text : '___' }}</span>
+          {{ questions[currentQ].after }}
+        </div>
+        <div class="q-instruction">
+          Which word fits? 👇
+          <button class="btn-read-again" @click="speakQuestion()">🔊 Read Again</button>
+        </div>
+        <button
+          v-for="opt in questions[currentQ].options" :key="opt.text"
+          class="opt-btn"
+          :class="{
+            correct: answered && opt.text === questions[currentQ].answer.text,
+            wrong:   answered && chosen===opt.text && opt.text!==questions[currentQ].answer.text
+          }"
+          :disabled="answered"
+          @click="pick(opt)"
+        >
+          <span class="opt-emoji"><img :src="opt.image" alt=""></span>
+          <span>{{ opt.text }}</span>
+          <span class="opt-result" v-if="answered && opt.text===questions[currentQ].answer.text">✅</span>
+          <span class="opt-result" v-else-if="answered && chosen===opt.text">❌</span>
+        </button>
+        <div v-if="answered" class="feedback-bar">
+          <div class="feedback-msg">{{ lastRight ? '🎉 Wonderful!' : '💪 Keep going!' }}</div>
+          <div class="feedback-hint">{{ questions[currentQ].hint }}</div>
+          <button class="btn-next" v-if="currentQ < questions.length-1" @click="nextQ">Next →</button>
+          <button class="btn-next" v-else @click="reviewDone=true">See my score! 🌟</button>
+        </div>
+      </div>
+    </template>
+
+    <div v-else class="score-card">
+      <div class="score-trophy">{{ scoreEmoji }}</div>
+      <div class="score-num">{{ score }} / {{ questions.length }}</div>
+      <div class="score-praise">{{ scorePraise }}</div>
+      <button class="btn-retry" @click="resetReview">Try Again 🔄</button>
+    </div>
+  </div>
+
+  <!-- Word popup -->
+  <transition name="fade">
+    <div v-if="popup" class="popup-overlay" @click="popup=null">
+      <div class="word-popup" @click.stop>
+        <div class="popup-emoji"><img :src="popup.image" alt=""></div>
+        <div class="popup-word">{{ popup.text }}</div>
+        <div class="popup-desc">{{ popup.desc }}</div>
+        <button class="popup-close" @click="popup=null">Got it! 👍</button>
+      </div>
+    </div>
+  </transition>
+
+</div><!-- end #app -->
+
+<script>
+const { createApp, ref, computed, watch } = Vue;
+
+const IMG = {
+  "throne":     { image:"images/crown.svg", desc:"A throne is a king's special chair — God is our King!" },
+  "God":        { image:"images/sparkle.svg", desc:"God is our loving Heavenly Father who made everything." },
+  "above":      { image:"images/up-arrow.svg", desc:"Above means higher up — like the sky where heaven is!" },
+  "Priest":     { image:"images/pray.svg", desc:"A High Priest speaks to God for all the people." },
+  "Love":       { image:"images/heart-red.svg", desc:"Jesus' very name is Love — He loves us so much!" },
+  "name":       { image:"images/tag.svg", desc:"Your name is what people call you. Jesus knows YOUR name!" },
+  "hands":      { image:"images/open-hands.svg", desc:"Jesus holds us safe in His hands forever." },
+  "heart":      { image:"images/heart-pink.svg", desc:"Jesus writes our name on His heart — He never forgets us!" },
+  "heaven":     { image:"images/cloud.svg", desc:"Heaven is the beautiful home where God lives." },
+  "Saviour":    { image:"images/star.svg", desc:"A Saviour rescues and saves us. Jesus is our Saviour!" },
+  "Friend":     { image:"images/handshake.svg", desc:"Jesus is the best Friend we'll ever have!" },
+  "soul":       { image:"images/dove.svg", desc:"Your soul is the forever part of you that God loves." },
+  "pardon":     { image:"images/ribbon.svg", desc:"To pardon means to forgive. God forgives us through Jesus!" },
+  "guilt":      { image:"images/sad.svg", desc:"Guilt is the sad feeling when we do wrong things." },
+  "sin":        { image:"images/no-sign.svg", desc:"Sin means doing things that hurt God or others." },
+  "Hallelujah": { image:"images/party.svg", desc:"Hallelujah means 'Praise God!' — it's a celebration word!" },
+  "graven":     { image:"images/writing.svg", desc:"Graven means carved in deeply — like carving our name in stone forever." },
+  "tongue":     { image:"images/tongue.svg", desc:"Tongue means voice or words. Nothing can ever tell us to leave God!" },
+};
+
+function w(text, newline=false) {
+  const clean = text.replace(/[^a-zA-Z]/g,'');
+  const info = IMG[clean];
+  return { text, newline, image: info?.image||null, desc: info?.desc||null };
+}
+
+// ─── SECTIONS with word-level timestamps derived from audio analysis ───
+// Audio: 154.5s total. Intro 0-8.3s. Verse1 8.3-43.5s. Chorus1 44.5-92s.
+// Verse2 98.5-143s.
+const SECTIONS = [
+  {
+    label: "Verse 1",
+    words: [
+      w("Before"),w("the"),w("throne"),w("of"),w("God"),w("above"),
+      w("I",true),w("have"),w("a"),w("strong"),w("and"),w("perfect"),w("plea"),
+      w("A",true),w("great"),w("High"),w("Priest"),w("whose"),w("name"),w("is"),w("Love"),
+      w("Who",true),w("ever"),w("lives"),w("and"),w("pleads"),w("for"),w("me"),
+    ],
+    wordTimes: [
+      8.3, 9.2, 10.2, 11.2, 12.1, 13.1,
+      14.8,15.9,17.0,18.1,19.2,20.3,21.4,
+      23.5,24.7,25.9,27.1,28.2,29.4,30.6,31.8,
+      33.5,34.9,36.4,37.8,39.2,40.6,42.1,
+    ]
+  },
+  {
+    label: "Chorus",
+    words: [
+      w("Hallelujah!"),w("What"),w("a"),w("Saviour"),
+      w("Hallelujah!",true),w("What"),w("a"),w("Friend"),
+      w("Saving,",true),w("helping,"),w("keeping,"),w("loving,"),
+      w("He",true),w("is"),w("with"),w("me"),w("to"),w("the"),w("end"),
+    ],
+    wordTimes: [
+      44.5, 46.2, 48.0, 49.8,
+      54.5, 56.1, 57.8, 59.4,
+      62.0, 65.2, 68.5, 71.8,
+      76.0, 77.7, 79.4, 81.1, 82.9, 84.6, 86.3,
+    ]
+  },
+  {
+    label: "Verse 2",
+    words: [
+      w("My"),w("name"),w("is"),w("graven"),w("on"),w("His"),w("hands"),
+      w("My",true),w("name"),w("is"),w("written"),w("on"),w("His"),w("heart"),
+      w("I",true),w("know"),w("that"),w("while"),w("in"),w("heaven"),w("He"),w("stands"),
+      w("No",true),w("tongue"),w("can"),w("bid"),w("me"),w("thence"),w("depart"),
+    ],
+    wordTimes: [
+      98.5,99.7,100.9,102.1,103.4,104.6,105.8,
+      107.5,108.8,110.1,111.4,112.6,113.9,115.2,
+      117.0,118.3,119.6,120.9,122.2,123.6,124.9,126.2,
+      128.0,130.1,132.3,134.4,136.6,138.7,140.9,
+    ]
+  }
+];
+
+// Build flat timing index (sorted by start time)
+const ALL_TIMINGS = [];
+SECTIONS.forEach((sec, si) => {
+  sec.wordTimes.forEach((t, wi) => {
+    const nextT = sec.wordTimes[wi+1] ?? (t + 1.5); // cap last word at 1.5s
+    ALL_TIMINGS.push({ si, wi, start: t, end: nextT });
+  });
+});
+
+const QUESTIONS = [
+  {
+    before:"Before the ___ of God above,", after:"",
+    answer:{text:"throne",image:"images/crown.svg"},
+    options:[{text:"throne",image:"images/crown.svg"},{text:"door",image:"images/door.svg"},{text:"cloud",image:"images/cloud.svg"},{text:"heart",image:"images/heart-pink.svg"}],
+    hint:"A throne is a king's special chair — God sits on His throne in heaven!"
+  },
+  {
+    before:"A great High ___ whose name is Love,", after:"",
+    answer:{text:"Priest",image:"images/pray.svg"},
+    options:[{text:"King",image:"images/crown.svg"},{text:"Priest",image:"images/pray.svg"},{text:"Friend",image:"images/handshake.svg"},{text:"Angel",image:"images/angel.svg"}],
+    hint:"A Priest speaks to God for the people — Jesus is our perfect High Priest!"
+  },
+  {
+    before:"My name is written on His", after:"",
+    answer:{text:"heart",image:"images/heart-pink.svg"},
+    options:[{text:"hands",image:"images/open-hands.svg"},{text:"heart",image:"images/heart-pink.svg"},{text:"name",image:"images/tag.svg"},{text:"soul",image:"images/dove.svg"}],
+    hint:"Jesus writes our name on His heart — He never ever forgets us!"
+  },
+  {
+    before:"Hallelujah! What a", after:"— Jesus rescues us!",
+    answer:{text:"Saviour",image:"images/star.svg"},
+    options:[{text:"Friend",image:"images/handshake.svg"},{text:"Saviour",image:"images/star.svg"},{text:"Priest",image:"images/pray.svg"},{text:"Helper",image:"images/helper.svg"}],
+    hint:"A Saviour is someone who rescues us. Jesus saves us from sin!"
+  },
+  {
+    before:"I know that while in", after:"He stands,",
+    answer:{text:"heaven",image:"images/cloud.svg"},
+    options:[{text:"heaven",image:"images/cloud.svg"},{text:"church",image:"images/church.svg"},{text:"earth",image:"images/earth.svg"},{text:"prayer",image:"images/pray.svg"}],
+    hint:"Heaven is where God lives, and Jesus is there right now praying for us!"
+  },
+  {
+    before:"My name is ___ on His hands,", after:"",
+    answer:{text:"graven",image:"images/writing.svg"},
+    options:[{text:"graven",image:"images/writing.svg"},{text:"painted",image:"images/palette.svg"},{text:"lost",image:"images/magnifier.svg"},{text:"hidden",image:"images/see-no-evil.svg"}],
+    hint:"Graven means carved deeply — our names are carved on Jesus' hands forever!"
+  },
+];
+
+createApp({
+  setup() {
+    const tab = ref('learn');
+    const audioEl = ref(null);
+    const playing = ref(false);
+    const currentTime = ref(0);
+    const duration = ref(154.5);
+    const popup = ref(null);
+
+    const currentSection = ref(0);
+    const activeWordIdx = ref(-1);
+
+    // Binary search: find the timing entry whose start <= t
+    function findTimingEntry(t) {
+      let lo = 0, hi = ALL_TIMINGS.length - 1, result = -1;
+      while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (ALL_TIMINGS[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+      }
+      if (result === -1) return null;
+      const entry = ALL_TIMINGS[result];
+      return (t < entry.end) ? entry : null; // null if we're in a gap
+    }
+
+    function updateKaraoke(t) {
+      const entry = findTimingEntry(t);
+      if (entry) {
+        currentSection.value = entry.si;
+        activeWordIdx.value = entry.wi;
+      } else {
+        // In a gap or before first word — clear highlight, keep section
+        activeWordIdx.value = -1;
+      }
+    }
+
+    // requestAnimationFrame loop for smooth ~60fps sync
+    let rafId = null;
+    function tick() {
+      if (audioEl.value) {
+        currentTime.value = audioEl.value.currentTime;
+        updateKaraoke(currentTime.value);
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    function startRaf() { if (!rafId) rafId = requestAnimationFrame(tick); }
+    function stopRaf() { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } }
+
+    function onMeta() { duration.value = audioEl.value?.duration || 154.5; }
+    function onEnded() { stopRaf(); playing.value = false; activeWordIdx.value = -1; }
+
+    function togglePlay() {
+      if (!audioEl.value) return;
+      if (playing.value) {
+        audioEl.value.pause();
+        stopRaf();
+        playing.value = false;
+      } else {
+        audioEl.value.play().catch(e => console.warn(e));
+        startRaf();
+        playing.value = true;
+      }
+    }
+
+    function restart() {
+      if (!audioEl.value) return;
+      audioEl.value.currentTime = 0;
+      currentTime.value = 0;
+      currentSection.value = 0;
+      activeWordIdx.value = -1;
+      if (playing.value) { stopRaf(); audioEl.value.play(); startRaf(); }
+    }
+
+    function seekTo(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const t = pct * duration.value;
+      currentTime.value = t;
+      if (audioEl.value) audioEl.value.currentTime = t;
+      updateKaraoke(t);
+    }
+
+    function fmtTime(s) {
+      const m = Math.floor(s/60);
+      return `${m}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+    }
+
+    const progressPct = computed(() =>
+      duration.value ? (currentTime.value / duration.value) * 100 : 0
+    );
+
+    function openPopup(word) { popup.value = word; }
+
+    // Review
+    const questions = QUESTIONS;
+    const currentQ = ref(0);
+    const answered = ref(false);
+    const chosen = ref(null);
+    const lastRight = ref(false);
+    const score = ref(0);
+    const reviewDone = ref(false);
+
+    // Speech synthesis for pre-readers
+    function speakText(text, rate = 0.85) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = rate;
+      utter.pitch = 1.1;
+      utter.lang = 'en-US';
+      window.speechSynthesis.speak(utter);
+    }
+
+    function speakQuestion() {
+      const q = questions[currentQ.value];
+      const spoken = q.before.replace('___', 'blank') + ' ' + q.after;
+      const optionNames = q.options.map(o => o.text).join(', ');
+      speakText(spoken + '. Choose from: ' + optionNames);
+    }
+
+    function pick(opt) {
+      if (answered.value) return;
+      chosen.value = opt.text;
+      answered.value = true;
+      lastRight.value = opt.text === questions[currentQ.value].answer.text;
+      if (lastRight.value) score.value++;
+      setTimeout(() => {
+        const correct = questions[currentQ.value].answer.text;
+        if (lastRight.value) {
+          speakText('Wonderful! The answer is ' + correct);
+        } else {
+          speakText('The answer is ' + correct);
+        }
+      }, 300);
+    }
+    function nextQ() {
+      currentQ.value++; answered.value=false; chosen.value=null;
+      setTimeout(speakQuestion, 200);
+    }
+    function resetReview() {
+      currentQ.value=0; answered.value=false; chosen.value=null; score.value=0; reviewDone.value=false;
+      setTimeout(speakQuestion, 200);
+    }
+
+    // Auto-speak when entering Review tab; cancel speech when leaving
+    watch(tab, (newTab, oldTab) => {
+      if (oldTab === 'review') window.speechSynthesis?.cancel();
+      if (newTab === 'review' && !reviewDone.value) {
+        setTimeout(speakQuestion, 300);
+      }
+    });
+
+    const scoreEmoji = computed(() => {
+      const r = score.value/questions.length;
+      return r===1?'🏆':r>=0.7?'🌟':r>=0.5?'😊':'💪';
+    });
+    const scorePraise = computed(() => {
+      const r = score.value/questions.length;
+      return r===1?'Perfect score! You know this hymn so well!':
+             r>=0.7?'Wonderful job! Keep practicing!':
+             r>=0.5?"Good try! Let's sing it again!":'Keep going — you are learning!';
+    });
+
+    return {
+      tab, audioEl, playing, currentTime, duration, progressPct,
+      sections: SECTIONS, currentSection, activeWordIdx,
+      popup, openPopup,
+      onMeta, onEnded,
+      togglePlay, restart, seekTo, fmtTime,
+      questions, currentQ, answered, chosen, lastRight, speakQuestion,
+      score, reviewDone, scoreEmoji, scorePraise,
+      pick, nextQ, resetReview,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
