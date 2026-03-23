@@ -72,7 +72,7 @@ const apps = ref([
     description: 'Build precise vocabulary with context-driven word selection and spaced repetition.',
     tags: ['Language', 'Japanese'],
     icon: '語',
-    url: './projects/right-word/nihongo-assist.html',
+    url: './projects/right-word/dist/index.html',
     comingSoon: false,
   },
   {
