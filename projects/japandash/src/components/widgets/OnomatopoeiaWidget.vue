@@ -23,6 +23,15 @@
 
       <!-- Daily word card -->
       <div v-if="currentWord" class="rounded-lg bg-koshi/30 p-4 text-center">
+        <!-- Jumped-from breadcrumb -->
+        <div v-if="jumpedFrom" class="flex items-center justify-center gap-1 mb-2">
+          <button
+            class="flex items-center gap-1 text-[0.6rem] text-ai hover:underline"
+            @click="jumpBack"
+          >
+            ← {{ jumpedFrom }}
+          </button>
+        </div>
         <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi mb-1">
           {{ browseMode ? 'Browse' : "Today's Word" }}
         </p>
@@ -64,14 +73,14 @@
       <div class="flex gap-2">
         <button
           class="flex-1 py-1.5 text-xs rounded-md border border-koshi text-sumi hover:bg-koshi/40 transition-colors"
-          @click="showAnother"
+          @click="showAnother(); jumpedFrom = null"
         >
           Show Another
         </button>
         <button
           class="py-1.5 px-3 text-xs rounded-md transition-colors"
           :class="browseMode ? 'bg-ai text-white' : 'border border-koshi text-sumi hover:bg-koshi/40'"
-          @click="browseMode = !browseMode"
+          @click="browseMode = !browseMode; jumpedFrom = null"
         >
           {{ browseMode ? 'Daily' : 'Browse' }}
         </button>
@@ -83,7 +92,7 @@
           v-for="item in filteredList"
           :key="item.word"
           class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-koshi/30 transition-colors"
-          @click="browseIndex = allItems.indexOf(item)"
+          @click="browseIndex = allItems.indexOf(item); jumpedFrom = null"
         >
           <span class="text-sm font-medium w-16">{{ item.word }}</span>
           <span class="text-xs text-usuzumi flex-1 truncate">{{ item.meaning }}</span>
@@ -106,6 +115,8 @@ const allItems = onomatopoeia
 const selectedCategory = ref('')
 const browseMode = ref(false)
 const browseIndex = ref(0)
+const jumpedFrom = ref(null)   // word we navigated away from via a related link
+const jumpedFromIndex = ref(null) // so we can go back
 
 const filteredList = computed(() => {
   if (!selectedCategory.value) return allItems
@@ -139,8 +150,19 @@ function showAnother() {
 function jumpTo(word) {
   const idx = allItems.findIndex(o => o.word === word)
   if (idx >= 0) {
+    jumpedFrom.value = currentWord.value?.word ?? null
+    jumpedFromIndex.value = browseMode.value ? browseIndex.value : null
     browseMode.value = true
     browseIndex.value = idx
+  }
+}
+
+function jumpBack() {
+  if (jumpedFrom.value) {
+    const idx = jumpedFromIndex.value ?? allItems.findIndex(o => o.word === jumpedFrom.value)
+    browseIndex.value = idx >= 0 ? idx : 0
+    jumpedFrom.value = null
+    jumpedFromIndex.value = null
   }
 }
 
