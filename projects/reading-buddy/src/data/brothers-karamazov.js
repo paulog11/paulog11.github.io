@@ -1,7 +1,10 @@
 export default {
   id: 'brothers-karamazov',
+  type: 'narrative',
   title: 'The Brothers Karamazov',
   author: 'Fyodor Dostoevsky',
+  coverEmoji: '\uD83D\uDCD6',
+  description: 'A sprawling family drama of faith, doubt, and patricide in 19th-century Russia.',
 
   characters: {
     fyodor: {
