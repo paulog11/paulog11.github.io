@@ -10,7 +10,7 @@ Multi-book reading companion. Supports two book types: **narrative** (progressiv
 ## Architecture
 App.vue is a thin shell that renders a BookSelector landing screen, then delegates to a type-specific sub-app based on `book.type`:
 - `type: 'narrative'` → NarrativeApp (Brothers Karamazov)
-- `type: 'concepts'` → ConceptApp (The Japanese Mind)
+- `type: 'concepts'` → ConceptApp (The Japanese Mind, Japanese Culture)
 
 This avoids conditional composable calls — each sub-app calls its own composable internally.
 
@@ -29,8 +29,9 @@ This avoids conditional composable calls — each sub-app calls its own composab
 - `src/components/CharacterCard.vue` / `CharacterGrid.vue` — character profiles
 - `src/components/BrothersTimeline.vue` — parallel timelines for Dmitri/Ivan/Alyosha
 
-### Concept books (The Japanese Mind)
+### Concept books (The Japanese Mind, Japanese Culture)
 - `src/data/japanese-mind.js` — 27 cultural concepts, each with 4-step content
+- `src/data/japanese-culture.js` — 8 religious/philosophical foundations (Shinto, Buddhism, Taoism, Zen, Confucianism, etc.)
 - `src/composables/useConceptProgress.js` — exposes book data (no unlock gating)
 - `src/components/ConceptApp.vue` — layout shell for concept books (sidebar + main)
 - `src/components/ConceptTracker.vue` — sidebar list of all concepts
