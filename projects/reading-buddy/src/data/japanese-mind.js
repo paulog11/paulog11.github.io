@@ -34,6 +34,7 @@ export default {
             'Notice it when someone seems to be asking for something indirectly, or when a person acts helpless in a way that invites you to step in. Instead of reading it as weakness, consider whether they\u2019re signaling closeness.',
         },
       },
+      comment: null,
     },
     {
       id: 'bushido',
@@ -62,6 +63,7 @@ export default {
             'Notice it when someone goes far beyond what seems reasonable for a task or obligation. The motivation may be less about the task itself and more about honoring a perceived duty or loyalty.',
         },
       },
+      comment: null,
     },
     {
       id: 'chinmoku',
@@ -90,6 +92,7 @@ export default {
             'Notice it when a conversation pauses and you feel the urge to fill the gap. Ask yourself whether the other person might be communicating something through the silence itself.',
         },
       },
+      comment: null,
     },
     {
       id: 'enryo',
@@ -118,6 +121,7 @@ export default {
             'Notice it when someone declines something you\u2019re offering, especially if it\u2019s the first or second time. Consider offering again\u2014their refusal may be enryo, not a true \u201cno.\u201d',
         },
       },
+      comment: null,
     },
     {
       id: 'giri',
@@ -146,6 +150,7 @@ export default {
             'Notice it when someone does something that seems formulaic or obligatory. Rather than dismissing it as insincere, consider that the act of following through on the obligation is itself the message.',
         },
       },
+      comment: null,
     },
     {
       id: 'haji',
@@ -174,6 +179,7 @@ export default {
             'Notice it when someone seems disproportionately upset about a minor social misstep, or when they go to great lengths to avoid being seen making a mistake. The stakes they feel may be social, not personal.',
         },
       },
+      comment: null,
     },
     {
       id: 'haragei',
@@ -202,6 +208,7 @@ export default {
             'Notice it when someone seems to be saying one thing but their behavior or tone suggests something else. Instead of pressing for a direct answer, try to read the situation holistically.',
         },
       },
+      comment: null,
     },
     {
       id: 'ie',
@@ -230,6 +237,7 @@ export default {
             'Notice it when family decisions seem to prioritize institutional continuity over individual preference\u2014career choices made to preserve a family business, marriages arranged for compatibility with the household, or eldest children bearing disproportionate responsibility.',
         },
       },
+      comment: null,
     },
     {
       id: 'ijime',
@@ -258,6 +266,7 @@ export default {
             'Notice it when group harmony seems to be maintained through exclusion rather than inclusion. If someone is being conspicuously ignored or isolated, consider whether social conformity pressure is at work.',
         },
       },
+      comment: null,
     },
     {
       id: 'ishin-denshin',
@@ -286,6 +295,7 @@ export default {
             'Notice it when people around you seem to coordinate effortlessly without verbal communication. Rather than feeling left out, observe the shared cues they\u2019re reading\u2014context, body language, routine.',
         },
       },
+      comment: null,
     },
     {
       id: 'jinji-ido',
@@ -314,6 +324,7 @@ export default {
             'Notice it when someone\u2019s career path seems to zigzag between unrelated roles. Instead of seeing it as unfocused, consider whether they\u2019re being groomed as a generalist leader.',
         },
       },
+      comment: null,
     },
     {
       id: 'joushiki',
@@ -342,6 +353,7 @@ export default {
             'Notice it when someone reacts to your behavior with surprise or confusion, as if you\u2019ve broken an obvious rule. You may have violated a joushiki you didn\u2019t know existed. Ask a trusted local what happened.',
         },
       },
+      comment: null,
     },
     {
       id: 'kata',
@@ -370,6 +382,7 @@ export default {
             'Notice it when training or learning feels excessively repetitive or rigid. Consider that the rigidity may be intentional\u2014the form is the lesson, and mastery of it unlocks a deeper understanding that can\u2019t be reached by skipping ahead.',
         },
       },
+      comment: null,
     },
     {
       id: 'kawaii',
@@ -398,6 +411,7 @@ export default {
             'Notice it when cute imagery appears in unexpected contexts\u2014government forms, corporate communications, safety warnings. Consider what social function the cuteness is serving: is it making something intimidating feel approachable?',
         },
       },
+      comment: null,
     },
     {
       id: 'ma',
@@ -425,6 +439,7 @@ export default {
             'Notice it in architecture, design, conversation, and performance. When space feels intentionally empty rather than accidentally vacant, you\u2019re experiencing ma. Pay attention to what the emptiness makes you feel or notice.',
         },
       },
+      comment: null,
     },
     {
       id: 'meishi',
@@ -453,6 +468,7 @@ export default {
             'Notice it at the start of any professional interaction in Japan. Watch how others handle cards\u2014the care they take mirrors the respect they\u2019re showing. Match their formality.',
         },
       },
+      comment: null,
     },
     {
       id: 'nemawashi',
@@ -481,6 +497,7 @@ export default {
             'Notice it when a meeting seems to reach consensus suspiciously quickly, or when a proposal passes without debate. The real decision-making likely happened beforehand in informal conversations.',
         },
       },
+      comment: null,
     },
     {
       id: 'nihonjinron',
@@ -509,6 +526,7 @@ export default {
             'Notice it when someone explains a cultural practice by saying \u201cthat\u2019s just how Japanese people are\u201d without further explanation. Ask yourself whether the trait is truly unique or whether it\u2019s a cultural practice with historical roots that could exist elsewhere.',
         },
       },
+      comment: null,
     },
     {
       id: 'on',
@@ -537,6 +555,7 @@ export default {
             'Notice it when someone speaks about a past mentor, employer, or helper with unusual reverence or feels compelled to \u201crepay\u201d a kindness from long ago. They may be honoring an on relationship.',
         },
       },
+      comment: null,
     },
     {
       id: 'otaku',
@@ -564,6 +583,7 @@ export default {
             'Notice it when someone\u2019s knowledge of a niche topic goes far beyond casual interest into encyclopedic territory. In Japan, this depth is increasingly respected as a form of dedication rather than dismissed as obsession.',
         },
       },
+      comment: null,
     },
     {
       id: 'ringi',
@@ -592,6 +612,7 @@ export default {
             'Notice it when a decision seems to take forever to finalize but then executes smoothly and without resistance. The slow decision was building the alignment needed for fast execution.',
         },
       },
+      comment: null,
     },
     {
       id: 'seken',
@@ -620,6 +641,7 @@ export default {
             'Notice it when someone makes a decision that seems motivated by how others will perceive it rather than personal preference. Ask who the \u201cseken\u201d is in this situation\u2014whose opinions are carrying weight?',
         },
       },
+      comment: null,
     },
     {
       id: 'sempai-kohai',
@@ -648,6 +670,7 @@ export default {
             'Notice it when someone treats a colleague with unusual deference or when someone takes a protective, mentoring role that seems to go beyond job requirements. The sempai-kohai dynamic may be at play.',
         },
       },
+      comment: null,
     },
     {
       id: 'seishin-shugi',
@@ -676,6 +699,7 @@ export default {
             'Notice it when endurance is being valued for its own sake, or when someone pushes through difficulty in a way that seems to prioritize proving their spirit over achieving a practical outcome.',
         },
       },
+      comment: null,
     },
     {
       id: 'shoganai',
@@ -704,6 +728,7 @@ export default {
             'Notice it when someone accepts a setback with calm rather than frustration. Instead of reading it as apathy, consider whether they\u2019re practicing shoganai\u2014a deliberate choice to conserve their energy for what they can change.',
         },
       },
+      comment: null,
     },
     {
       id: 'tatemae-honne',
@@ -732,6 +757,7 @@ export default {
             'Notice it when someone\u2019s words seem positive but their energy or context suggests otherwise. Rather than taking statements at face value, consider the social situation: what would tatemae require them to say here, and what might their honne actually be?',
         },
       },
+      comment: null,
     },
     {
       id: 'wabi-sabi',
@@ -759,6 +785,7 @@ export default {
             'Notice it when you feel drawn to something because of its imperfections rather than despite them\u2014a cracked wall, a faded fabric, an asymmetric design. That response is wabi-sabi.',
         },
       },
+      comment: null,
     },
   ],
 }

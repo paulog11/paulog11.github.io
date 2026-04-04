@@ -34,6 +34,7 @@ export default {
             'Notice it when discussions of Japanese identity arise. The tension between the myth of a homogeneous people and the archaeological reality of diverse migration waves is a thread that runs through all of Japanese cultural history.',
         },
       },
+      comment: null,
     },
     {
       id: 'cultural-history',
@@ -62,6 +63,7 @@ export default {
             'Notice it when someone describes Japan as "not very religious." The layered model suggests the opposite—religious and philosophical traditions are so deeply embedded that they operate invisibly in daily life, from etiquette to aesthetics to business practices.',
         },
       },
+      comment: null,
     },
     {
       id: 'shinto',
@@ -91,6 +93,7 @@ export default {
             'Notice Shinto\'s influence whenever you see attention to boundaries (thresholds, wrapping, inside/outside distinctions), seasonal awareness, or purification rituals in daily Japanese life. The instinct to keep things clean, ordered, and properly bounded traces back to Shinto sensibilities.',
         },
       },
+      comment: null,
     },
     {
       id: 'buddhism',
@@ -120,6 +123,7 @@ export default {
             'Notice Buddhism\'s influence in Japanese attitudes toward impermanence and acceptance—the resigned sigh of "shō ga nai" (it can\'t be helped), the appreciation of weathered objects, and the cultural comfort with ambiguity and transience all carry Buddhist undertones.',
         },
       },
+      comment: null,
     },
     {
       id: 'taoism',
@@ -149,6 +153,7 @@ export default {
             'Notice Taoism\'s hidden presence whenever you encounter Japanese superstitions about lucky or unlucky numbers, directional taboos, seasonal rituals tied to cosmological cycles, or the pervasive concept of ki in language and practice.',
         },
       },
+      comment: null,
     },
     {
       id: 'zen',
@@ -176,6 +181,7 @@ export default {
             'Notice Zen\'s influence whenever you encounter deliberate simplicity, empty space treated as meaningful, or activities elevated into meditative "ways" (dō/道). The Japanese impulse to find depth in restraint and profundity in the mundane is Zen\'s lasting gift to the culture.',
         },
       },
+      comment: null,
     },
     {
       id: 'confucianism',
@@ -205,6 +211,7 @@ export default {
             'Notice Confucianism operating whenever you see deference to seniority, emphasis on group harmony over individual assertion, the weight placed on educational achievement, or the elaborate system of social obligations (giri) that governs gift-giving, favors, and professional relationships.',
         },
       },
+      comment: null,
     },
     {
       id: 'western-influences',
@@ -234,6 +241,7 @@ export default {
             'Notice it when something in Japan looks familiar but feels different. The gap between Western form and Japanese content—a constitutional democracy that runs on consensus, a capitalist economy built on loyalty, a pop culture industry steeped in Buddhist impermanence—is where the multilayered model comes alive.',
         },
       },
+      comment: null,
     },
   ],
 }

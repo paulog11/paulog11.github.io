@@ -50,5 +50,12 @@ defineProps({
       <h4 class="text-xs font-mono uppercase tracking-wider text-gold-400/80 mb-1.5">Trigger</h4>
       <p class="text-silver-300 text-sm leading-relaxed italic">{{ concept.steps.trigger.content }}</p>
     </div>
+
+    <!-- FM Japan 25 Comments -->
+    <div class="border border-forest-600/50 rounded-lg p-4 bg-forest-800/30">
+      <h4 class="text-xs font-mono uppercase tracking-wider text-silver-400 mb-2">FM Japan 25 Comments</h4>
+      <p v-if="concept.comment" class="text-silver-200 text-sm leading-relaxed">{{ concept.comment }}</p>
+      <p v-else class="text-silver-600 text-sm italic">No notes yet.</p>
+    </div>
   </div>
 </template>
