@@ -356,7 +356,13 @@ export const useGameStore = defineStore('game', () => {
         player.hand.push({ ...card, flipped: true });
         Audio.play('bust');
         showToast(`💥 ${player.name} busted! (duplicate ${card.value})`);
-        advanceAfterCard(player);
+        // If busting during a forced Flip Three, end it immediately
+        if (flipThreeData.value && flipThreeData.value.type === 'flipthree') {
+          flipThreeData.value = null;
+          nextTurn();
+        } else {
+          advanceAfterCard(player);
+        }
         return;
       }
       player.hand.push({ ...card, flipped: true });
@@ -373,7 +379,19 @@ export const useGameStore = defineStore('game', () => {
       // Rule 3: advance turn after each flip (one card per turn)
       nextTurn();
     } else {
-      // Action or modifier card — all go to player hand, turn advances after resolution
+      // During a forced Flip Three, non-number cards (modifiers/actions) still count as one
+      // of the 3 required flips — add to hand but don't trigger special effects mid-sequence
+      if (flipThreeData.value && flipThreeData.value.type === 'flipthree') {
+        player.hand.push({ ...card, flipped: true });
+        if (card.type === 'modifier') Audio.play(card.isMultiplier ? 'modifierX2' : 'modifier');
+        flipThreeData.value.cardsLeft--;
+        if (flipThreeData.value.cardsLeft <= 0) {
+          flipThreeData.value = null;
+          nextTurn();
+        }
+        return;
+      }
+      // Normal turn — action or modifier card triggers its special effect
       handleSpecial(card, player);
     }
   }
