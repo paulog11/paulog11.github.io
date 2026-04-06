@@ -11,13 +11,16 @@ export const contextOptions = [
 
 export function useTranslation() {
   const context = ref('casual')
-  const query = ref('')
   const results = ref([])
   const loading = ref(false)
   const error = ref(null)
+  let abortController = null
 
-  async function translate(apiKey) {
-    if (!apiKey || !query.value.trim()) return
+  async function translate(query, apiKey) {
+    if (!apiKey || !query?.trim()) return
+
+    if (abortController) abortController.abort()
+    abortController = new AbortController()
 
     loading.value = true
     error.value = null
@@ -43,8 +46,9 @@ No explanations, no markdown, only the raw JSON array.`
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1000,
           system: systemPrompt,
-          messages: [{ role: 'user', content: query.value.trim() }]
-        })
+          messages: [{ role: 'user', content: query.trim() }]
+        }),
+        signal: abortController.signal
       })
 
       const data = await resp.json()
@@ -53,6 +57,7 @@ No explanations, no markdown, only the raw JSON array.`
       const text = data.content[0].text.trim().replace(/```json|```/g, '')
       results.value = JSON.parse(text)
     } catch (e) {
+      if (e.name === 'AbortError') return
       error.value = e.message || 'An unexpected error occurred.'
     } finally {
       loading.value = false
@@ -64,5 +69,5 @@ No explanations, no markdown, only the raw JSON array.`
     error.value = null
   }
 
-  return { context, contextOptions, query, results, loading, error, translate, clearResults }
+  return { context, contextOptions, results, loading, error, translate, clearResults }
 }

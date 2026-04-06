@@ -27,19 +27,24 @@ describe('useTranslation', () => {
 
   it('translate exits early if apiKey is empty', async () => {
     const { translate } = useTranslation()
-    await translate('')
+    await translate('Thank you', '')
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('translate exits early if query is empty', async () => {
     const { translate } = useTranslation()
-    await translate('sk-ant-123')
+    await translate('', 'sk-ant-123')
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('translate exits early if query is whitespace only', async () => {
+    const { translate } = useTranslation()
+    await translate('   ', 'sk-ant-123')
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('sets loading to true during call and false after', async () => {
-    const { query, translate, loading } = useTranslation()
-    query.value = 'Thank you'
+    const { translate, loading } = useTranslation()
 
     let loadingDuringCall = false
     vi.stubGlobal('fetch', vi.fn(() => {
@@ -47,23 +52,21 @@ describe('useTranslation', () => {
       return Promise.resolve({ json: () => Promise.resolve({ content: [{ text: JSON.stringify(mockPhrases) }] }) })
     }))
 
-    await translate('sk-ant-123')
+    await translate('Thank you', 'sk-ant-123')
     expect(loadingDuringCall).toBe(true)
     expect(loading.value).toBe(false)
   })
 
   it('successful response populates results', async () => {
-    const { query, translate, results } = useTranslation()
-    query.value = 'Thank you'
-    await translate('sk-ant-123')
+    const { translate, results } = useTranslation()
+    await translate('Thank you', 'sk-ant-123')
     expect(results.value).toEqual(mockPhrases)
   })
 
   it('API error in response body sets error', async () => {
     vi.stubGlobal('fetch', makeFetchMock({ error: { message: 'invalid api key' } }))
-    const { query, translate, error, results } = useTranslation()
-    query.value = 'Thank you'
-    await translate('sk-ant-123')
+    const { translate, error, results } = useTranslation()
+    await translate('Thank you', 'sk-ant-123')
     expect(error.value).toBe('invalid api key')
     expect(results.value).toEqual([])
   })
@@ -72,17 +75,15 @@ describe('useTranslation', () => {
     vi.stubGlobal('fetch', makeFetchMock({
       content: [{ text: 'this is not json' }]
     }))
-    const { query, translate, error } = useTranslation()
-    query.value = 'Thank you'
-    await translate('sk-ant-123')
+    const { translate, error } = useTranslation()
+    await translate('Thank you', 'sk-ant-123')
     expect(error.value).toBeTruthy()
   })
 
   it('clearResults resets results and error', async () => {
     vi.stubGlobal('fetch', makeFetchMock({ error: { message: 'fail' } }))
-    const { query, translate, clearResults, results, error } = useTranslation()
-    query.value = 'Thank you'
-    await translate('sk-ant-123')
+    const { translate, clearResults, results, error } = useTranslation()
+    await translate('Thank you', 'sk-ant-123')
     expect(error.value).toBeTruthy()
 
     clearResults()
@@ -91,10 +92,9 @@ describe('useTranslation', () => {
   })
 
   it('system prompt for formal context includes "formal"', async () => {
-    const { query, context, translate } = useTranslation()
-    query.value = 'I need to speak formally'
+    const { context, translate } = useTranslation()
     context.value = 'formal'
-    await translate('sk-ant-123')
+    await translate('I need to speak formally', 'sk-ant-123')
 
     const callBody = JSON.parse(fetch.mock.calls[0][1].body)
     expect(callBody.system).toContain('formal')
@@ -102,5 +102,27 @@ describe('useTranslation', () => {
 
   it('contextOptions has 6 entries', () => {
     expect(contextOptions).toHaveLength(6)
+  })
+
+  it('aborts previous in-flight request when translate is called again', async () => {
+    let abortSignal = null
+    vi.stubGlobal('fetch', vi.fn((_, opts) => {
+      abortSignal = opts.signal
+      return new Promise((resolve) => {
+        opts.signal.addEventListener('abort', () => resolve({ json: () => Promise.resolve({}) }))
+      })
+    }))
+
+    const { translate } = useTranslation()
+
+    const first = translate('hello', 'sk-ant-123')
+    expect(abortSignal.aborted).toBe(false)
+
+    // Second call should abort the first
+    vi.stubGlobal('fetch', makeFetchMock({ content: [{ text: JSON.stringify(mockPhrases) }] }))
+    await translate('world', 'sk-ant-123')
+
+    expect(abortSignal.aborted).toBe(true)
+    await first
   })
 })

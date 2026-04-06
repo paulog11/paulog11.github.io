@@ -204,6 +204,22 @@ textarea::placeholder { color: var(--muted); font-weight: 300; }
 .ask-btn:active { transform: scale(0.98); }
 .ask-btn:disabled { background: var(--border); cursor: not-allowed; }
 
+.mic-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.mic-btn:hover { border-color: var(--ink); }
+.mic-btn--recording { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+.mic-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .hint {
   font-size: 0.72rem;
   color: var(--muted);

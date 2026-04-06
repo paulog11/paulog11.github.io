@@ -1,21 +1,23 @@
 <script setup>
 import { ref } from 'vue'
 import { useApiKey } from './composables/useApiKey.js'
+import { useInput } from './composables/useInput.js'
 import { useTranslation } from './composables/useTranslation.js'
 import ApiKeyBar from './components/ApiKeyBar.vue'
 import ContextBar from './components/ContextBar.vue'
-import QueryInput from './components/QueryInput.vue'
+import InputBar from './components/InputBar.vue'
 import ResultList from './components/ResultList.vue'
 import ShowOverlay from './components/ShowOverlay.vue'
 
 const { apiKey, hasKey, saveKey, clearKey } = useApiKey()
-const { context, contextOptions, query, results, loading, error, translate, clearResults } = useTranslation()
+const { query, recording, supported, startRecording, stopRecording } = useInput()
+const { context, contextOptions, results, loading, error, translate, clearResults } = useTranslation()
 
 const showOverlay = ref(false)
 
 function onTranslate() {
   clearResults()
-  translate(apiKey.value)
+  translate(query.value, apiKey.value)
 }
 </script>
 
@@ -37,11 +39,15 @@ function onTranslate() {
       v-model="context"
     />
 
-    <QueryInput
+    <InputBar
       v-model="query"
       :loading="loading"
       :hasKey="hasKey"
+      :recording="recording"
+      :supported="supported"
       @translate="onTranslate"
+      @startVoice="startRecording"
+      @stopVoice="stopRecording"
     />
 
     <ResultList
