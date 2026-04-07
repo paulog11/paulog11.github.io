@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { useLocalStorage } from './useLocalStorage.js'
-import { fetchUser, fetchSummary, fetchAllAssignments } from '../services/wanikani-api.js'
+import { fetchUser, fetchSummary, fetchAllAssignments, fetchSubjects } from '../services/wanikani-api.js'
 
 export function useWaniKani() {
   const apiKey = useLocalStorage('japandash:wanikani-key', '')
@@ -11,6 +11,102 @@ export function useWaniKani() {
   const error = ref(null)
 
   const hasKey = computed(() => !!apiKey.value)
+
+  // Vocabulary + audio state
+  const learnedVocabulary = ref([])
+  const vocabLoading = ref(false)
+  const vocabError = ref(null)
+  const vocabCache = useLocalStorage('japandash:wanikani-vocab-cache', null)
+
+  const SRS_LABELS = {
+    1: 'apprentice', 2: 'apprentice', 3: 'apprentice', 4: 'apprentice',
+    5: 'guru', 6: 'guru',
+    7: 'master',
+    8: 'enlightened',
+    9: 'burned',
+  }
+
+  function mergeVocabItem(assignment, subject) {
+    const sd = subject.data
+    const ad = assignment.data
+    const primaryMeaning = sd.meanings?.find(m => m.primary)?.meaning ?? sd.meanings?.[0]?.meaning ?? ''
+    const primaryReading = sd.readings?.find(r => r.primary)?.reading ?? sd.readings?.[0]?.reading ?? ''
+    const audios = (sd.pronunciation_audios ?? []).map(a => ({
+      url: a.url,
+      contentType: a.content_type,
+      gender: a.metadata?.gender ?? null,
+      voiceActorName: a.metadata?.voice_actor_name ?? null,
+      pronunciation: a.metadata?.pronunciation ?? primaryReading,
+    }))
+    return {
+      subjectId: subject.id,
+      srsStage: ad.srs_stage,
+      srsLabel: SRS_LABELS[ad.srs_stage] ?? 'apprentice',
+      level: sd.level,
+      characters: sd.characters,
+      primaryMeaning,
+      meanings: sd.meanings?.map(m => m.meaning) ?? [],
+      primaryReading,
+      readings: sd.readings ?? [],
+      audios,
+    }
+  }
+
+  async function fetchLearnedVocabulary(forceRefresh = false) {
+    if (!apiKey.value || assignments.value.length === 0) return
+
+    const cached = vocabCache.value
+    if (
+      !forceRefresh &&
+      cached &&
+      cached.userId === user.value?.username &&
+      Date.now() - new Date(cached.fetchedAt).getTime() < 24 * 60 * 60 * 1000
+    ) {
+      learnedVocabulary.value = cached.items
+      return
+    }
+
+    vocabLoading.value = true
+    vocabError.value = null
+    try {
+      const vocabAssignments = assignments.value.filter(
+        a => a.data?.subject_type === 'vocabulary' && a.data?.started_at != null
+      )
+
+      const subjectIds = vocabAssignments.map(a => a.data.subject_id)
+      const chunks = []
+      for (let i = 0; i < subjectIds.length; i += 1000) {
+        chunks.push(subjectIds.slice(i, i + 1000))
+      }
+
+      const subjectResults = await Promise.all(
+        chunks.map(chunk =>
+          fetchSubjects(apiKey.value, { types: 'vocabulary', subject_ids: chunk.join(',') })
+        )
+      )
+      const subjects = subjectResults.flat()
+      const subjectMap = Object.fromEntries(subjects.map(s => [s.id, s]))
+
+      const merged = vocabAssignments
+        .map(a => {
+          const subject = subjectMap[a.data.subject_id]
+          return subject ? mergeVocabItem(a, subject) : null
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.level - b.level || a.characters.localeCompare(b.characters))
+
+      learnedVocabulary.value = merged
+      vocabCache.value = {
+        fetchedAt: new Date().toISOString(),
+        userId: user.value?.username,
+        items: merged,
+      }
+    } catch (e) {
+      vocabError.value = e.message
+    } finally {
+      vocabLoading.value = false
+    }
+  }
 
   const srsDistribution = computed(() => {
     const dist = { apprentice: 0, guru: 0, master: 0, enlightened: 0, burned: 0 }
@@ -81,6 +177,7 @@ export function useWaniKani() {
     hasKey,
     user,
     summary,
+    assignments,
     srsDistribution,
     reviewsAvailable,
     lessonsAvailable,
@@ -88,5 +185,9 @@ export function useWaniKani() {
     loading,
     error,
     refresh,
+    learnedVocabulary,
+    vocabLoading,
+    vocabError,
+    fetchLearnedVocabulary,
   }
 }

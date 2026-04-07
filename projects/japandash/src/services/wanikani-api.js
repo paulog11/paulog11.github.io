@@ -49,3 +49,14 @@ export async function fetchLevelProgressions(token) {
   const data = await fetchJSON(`${BASE_URL}/level_progressions`, token)
   return data.data
 }
+
+export async function fetchSubjects(token, params = {}) {
+  const items = []
+  let url = `${BASE_URL}/subjects?${new URLSearchParams(params)}`
+  while (url) {
+    const data = await fetchJSON(url, token)
+    items.push(...data.data)
+    url = data.pages?.next_url || null
+  }
+  return items
+}

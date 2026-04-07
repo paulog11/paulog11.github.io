@@ -57,6 +57,7 @@
     <main class="p-6">
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         <WaniKaniWidget />
+        <VocabWidget />
         <JishoWidget />
         <ShadowingWidget />
         <OnomatopoeiaWidget />
@@ -72,6 +73,7 @@
 import { ref } from 'vue'
 import { useLocalStorage } from './composables/useLocalStorage.js'
 import WaniKaniWidget from './components/widgets/WaniKaniWidget.vue'
+import VocabWidget from './components/widgets/VocabWidget.vue'
 import JishoWidget from './components/widgets/JishoWidget.vue'
 import ShadowingWidget from './components/widgets/ShadowingWidget.vue'
 import OnomatopoeiaWidget from './components/widgets/OnomatopoeiaWidget.vue'
