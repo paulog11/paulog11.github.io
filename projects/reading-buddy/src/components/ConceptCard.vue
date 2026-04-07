@@ -39,9 +39,9 @@ defineProps({
     <!-- Cultural Gap (conditional) -->
     <div
       v-if="concept.steps.culturalGap.applicable"
-      class="border-l-2 border-amber-400/60 pl-4"
+      class="border-l-2 border-amber-600/70 pl-4"
     >
-      <h4 class="text-xs font-mono uppercase tracking-wider text-amber-400/80 mb-1.5">Cultural Gap</h4>
+      <h4 class="text-xs font-mono uppercase tracking-wider text-amber-700 mb-1.5">Cultural Gap</h4>
       <p class="text-silver-300 text-sm leading-relaxed">{{ concept.steps.culturalGap.content }}</p>
     </div>
 

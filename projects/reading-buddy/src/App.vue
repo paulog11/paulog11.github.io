@@ -7,8 +7,9 @@ import brothersData from './data/brothers-karamazov.js'
 import japaneseData from './data/japanese-mind.js'
 import japaneseCultureData from './data/japanese-culture.js'
 import multiplyingChurchesData from './data/multiplying-churches.js'
+import gospelHumanContextsData from './data/gospel-human-contexts.js'
 
-const BOOKS = [brothersData, japaneseData, japaneseCultureData, multiplyingChurchesData]
+const BOOKS = [brothersData, japaneseData, japaneseCultureData, multiplyingChurchesData, gospelHumanContextsData]
 const selectedId = ref(null)
 const selectedBook = computed(() => BOOKS.find((b) => b.id === selectedId.value) || null)
 </script>

@@ -75,7 +75,7 @@ function handleReset() {
           <span class="text-xs text-silver-400">Reset progress?</span>
           <button
             @click="handleReset"
-            class="text-xs bg-red-900/50 text-red-300 px-2 py-1 rounded hover:bg-red-900 transition-colors"
+            class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors"
           >
             Yes
           </button>
