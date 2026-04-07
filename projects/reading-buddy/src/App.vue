@@ -6,8 +6,9 @@ import ConceptApp from './components/ConceptApp.vue'
 import brothersData from './data/brothers-karamazov.js'
 import japaneseData from './data/japanese-mind.js'
 import japaneseCultureData from './data/japanese-culture.js'
+import multiplyingChurchesData from './data/multiplying-churches.js'
 
-const BOOKS = [brothersData, japaneseData, japaneseCultureData]
+const BOOKS = [brothersData, japaneseData, japaneseCultureData, multiplyingChurchesData]
 const selectedId = ref(null)
 const selectedBook = computed(() => BOOKS.find((b) => b.id === selectedId.value) || null)
 </script>
