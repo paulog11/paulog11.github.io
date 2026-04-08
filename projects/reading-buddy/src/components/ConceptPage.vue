@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import ConceptCard from './ConceptCard.vue'
+import { coverImages } from '../assets/coverImages.js'
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -19,7 +20,15 @@ const activeConcept = computed(() =>
   <div>
     <!-- Landing state: no concept selected -->
     <div v-if="!activeConcept" class="text-center py-16 px-4">
-      <div class="text-5xl mb-6">{{ book.coverEmoji || '&#128214;' }}</div>
+      <div class="mb-6 flex justify-center">
+        <img
+          v-if="coverImages[book.id]"
+          :src="coverImages[book.id]"
+          :alt="book.title"
+          class="w-24 h-32 object-cover rounded shadow-md"
+        />
+        <div v-else class="text-5xl">{{ book.coverEmoji || '&#128214;' }}</div>
+      </div>
       <h2 class="font-serif text-3xl text-silver-100 mb-2">
         {{ book.title }}
       </h2>
