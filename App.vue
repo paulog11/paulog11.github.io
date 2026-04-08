@@ -106,6 +106,16 @@ const apps = ref([
     comingSoon: false,
   },
   {
+    id: 'machi-koro',
+    title: 'Machi Koro',
+    subtitle: 'City Builder',
+    description: 'Build your city by rolling dice and buying establishments. First to complete all 4 landmarks wins!',
+    tags: ['Game', 'Board Game'],
+    icon: '🏙️',
+    url: './projects/ported-games/machi-koro/dist/index.html',
+    comingSoon: false,
+  },
+  {
     id: 'flip7',
     title: 'Flip 7',
     subtitle: 'Card Game',
