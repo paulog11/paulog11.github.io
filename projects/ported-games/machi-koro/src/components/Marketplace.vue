@@ -51,7 +51,7 @@ const availableEsts = computed(() =>
             style="font-size:12px;padding:6px 12px;"
             :disabled="!store.canBuy || !canAfford(lm.cost)"
             @click="store.buyLandmark(lm.id)"
-          >💰{{ lm.cost }}</button>
+          >{{ lm.cost === 0 ? 'Free' : `💰${lm.cost}` }}</button>
         </div>
       </div>
     </div>

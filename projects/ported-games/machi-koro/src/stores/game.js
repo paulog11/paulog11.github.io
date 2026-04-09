@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import {
   ESTABLISHMENTS, LANDMARKS, TYPE, EFFECT, ICON,
-  buildSupply, getEst, getLandmark, countByIcon,
+  buildShuffledDeck, getEst, getLandmark, countByIcon,
   activatesOn, DEFAULT_NAMES, PLAYER_COLORS,
 } from '../constants.js';
 import { audio } from '../audio.js';
@@ -19,15 +19,18 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Supply ─────────────────────────────────────────────────────────────────
   const supply = ref({});
+  const deck   = ref([]); // shuffled remaining cards for variable supply
 
   // ── Turn State Machine ─────────────────────────────────────────────────────
-  // Phases: 'rolling' | 'reroll_prompt' | 'income' | 'buy' | 'end_turn'
+  // Phases: 'rolling' | 'reroll_prompt' | 'harbor_prompt' | 'income' | 'buy' | 'end_turn'
   const turnPhase          = ref('rolling');
   const diceValues         = ref([]);
   const isRolling          = ref(false);
   const usedReroll         = ref(false);
   const extraTurn          = ref(false);
   const consecutiveTurns   = ref(0);
+  const harborBonus        = ref(0);    // 0 or 2; added to diceTotal when Harbor is used
+  const boughtThisTurn     = ref(false); // Airport: did player buy anything this turn?
 
   // ── Interaction Modals ─────────────────────────────────────────────────────
   // null | { type, step?, opponentIdx?, opponentEstId?, myEstId? }
@@ -45,13 +48,15 @@ export const useGameStore = defineStore('game', () => {
 
   // ── Computed ───────────────────────────────────────────────────────────────
   const currentPlayer   = computed(() => players.value[currentPlayerIdx.value]);
-  const diceTotal       = computed(() => diceValues.value.reduce((s, d) => s + d, 0));
+  const diceTotal       = computed(() => diceValues.value.reduce((s, d) => s + d, 0) + harborBonus.value);
   const isDoubles       = computed(() => diceValues.value.length === 2 && diceValues.value[0] === diceValues.value[1]);
 
   const hasTrainStation  = computed(() => currentPlayer.value?.landmarks?.train_station ?? false);
   const hasShoppingMall  = computed(() => currentPlayer.value?.landmarks?.shopping_mall ?? false);
   const hasAmusementPark = computed(() => currentPlayer.value?.landmarks?.amusement_park ?? false);
   const hasRadioTower    = computed(() => currentPlayer.value?.landmarks?.radio_tower ?? false);
+  const hasHarbor        = computed(() => currentPlayer.value?.landmarks?.harbor ?? false);
+  const hasAirport       = computed(() => currentPlayer.value?.landmarks?.airport ?? false);
 
   const canRoll   = computed(() => turnPhase.value === 'rolling' && !pendingInteraction.value && !isAnimating.value);
   const canReroll = computed(() => turnPhase.value === 'reroll_prompt' && hasRadioTower.value && !usedReroll.value);
@@ -71,11 +76,12 @@ export const useGameStore = defineStore('game', () => {
       }
     }
     switch (turnPhase.value) {
-      case 'rolling':      return `${name}'s turn — Roll the dice!`;
+      case 'rolling':       return `${name}'s turn — Roll the dice!`;
       case 'reroll_prompt': return `${name}: Use Radio Tower to reroll?`;
-      case 'income':       return `Resolving income...`;
-      case 'buy':          return `${name}: Buy a building or landmark (optional).`;
-      case 'end_turn':     return '';
+      case 'harbor_prompt': return `${name}: Use Harbor to add +2?`;
+      case 'income':        return `Resolving income...`;
+      case 'buy':           return `${name}: Buy a building or landmark (optional).`;
+      case 'end_turn':      return '';
       default: return '';
     }
   });
@@ -99,11 +105,27 @@ export const useGameStore = defineStore('game', () => {
       establishments: ests,
       landmarks: lm,
       isAI,
+      renovatedCards: {},       // { [estId]: count } — face-down (deactivated) copies; only Winery uses this
+      techStartupInvestment: 0, // accumulated coins invested into Tech Startup
     };
   }
 
   function clamp(val, min, max) {
     return Math.max(min, Math.min(max, val));
+  }
+
+  // Count built landmarks for a player
+  function builtLandmarkCount(playerIdx) {
+    return Object.values(players.value[playerIdx].landmarks).filter(Boolean).length;
+  }
+
+  // Draw cards from the deck until we have 10 unique visible stacks
+  function drawToFillSupply() {
+    const uniqueVisible = () => Object.values(supply.value).filter(v => v > 0).length;
+    while (uniqueVisible() < 10 && deck.value.length > 0) {
+      const estId = deck.value.shift();
+      supply.value[estId] = (supply.value[estId] ?? 0) + 1;
+    }
   }
 
   function transferCoins(fromIdx, toIdx, amount) {
@@ -157,25 +179,28 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // ── Calculate income for one activation of one establishment ──────────────
+  // Returns the total income (positive) or cost (negative for LOAN).
+  // For WINERY, also marks active copies as renovated.
+  // For TECH_STARTUP, PARK, PUBLISHER, TAX_OFFICE — handled directly in resolvePurple.
   function calcIncome(ownerIdx, estId) {
     const est = getEst(estId);
     const owner = players.value[ownerIdx];
-    const count = owner.establishments[estId] || 0;
+    const bonus = shoppingMallBonus(ownerIdx, est.icon);
+
+    // Active count: for Winery, subtract renovated copies
+    const totalCount = owner.establishments[estId] || 0;
+    const renovated = owner.renovatedCards?.[estId] ?? 0;
+    const count = est.renovates ? Math.max(0, totalCount - renovated) : totalCount;
     if (count === 0) return 0;
 
-    const bonus = shoppingMallBonus(ownerIdx, est.icon);
     let incomePerCard = 0;
 
     switch (est.effect) {
       case EFFECT.BANK:
-        incomePerCard = est.baseIncome + bonus;
-        break;
       case EFFECT.STEAL_ACTIVE:
         incomePerCard = est.baseIncome + bonus;
         break;
       case EFFECT.STEAL_ALL:
-        incomePerCard = est.baseIncome; // no shopping mall bonus for purple
-        break;
       case EFFECT.STEAL_CHOOSE:
         incomePerCard = est.baseIncome;
         break;
@@ -191,6 +216,47 @@ export const useGameStore = defineStore('game', () => {
       case EFFECT.PER_WHEAT:
         incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.WHEAT) + bonus;
         break;
+      // Expansion effects:
+      case EFFECT.BANK_IF_FEW_LANDMARKS:
+        incomePerCard = builtLandmarkCount(ownerIdx) < 2 ? est.baseIncome + bonus : 0;
+        break;
+      case EFFECT.BANK_IF_HARBOR:
+        incomePerCard = owner.landmarks.harbor ? est.baseIncome + bonus : 0;
+        break;
+      case EFFECT.STEAL_ACTIVE_IF_HARBOR:
+        incomePerCard = owner.landmarks.harbor ? est.baseIncome + bonus : 0;
+        break;
+      case EFFECT.PER_FLOWER:
+        incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.FLOWER) + bonus;
+        break;
+      case EFFECT.PER_GRAPE:
+        incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.GRAPE) + bonus;
+        break;
+      case EFFECT.PER_BREAD:
+        incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.BREAD) + bonus;
+        break;
+      case EFFECT.PER_CUP_ALL: {
+        const totalCups = players.value.reduce((sum, p) => sum + countByIcon(p.establishments, ICON.CUP), 0);
+        incomePerCard = est.baseIncome * totalCups + bonus;
+        break;
+      }
+      case EFFECT.LOAN:
+        return -2 * count; // negative income — owner pays bank
+      case EFFECT.WINERY: {
+        const grapeCount = countByIcon(owner.establishments, ICON.GRAPE);
+        incomePerCard = est.baseIncome * grapeCount;
+        // Renovate all active Winery copies after computing income
+        owner.renovatedCards[estId] = (owner.renovatedCards[estId] ?? 0) + count;
+        break;
+      }
+      // TECH_STARTUP, PARK, PUBLISHER, TAX_OFFICE handled in resolvePurple
+      case EFFECT.TECH_STARTUP:
+      case EFFECT.PARK:
+      case EFFECT.PUBLISHER:
+      case EFFECT.TAX_OFFICE:
+        return 0; // handled separately
+      default:
+        incomePerCard = 0;
     }
 
     return incomePerCard * count;
@@ -202,25 +268,49 @@ export const useGameStore = defineStore('game', () => {
     // Red cards activate on other players' turns — card owners collect from active player
     const activeIdx = currentPlayerIdx.value;
     const total = diceTotal.value;
+    const activePlayer = players.value[activeIdx];
 
     const redEsts = ESTABLISHMENTS.filter(e => e.type === TYPE.RED && activatesOn(e, total));
     for (const est of redEsts) {
       for (let ownerIdx = 0; ownerIdx < players.value.length; ownerIdx++) {
         if (ownerIdx === activeIdx) continue; // red doesn't fire for active player
-        const count = players.value[ownerIdx].establishments[est.id] || 0;
+        const owner = players.value[ownerIdx];
+        const count = owner.establishments[est.id] || 0;
         if (count === 0) continue;
 
-        const bonus = shoppingMallBonus(ownerIdx, est.icon);
-        const perCard = est.baseIncome + bonus;
-        const totalIncome = perCard * count;
+        let totalIncome = 0;
 
-        const actual = Math.min(players.value[activeIdx].coins, totalIncome);
-        players.value[activeIdx].coins -= actual;
-        players.value[ownerIdx].coins  += actual;
+        if (est.effect === EFFECT.STEAL_ACTIVE_IF_LANDMARKS) {
+          // French Restaurant: only fires if roller has 2+ built landmarks
+          if (builtLandmarkCount(activeIdx) < 2) continue;
+          const bonus = shoppingMallBonus(ownerIdx, est.icon);
+          totalIncome = (est.baseIncome + bonus) * count;
+
+        } else if (est.effect === EFFECT.STEAL_ALL_IF_LANDMARKS) {
+          // Member's Club: take ALL coins from roller if they have 3+ landmarks
+          if (builtLandmarkCount(activeIdx) < 3) continue;
+          totalIncome = activePlayer.coins; // take everything
+
+        } else if (est.effect === EFFECT.STEAL_ACTIVE_IF_HARBOR) {
+          // Sushi Bar: only fires if owner has Harbor
+          if (!owner.landmarks.harbor) continue;
+          const bonus = shoppingMallBonus(ownerIdx, est.icon);
+          totalIncome = (est.baseIncome + bonus) * count;
+
+        } else {
+          // Normal red (STEAL_ACTIVE): Café, Family Restaurant, Pizza Joint
+          const bonus = shoppingMallBonus(ownerIdx, est.icon);
+          totalIncome = (est.baseIncome + bonus) * count;
+        }
+
+        if (totalIncome <= 0) continue;
+        const actual = Math.min(activePlayer.coins, totalIncome);
+        activePlayer.coins -= actual;
+        owner.coins += actual;
 
         if (actual > 0) {
-          addLogEntry(players.value[ownerIdx].name, actual, est.name, true);
-          addLogEntry(players.value[activeIdx].name, actual, est.name, false);
+          addLogEntry(owner.name, actual, est.name, true);
+          addLogEntry(activePlayer.name, actual, est.name, false);
           audio.coinLoss();
         }
       }
@@ -237,20 +327,46 @@ export const useGameStore = defineStore('game', () => {
 
     for (const est of blueGreenEsts) {
       if (est.type === TYPE.GREEN) {
-        // Green: only active player collects
+        // Green: only active player collects (or pays for LOAN)
+        if (est.effect === EFFECT.TUNA_BOAT) continue; // TUNA_BOAT is Blue only
+
         const income = calcIncome(activeIdx, est.id);
         if (income > 0) {
           players.value[activeIdx].coins += income;
           addLogEntry(players.value[activeIdx].name, income, est.name, true);
           audio.coinGain();
+        } else if (income < 0) {
+          // LOAN: pay to bank (clamped at 0)
+          const payment = Math.min(players.value[activeIdx].coins, Math.abs(income));
+          players.value[activeIdx].coins -= payment;
+          if (payment > 0) {
+            addLogEntry(players.value[activeIdx].name, payment, `${est.name} (payment)`, false);
+            audio.coinLoss();
+          }
         }
       } else {
         // Blue: every player who owns it collects
         for (let ownerIdx = 0; ownerIdx < players.value.length; ownerIdx++) {
+          const owner = players.value[ownerIdx];
+          const count = owner.establishments[est.id] || 0;
+          if (count === 0) continue;
+
+          // Tuna Boat: if owner has Harbor, roll 2 internal dice and gain that total
+          if (est.effect === EFFECT.TUNA_BOAT) {
+            if (!owner.landmarks.harbor) continue;
+            const d1 = Math.ceil(Math.random() * 6);
+            const d2 = Math.ceil(Math.random() * 6);
+            const tunaTotal = (d1 + d2) * count;
+            owner.coins += tunaTotal;
+            addLogEntry(owner.name, tunaTotal, `${est.name} (rolled ${d1}+${d2}=${d1+d2})`, true);
+            audio.coinGain();
+            continue;
+          }
+
           const income = calcIncome(ownerIdx, est.id);
           if (income > 0) {
-            players.value[ownerIdx].coins += income;
-            addLogEntry(players.value[ownerIdx].name, income, est.name, true);
+            owner.coins += income;
+            addLogEntry(owner.name, income, est.name, true);
             audio.coinGain();
           }
         }
@@ -263,7 +379,10 @@ export const useGameStore = defineStore('game', () => {
     const total = diceTotal.value;
 
     // Purple cards activate only on active player's turn, in fixed order
-    const purpleOrder = ['stadium', 'tv_station', 'business_center'];
+    const purpleOrder = [
+      'stadium', 'tv_station', 'business_center',
+      'tech_startup', 'park', 'publisher', 'tax_office',
+    ];
 
     for (const estId of purpleOrder) {
       const count = players.value[activeIdx].establishments[estId] || 0;
@@ -306,6 +425,77 @@ export const useGameStore = defineStore('game', () => {
           pendingInteraction.value = { type: 'business_center', step: 1 };
           return;
         }
+
+      } else if (est.effect === EFFECT.TECH_STARTUP) {
+        // Tech Startup: collect invested total from bank + each opponent; then reset
+        const activePlayer = players.value[activeIdx];
+        const invested = activePlayer.techStartupInvestment;
+        if (invested > 0) {
+          // From bank
+          activePlayer.coins += invested;
+          addLogEntry(activePlayer.name, invested, `${est.name} (bank)`, true);
+          // From each opponent
+          for (let i = 0; i < players.value.length; i++) {
+            if (i === activeIdx) continue;
+            const actual = Math.min(players.value[i].coins, invested);
+            players.value[i].coins -= actual;
+            activePlayer.coins += actual;
+            if (actual > 0) {
+              addLogEntry(activePlayer.name, actual, `${est.name} (from ${players.value[i].name})`, true);
+              addLogEntry(players.value[i].name, actual, est.name, false);
+            }
+          }
+          activePlayer.techStartupInvestment = 0;
+          audio.coinBig();
+        }
+
+      } else if (est.effect === EFFECT.PARK) {
+        // Park: redistribute all players' coins equally
+        const total_coins = players.value.reduce((s, p) => s + p.coins, 0);
+        const each = Math.floor(total_coins / players.value.length);
+        players.value.forEach(p => { p.coins = each; });
+        addLogEntry(players.value[activeIdx].name, 0, `Park: redistributed ${total_coins} coins (${each} each)`, true);
+        audio.coinGain();
+
+      } else if (est.effect === EFFECT.PUBLISHER) {
+        // Publisher: steal (cup+bread count) from each opponent
+        const activePlayer = players.value[activeIdx];
+        let gained = 0;
+        for (let i = 0; i < players.value.length; i++) {
+          if (i === activeIdx) continue;
+          const opponent = players.value[i];
+          const iconCount = countByIcon(opponent.establishments, ICON.CUP) +
+                            countByIcon(opponent.establishments, ICON.BREAD);
+          if (iconCount === 0) continue;
+          const actual = Math.min(opponent.coins, iconCount);
+          opponent.coins -= actual;
+          activePlayer.coins += actual;
+          gained += actual;
+          if (actual > 0) {
+            addLogEntry(activePlayer.name, actual, `${est.name} (from ${opponent.name})`, true);
+            addLogEntry(opponent.name, actual, est.name, false);
+          }
+        }
+        if (gained > 0) audio.coinBig();
+
+      } else if (est.effect === EFFECT.TAX_OFFICE) {
+        // Tax Office: take floor(coins/2) from each player with 10+ coins
+        const activePlayer = players.value[activeIdx];
+        let gained = 0;
+        for (let i = 0; i < players.value.length; i++) {
+          if (i === activeIdx) continue;
+          const opponent = players.value[i];
+          if (opponent.coins < 10) continue;
+          const taken = Math.floor(opponent.coins / 2);
+          opponent.coins -= taken;
+          activePlayer.coins += taken;
+          gained += taken;
+          if (taken > 0) {
+            addLogEntry(activePlayer.name, taken, `${est.name} (from ${opponent.name})`, true);
+            addLogEntry(opponent.name, taken, est.name, false);
+          }
+        }
+        if (gained > 0) audio.coinBig();
       }
     }
 
@@ -313,7 +503,89 @@ export const useGameStore = defineStore('game', () => {
     advanceToBuy();
   }
 
+  // Resolve a subset of purple card IDs (used after overlay interactions complete)
+  async function resolveRemainingPurples(activeIdx, total, estIds) {
+    const activePlayer = players.value[activeIdx];
+    for (const estId of estIds) {
+      const count = activePlayer.establishments[estId] || 0;
+      if (count === 0) continue;
+      const est = getEst(estId);
+      if (!activatesOn(est, total)) continue;
+
+      if (est.effect === EFFECT.TECH_STARTUP) {
+        const invested = activePlayer.techStartupInvestment;
+        if (invested > 0) {
+          activePlayer.coins += invested;
+          addLogEntry(activePlayer.name, invested, `${est.name} (bank)`, true);
+          for (let i = 0; i < players.value.length; i++) {
+            if (i === activeIdx) continue;
+            const actual = Math.min(players.value[i].coins, invested);
+            players.value[i].coins -= actual;
+            activePlayer.coins += actual;
+            if (actual > 0) {
+              addLogEntry(activePlayer.name, actual, `${est.name} (from ${players.value[i].name})`, true);
+              addLogEntry(players.value[i].name, actual, est.name, false);
+            }
+          }
+          activePlayer.techStartupInvestment = 0;
+          audio.coinBig();
+        }
+      } else if (est.effect === EFFECT.PARK) {
+        const total_coins = players.value.reduce((s, p) => s + p.coins, 0);
+        const each = Math.floor(total_coins / players.value.length);
+        players.value.forEach(p => { p.coins = each; });
+        addLogEntry(activePlayer.name, 0, `Park: redistributed ${total_coins} coins (${each} each)`, true);
+        audio.coinGain();
+      } else if (est.effect === EFFECT.PUBLISHER) {
+        let gained = 0;
+        for (let i = 0; i < players.value.length; i++) {
+          if (i === activeIdx) continue;
+          const opponent = players.value[i];
+          const iconCount = countByIcon(opponent.establishments, ICON.CUP) + countByIcon(opponent.establishments, ICON.BREAD);
+          if (iconCount === 0) continue;
+          const actual = Math.min(opponent.coins, iconCount);
+          opponent.coins -= actual;
+          activePlayer.coins += actual;
+          gained += actual;
+          if (actual > 0) {
+            addLogEntry(activePlayer.name, actual, `${est.name} (from ${opponent.name})`, true);
+            addLogEntry(opponent.name, actual, est.name, false);
+          }
+        }
+        if (gained > 0) audio.coinBig();
+      } else if (est.effect === EFFECT.TAX_OFFICE) {
+        let gained = 0;
+        for (let i = 0; i < players.value.length; i++) {
+          if (i === activeIdx) continue;
+          const opponent = players.value[i];
+          if (opponent.coins < 10) continue;
+          const taken = Math.floor(opponent.coins / 2);
+          opponent.coins -= taken;
+          activePlayer.coins += taken;
+          gained += taken;
+          if (taken > 0) {
+            addLogEntry(activePlayer.name, taken, `${est.name} (from ${opponent.name})`, true);
+            addLogEntry(opponent.name, taken, est.name, false);
+          }
+        }
+        if (gained > 0) audio.coinBig();
+      }
+    }
+    advanceToBuy();
+  }
+
+  // City Hall: after all income resolved, any player with 0 coins + City Hall gets 1 coin
+  function resolveCityHall() {
+    for (const player of players.value) {
+      if (player.landmarks.city_hall && player.coins === 0) {
+        player.coins += 1;
+        addLogEntry(player.name, 1, 'City Hall', true);
+      }
+    }
+  }
+
   function advanceToBuy() {
+    resolveCityHall();
     turnPhase.value = 'buy';
     if (players.value[currentPlayerIdx.value].isAI) {
       setTimeout(() => aiDoBuy(), 600);
@@ -322,7 +594,7 @@ export const useGameStore = defineStore('game', () => {
 
   // ── TV Station Overlay ────────────────────────────────────────────────────
 
-  function pickTVStationTarget(targetIdx) {
+  async function pickTVStationTarget(targetIdx) {
     const activeIdx = currentPlayerIdx.value;
     const amount = 5;
     const actual = Math.min(players.value[targetIdx].coins, amount);
@@ -335,21 +607,20 @@ export const useGameStore = defineStore('game', () => {
     }
     pendingInteraction.value = null;
 
-    // Continue purple resolution (check for business center)
-    const remaining = ['business_center'];
+    // Continue purple resolution (check for business center then new purples)
     const total = diceTotal.value;
     const bcCount = players.value[activeIdx].establishments['business_center'] || 0;
     const bcEst = getEst('business_center');
     if (bcCount > 0 && activatesOn(bcEst, total)) {
       if (players.value[activeIdx].isAI) {
         aiPickBusinessCenterSwap(activeIdx);
-        advanceToBuy();
+        await resolveRemainingPurples(activeIdx, total, ['tech_startup', 'park', 'publisher', 'tax_office']);
       } else {
         pendingInteraction.value = { type: 'business_center', step: 1 };
         return;
       }
     } else {
-      advanceToBuy();
+      await resolveRemainingPurples(activeIdx, total, ['tech_startup', 'park', 'publisher', 'tax_office']);
     }
   }
 
@@ -363,7 +634,7 @@ export const useGameStore = defineStore('game', () => {
     };
   }
 
-  function pickBusinessCenterSwap(myEstId, opponentEstId) {
+  async function pickBusinessCenterSwap(myEstId, opponentEstId) {
     const activeIdx = currentPlayerIdx.value;
     const { opponentIdx } = pendingInteraction.value;
 
@@ -377,7 +648,7 @@ export const useGameStore = defineStore('game', () => {
     audio.businessCenter();
 
     pendingInteraction.value = null;
-    advanceToBuy();
+    await resolveRemainingPurples(activeIdx, diceTotal.value, ['tech_startup', 'park', 'publisher', 'tax_office']);
   }
 
   // ── Public: resolve income after roll ─────────────────────────────────────
@@ -428,9 +699,33 @@ export const useGameStore = defineStore('game', () => {
           setTimeout(() => aiDecideReroll(), 500);
         }
       } else {
-        resolveIncome();
+        checkHarborThenIncome();
       }
     }, 600);
+  }
+
+  // After rolling (and after any reroll), check Harbor before resolving income
+  function checkHarborThenIncome() {
+    const rawTotal = diceValues.value.reduce((s, d) => s + d, 0);
+    if (hasHarbor.value && rawTotal >= 10) {
+      turnPhase.value = 'harbor_prompt';
+      if (players.value[currentPlayerIdx.value].isAI) {
+        // AI always uses Harbor
+        setTimeout(() => useHarbor(), 400);
+      }
+    } else {
+      resolveIncome();
+    }
+  }
+
+  function useHarbor() {
+    harborBonus.value = 2;
+    resolveIncome();
+  }
+
+  function skipHarbor() {
+    harborBonus.value = 0;
+    resolveIncome();
   }
 
   function chooseDiceCount(count) {
@@ -446,7 +741,7 @@ export const useGameStore = defineStore('game', () => {
 
   function skipReroll() {
     turnPhase.value = 'rolling'; // just to keep consistent, then immediately resolve
-    resolveIncome();
+    checkHarborThenIncome();
   }
 
   // ── Buy Phase ─────────────────────────────────────────────────────────────
@@ -466,8 +761,22 @@ export const useGameStore = defineStore('game', () => {
     player.establishments[estId] = (player.establishments[estId] || 0) + 1;
     supply.value[estId] = Math.max(0, supply.value[estId] - 1);
 
-    addLogEntry(player.name, est.cost, `Bought ${est.name}`, false);
+    // Refill variable supply when a stack is depleted
+    if (supply.value[estId] === 0) drawToFillSupply();
+
+    // Loan Office: gain 5 coins immediately on purchase
+    if (est.buildBonus) {
+      player.coins += est.buildBonus;
+      addLogEntry(player.name, est.buildBonus, `${est.name} (loan)`, true);
+    }
+
+    if (est.cost > 0) {
+      addLogEntry(player.name, est.cost, `Bought ${est.name}`, false);
+    } else {
+      addLogEntry(player.name, 0, `Bought ${est.name} (free)`, true);
+    }
     audio.establishmentBuy();
+    boughtThisTurn.value = true;
     endTurn();
   }
 
@@ -482,9 +791,14 @@ export const useGameStore = defineStore('game', () => {
     player.coins -= lm.cost;
     player.landmarks[landmarkId] = true;
 
-    addLogEntry(player.name, lm.cost, `Built ${lm.name}`, false);
+    if (lm.cost > 0) {
+      addLogEntry(player.name, lm.cost, `Built ${lm.name}`, false);
+    } else {
+      addLogEntry(player.name, 0, `Built ${lm.name} (free)`, true);
+    }
     audio.landmarkBuy();
     showToast(`🏛️ ${player.name} built ${lm.name}!`);
+    boughtThisTurn.value = true;
 
     if (checkWin()) return;
     endTurn();
@@ -513,6 +827,26 @@ export const useGameStore = defineStore('game', () => {
 
   function endTurn() {
     turnPhase.value = 'end_turn';
+    const player = players.value[currentPlayerIdx.value];
+
+    // Airport: if player has Airport and bought nothing this turn, gain 10 coins
+    if (hasAirport.value && !boughtThisTurn.value) {
+      player.coins += 10;
+      addLogEntry(player.name, 10, 'Airport (built nothing)', true);
+    }
+
+    // Tech Startup: auto-invest 1 coin per copy owned at end of turn
+    const tsCount = player.establishments['tech_startup'] || 0;
+    if (tsCount > 0 && player.coins > 0) {
+      const invest = Math.min(tsCount, player.coins);
+      player.coins -= invest;
+      player.techStartupInvestment += invest;
+      addLogEntry(player.name, invest, `Tech Startup (invested, total: ${player.techStartupInvestment})`, false);
+    }
+
+    // Reset per-turn state
+    harborBonus.value = 0;
+    boughtThisTurn.value = false;
 
     // Amusement Park: doubles = extra turn
     if (isDoubles.value && hasAmusementPark.value && extraTurn.value === false) {
@@ -537,6 +871,8 @@ export const useGameStore = defineStore('game', () => {
     currentPlayerIdx.value = idx;
     turnPhase.value = 'rolling';
     usedReroll.value = false;
+    harborBonus.value = 0;
+    boughtThisTurn.value = false;
     pendingInteraction.value = null;
     diceValues.value = [];
 
@@ -556,17 +892,18 @@ export const useGameStore = defineStore('game', () => {
       players.value.push(makePlayer(i, name, isAI));
     }
 
-    // Remove starting cards from supply
-    supply.value = buildSupply();
-    const startingCards = ESTABLISHMENTS.filter(e => e.startingCard);
-    for (const est of startingCards) {
-      supply.value[est.id] = Math.max(0, supply.value[est.id] - count);
-    }
+    // Variable supply: start with all zeros, build from shuffled deck
+    supply.value = {};
+    for (const est of ESTABLISHMENTS) supply.value[est.id] = 0;
+    deck.value = buildShuffledDeck(count);
+    drawToFillSupply();
 
     currentPlayerIdx.value = 0;
     turnPhase.value = 'rolling';
     diceValues.value = [];
     usedReroll.value = false;
+    harborBonus.value = 0;
+    boughtThisTurn.value = false;
     extraTurn.value = false;
     consecutiveTurns.value = 0;
     pendingInteraction.value = null;
@@ -579,11 +916,14 @@ export const useGameStore = defineStore('game', () => {
     screen.value = 'title';
     players.value = [];
     diceValues.value = [];
+    deck.value = [];
     winnerData.value = null;
     pendingInteraction.value = null;
     incomeLog.value = [];
     showConfetti.value = false;
     confettiPieces.value = [];
+    harborBonus.value = 0;
+    boughtThisTurn.value = false;
   }
 
   // ── AI Logic ──────────────────────────────────────────────────────────────
@@ -655,6 +995,7 @@ export const useGameStore = defineStore('game', () => {
     if (!anyActive) {
       chooseReroll();
     } else {
+      // After deciding whether to reroll, Harbor check happens inside skipReroll → checkHarborThenIncome
       skipReroll();
     }
   }
@@ -679,12 +1020,13 @@ export const useGameStore = defineStore('game', () => {
   function aiDoBuy() {
     const player = players.value[currentPlayerIdx.value];
 
-    // Priority 1: Buy a landmark if affordable
-    for (const lm of LANDMARKS) {
-      if (!player.landmarks[lm.id] && player.coins >= lm.cost) {
-        buyLandmark(lm.id);
-        return;
-      }
+    // Priority 1: Buy a landmark if affordable — cheapest first so free ones (City Hall) are grabbed immediately
+    const unbuiltLandmarks = LANDMARKS
+      .filter(lm => !player.landmarks[lm.id] && player.coins >= lm.cost)
+      .sort((a, b) => a.cost - b.cost);
+    if (unbuiltLandmarks.length > 0) {
+      buyLandmark(unbuiltLandmarks[0].id);
+      return;
     }
 
     // Priority 2: Buy cheapest affordable establishment that fills a roll gap
@@ -698,6 +1040,8 @@ export const useGameStore = defineStore('game', () => {
 
     const affordable = ESTABLISHMENTS.filter(e => {
       if (e.type === TYPE.PURPLE && (player.establishments[e.id] || 0) >= 1) return false;
+      // AI limits Loan Office to 1 copy (negative income card — diminishing returns)
+      if (e.id === 'loan_office' && (player.establishments['loan_office'] || 0) >= 1) return false;
       if ((supply.value[e.id] || 0) <= 0) return false;
       return player.coins >= e.cost;
     });
@@ -738,17 +1082,18 @@ export const useGameStore = defineStore('game', () => {
   return {
     // State
     screen, playerCount, playerNames,
-    players, currentPlayerIdx, supply,
+    players, currentPlayerIdx, supply, deck,
     turnPhase, diceValues, isRolling, usedReroll, extraTurn, consecutiveTurns,
+    harborBonus, boughtThisTurn,
     pendingInteraction,
     incomeLog, toast, showConfetti, confettiPieces, isAnimating, isMuted, winnerData,
     // Computed
     currentPlayer, diceTotal, isDoubles,
-    hasTrainStation, hasShoppingMall, hasAmusementPark, hasRadioTower,
+    hasTrainStation, hasShoppingMall, hasAmusementPark, hasRadioTower, hasHarbor, hasAirport,
     canRoll, canReroll, canBuy, turnInstructions,
     // Actions
     startGame, resetAll,
-    rollDice, chooseDiceCount, chooseReroll, skipReroll,
+    rollDice, chooseDiceCount, chooseReroll, skipReroll, useHarbor, skipHarbor,
     resolveIncome,
     pickTVStationTarget, pickBusinessCenterOpponent, pickBusinessCenterSwap,
     buyEstablishment, buyLandmark, skipBuy,

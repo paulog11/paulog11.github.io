@@ -392,6 +392,12 @@ body {
 .est-chip.est-green  { background: var(--green-card); }
 .est-chip.est-red    { background: var(--red-card); }
 .est-chip.est-purple { background: var(--purple-card); }
+.est-chip.est-chip-renovated {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+  text-decoration: line-through;
+}
+.chip-renovated-badge { font-style: normal; text-decoration: none; }
 
 /* ── MARKETPLACE ── */
 .marketplace {

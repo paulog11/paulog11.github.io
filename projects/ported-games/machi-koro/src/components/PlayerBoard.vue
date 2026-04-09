@@ -16,12 +16,19 @@ const store = useGameStore();
 const ownedEsts = computed(() =>
   ESTABLISHMENTS
     .filter(e => (props.player.establishments[e.id] || 0) > 0)
-    .map(e => ({
-      ...e,
-      count: props.player.establishments[e.id],
-      typeClass: estTypeClass(e.type),
-      icon: estIconEmoji(e.icon),
-    }))
+    .map(e => {
+      const total = props.player.establishments[e.id];
+      const renovated = props.player.renovatedCards?.[e.id] ?? 0;
+      const active = total - renovated;
+      return {
+        ...e,
+        count: total,
+        activeCount: active,
+        renovatedCount: renovated,
+        typeClass: estTypeClass(e.type),
+        icon: estIconEmoji(e.icon),
+      };
+    })
 );
 
 const landmarkCount = computed(() =>
@@ -44,15 +51,27 @@ const landmarkCount = computed(() =>
     <LandmarkRow :player-landmarks="player.landmarks" />
 
     <div v-if="ownedEsts.length > 0" class="est-grid">
+      <!-- Active copies -->
       <div
-        v-for="est in ownedEsts"
+        v-for="est in ownedEsts.filter(e => e.activeCount > 0)"
         :key="est.id"
         class="est-chip"
         :class="est.typeClass"
         :title="est.description"
       >
         <span>{{ est.icon }} {{ est.name }}</span>
-        <span v-if="est.count > 1" class="chip-count">{{ est.count }}</span>
+        <span v-if="est.activeCount > 1" class="chip-count">{{ est.activeCount }}</span>
+      </div>
+      <!-- Renovated (face-down) copies — shown greyed out -->
+      <div
+        v-for="est in ownedEsts.filter(e => e.renovatedCount > 0)"
+        :key="'renovated-' + est.id"
+        class="est-chip est-chip-renovated"
+        :title="`${est.name} (face-down — permanently deactivated)`"
+      >
+        <span>{{ est.icon }} {{ est.name }}</span>
+        <span class="chip-count chip-renovated-badge">↩</span>
+        <span v-if="est.renovatedCount > 1" class="chip-count">{{ est.renovatedCount }}</span>
       </div>
     </div>
     <div v-else class="text-muted" style="font-size:12px;padding:4px 0;">No establishments yet.</div>

@@ -25,12 +25,15 @@ export function estTypeLabel(type) {
 // Emoji icon for an establishment's icon group
 export function estIconEmoji(icon) {
   switch (icon) {
-    case ICON.WHEAT: return '🌾';
-    case ICON.COW:   return '🐄';
-    case ICON.GEAR:  return '⚙️';
-    case ICON.BREAD: return '🍞';
-    case ICON.CUP:   return '☕';
-    case ICON.TOWER: return '📡';
+    case ICON.WHEAT:  return '🌾';
+    case ICON.COW:    return '🐄';
+    case ICON.GEAR:   return '⚙️';
+    case ICON.BREAD:  return '🍞';
+    case ICON.CUP:    return '☕';
+    case ICON.TOWER:  return '📡';
+    case ICON.FLOWER: return '🌸';
+    case ICON.GRAPE:  return '🍇';
+    case ICON.FISH:   return '🐟';
     default: return '🏠';
   }
 }
@@ -51,7 +54,10 @@ export function landmarkEmoji(id) {
     case 'shopping_mall':  return '🛍️';
     case 'amusement_park': return '🎡';
     case 'radio_tower':    return '📻';
-    default: return '🏛️';
+    case 'city_hall':      return '🏛️';
+    case 'harbor':         return '⚓';
+    case 'airport':        return '✈️';
+    default: return '🏗️';
   }
 }
 

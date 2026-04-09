@@ -27,6 +27,13 @@ const store = useGameStore();
         <button class="btn btn-no"  @click="store.skipReroll()">No, Keep It</button>
       </template>
 
+      <!-- Harbor: add +2 to total? -->
+      <template v-else-if="store.turnPhase === 'harbor_prompt'">
+        <div class="phase-prompt">⚓ Use Harbor? (+2 → total becomes {{ store.diceTotal + 2 }})</div>
+        <button class="btn btn-yes" @click="store.useHarbor()">Yes, +2</button>
+        <button class="btn btn-no"  @click="store.skipHarbor()">No, Keep {{ store.diceTotal }}</button>
+      </template>
+
       <!-- Normal roll -->
       <template v-else-if="store.canRoll">
         <button class="btn btn-roll" @click="store.rollDice(1)">🎲 Roll Dice</button>

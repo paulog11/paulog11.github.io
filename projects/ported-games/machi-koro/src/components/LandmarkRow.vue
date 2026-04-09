@@ -18,7 +18,9 @@ defineProps({
     >
       <span class="landmark-slot-icon">{{ landmarkEmoji(lm.id) }}</span>
       <span class="landmark-slot-name">{{ lm.name }}</span>
-      <span v-if="!playerLandmarks[lm.id]" class="landmark-slot-cost">💰{{ lm.cost }}</span>
+      <span v-if="!playerLandmarks[lm.id]" class="landmark-slot-cost">
+        {{ lm.cost === 0 ? 'Free' : `💰${lm.cost}` }}
+      </span>
     </div>
   </div>
 </template>
