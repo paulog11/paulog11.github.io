@@ -10,10 +10,16 @@
         :href="portfolioUrl"
         target="_blank"
         rel="noopener"
-        class="group flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.08em] uppercase text-muted hover:text-ink transition-colors duration-200"
+        class="group flex items-center gap-2 font-mono text-[0.72rem] tracking-[0.08em] uppercase
+               text-parchment bg-accent
+               px-4 py-2 rounded-sm
+               shadow-[0_4px_0_0_#7a3d19]
+               hover:shadow-[0_2px_0_0_#7a3d19] hover:translate-y-[2px]
+               active:shadow-none active:translate-y-[4px]
+               transition-all duration-100"
       >
-        <span>Portfolio &amp; Profile</span>
-        <span class="inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>
+        <span>My Profile</span>
+        <span class="inline-block transition-transform duration-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>
       </a>
     </header>
 
