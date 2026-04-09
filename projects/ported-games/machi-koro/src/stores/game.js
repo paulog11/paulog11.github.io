@@ -96,6 +96,7 @@ export const useGameStore = defineStore('game', () => {
 
     const lm = {};
     for (const l of LANDMARKS) lm[l.id] = false;
+    lm['city_hall'] = true; // City Hall is pre-built for all players
 
     return {
       id,

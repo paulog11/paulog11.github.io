@@ -30,52 +30,52 @@ const availableEsts = computed(() =>
 
 <template>
   <div class="marketplace">
-    <div class="marketplace-title">🏪 Marketplace</div>
-
-    <!-- Landmarks -->
-    <div class="marketplace-section">
-      <div class="marketplace-section-label">Landmarks</div>
-      <div class="landmark-buy-list">
-        <div v-for="lm in LANDMARKS" :key="lm.id" class="landmark-buy-row">
-          <div class="landmark-buy-info">
-            <span class="landmark-buy-icon">{{ landmarkEmoji(lm.id) }}</span>
-            <div>
-              <div class="landmark-buy-name">{{ lm.name }}</div>
-              <div class="landmark-buy-desc">{{ lm.description }}</div>
+    <div class="marketplace-inner">
+      <!-- Landmarks (horizontal strip) -->
+      <div class="marketplace-section marketplace-section--landmarks">
+        <div class="marketplace-section-label">Landmarks</div>
+        <div class="landmark-buy-list">
+          <div v-for="lm in LANDMARKS" :key="lm.id" class="landmark-buy-row">
+            <div class="landmark-buy-info">
+              <span class="landmark-buy-icon">{{ landmarkEmoji(lm.id) }}</span>
+              <div>
+                <div class="landmark-buy-name">{{ lm.name }}</div>
+                <div class="landmark-buy-desc">{{ lm.description }}</div>
+              </div>
             </div>
+            <span v-if="player?.landmarks[lm.id]" class="landmark-built-badge">✓</span>
+            <button
+              v-else
+              class="btn btn-yes"
+              style="font-size:11px;padding:5px 10px;white-space:nowrap;"
+              :disabled="!store.canBuy || !canAfford(lm.cost)"
+              @click="store.buyLandmark(lm.id)"
+            >{{ lm.cost === 0 ? 'Free' : `💰${lm.cost}` }}</button>
           </div>
-          <span v-if="player?.landmarks[lm.id]" class="landmark-built-badge">✓ Built</span>
-          <button
-            v-else
-            class="btn btn-yes"
-            style="font-size:12px;padding:6px 12px;"
-            :disabled="!store.canBuy || !canAfford(lm.cost)"
-            @click="store.buyLandmark(lm.id)"
-          >{{ lm.cost === 0 ? 'Free' : `💰${lm.cost}` }}</button>
+        </div>
+      </div>
+
+      <div class="marketplace-section-divider"></div>
+
+      <!-- Establishments (grid) -->
+      <div class="marketplace-section marketplace-section--ests">
+        <div class="marketplace-section-label">Establishments</div>
+        <div class="est-card-grid">
+          <EstablishmentCard
+            v-for="est in availableEsts"
+            :key="est.id"
+            :establishment="est"
+            :supply="supplyFor(est.id)"
+            :can-afford="canAfford(est.cost)"
+            :can-buy="store.canBuy"
+            :already-owned="isAlreadyOwnedPurple(est.id, est.type)"
+            @buy="store.buyEstablishment($event)"
+          />
         </div>
       </div>
     </div>
 
-    <div class="section-divider"></div>
-
-    <!-- Establishments -->
-    <div class="marketplace-section">
-      <div class="marketplace-section-label">Establishments</div>
-      <div class="est-card-grid">
-        <EstablishmentCard
-          v-for="est in availableEsts"
-          :key="est.id"
-          :establishment="est"
-          :supply="supplyFor(est.id)"
-          :can-afford="canAfford(est.cost)"
-          :can-buy="store.canBuy"
-          :already-owned="isAlreadyOwnedPurple(est.id, est.type)"
-          @buy="store.buyEstablishment($event)"
-        />
-      </div>
-    </div>
-
-    <div v-if="store.canBuy" style="margin-top:12px;text-align:center;">
+    <div v-if="store.canBuy" style="margin-top:10px;text-align:center;">
       <button class="btn btn-skip" @click="store.skipBuy()">Skip — End Turn</button>
     </div>
   </div>

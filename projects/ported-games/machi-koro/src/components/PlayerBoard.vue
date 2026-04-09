@@ -1,13 +1,14 @@
 <script setup>
 import { computed } from 'vue';
 import { useGameStore } from '../stores/game.js';
-import { ESTABLISHMENTS, TYPE } from '../constants.js';
+import { ESTABLISHMENTS } from '../constants.js';
 import { estTypeClass, estIconEmoji } from '../cardUtils.js';
 import LandmarkRow from './LandmarkRow.vue';
 
 const props = defineProps({
-  player:    { type: Object, required: true },
-  isActive:  { type: Boolean, default: false },
+  player:   { type: Object, required: true },
+  isActive: { type: Boolean, default: false },
+  isHuman:  { type: Boolean, default: false },
 });
 
 const store = useGameStore();
@@ -37,7 +38,7 @@ const landmarkCount = computed(() =>
 </script>
 
 <template>
-  <div class="player-board" :class="{ active: isActive }">
+  <div class="player-board" :class="{ active: isActive, 'player-board--human': isHuman }">
     <div class="player-board-header">
       <div class="player-color-bar" :style="{ background: player.color }"></div>
       <div class="player-name">{{ player.name }}</div>
@@ -57,21 +58,31 @@ const landmarkCount = computed(() =>
         :key="est.id"
         class="est-chip"
         :class="est.typeClass"
-        :title="est.description"
       >
         <span>{{ est.icon }} {{ est.name }}</span>
         <span v-if="est.activeCount > 1" class="chip-count">{{ est.activeCount }}</span>
+        <div class="est-tooltip">
+          <div class="est-tooltip-name">{{ est.icon }} {{ est.name }}</div>
+          <div class="est-tooltip-roll">Roll: {{ est.rolls.join(', ') }}</div>
+          <div class="est-tooltip-desc">{{ est.description }}</div>
+          <div v-if="est.cost !== undefined" class="est-tooltip-cost">Cost: 💰{{ est.cost }}</div>
+        </div>
       </div>
       <!-- Renovated (face-down) copies — shown greyed out -->
       <div
         v-for="est in ownedEsts.filter(e => e.renovatedCount > 0)"
         :key="'renovated-' + est.id"
         class="est-chip est-chip-renovated"
-        :title="`${est.name} (face-down — permanently deactivated)`"
       >
         <span>{{ est.icon }} {{ est.name }}</span>
         <span class="chip-count chip-renovated-badge">↩</span>
         <span v-if="est.renovatedCount > 1" class="chip-count">{{ est.renovatedCount }}</span>
+        <div class="est-tooltip">
+          <div class="est-tooltip-name">{{ est.icon }} {{ est.name }}</div>
+          <div class="est-tooltip-roll">Roll: {{ est.rolls.join(', ') }}</div>
+          <div class="est-tooltip-desc">{{ est.description }}</div>
+          <div class="est-tooltip-desc" style="color:#ff6b6b;margin-top:4px;">Face-down — permanently deactivated</div>
+        </div>
       </div>
     </div>
     <div v-else class="text-muted" style="font-size:12px;padding:4px 0;">No establishments yet.</div>
