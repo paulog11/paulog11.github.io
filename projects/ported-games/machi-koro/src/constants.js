@@ -9,15 +9,18 @@ export const TYPE = {
 // ── Icon Groups ──────────────────────────────────────────────────────────────
 // Used for Shopping Mall bonus detection and combo card counting
 export const ICON = {
-  WHEAT:  'wheat',  // Wheat Field, Apple Orchard
+  WHEAT:  'wheat',  // Wheat Field, Apple Orchard, Flower Orchard, Corn Field
   COW:    'cow',    // Ranch
   GEAR:   'gear',   // Forest, Mine
-  BREAD:  'bread',  // Bakery, Convenience Store, Cheese Factory, Furniture Factory, Produce Market
+  BREAD:  'bread',  // Bakery, Convenience Store, Flower Shop, General Store
   CUP:    'cup',    // Café, Family Restaurant, Pizza Joint, Sushi Bar, French Restaurant, Member's Club
   TOWER:  'tower',  // Stadium, TV Station, Business Center, Tech Startup, Park, Publisher, Tax Office
   FLOWER: 'flower', // Flower Orchard (Flower Shop counts these)
   GRAPE:  'grape',  // Vineyard (Winery counts these)
   FISH:   'fish',   // Mackerel Boat, Tuna Boat (cosmetic)
+  FACTORY: 'factory',   // Cheese Factory, Furniture Factory, Soda Bottling Plant, Food Warehouse, Winery
+  SUITCASE: 'suitcase',   // Loan Office
+  FRUIT: 'fruit',   // Produce Market
 };
 
 // ── Effect Types ─────────────────────────────────────────────────────────────
@@ -160,7 +163,7 @@ export const ESTABLISHMENTS = [
     id: 'cheese_factory',
     name: 'Cheese Factory',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FACTORY,
     rolls: [7],
     cost: 5,
     baseIncome: 3,
@@ -171,7 +174,7 @@ export const ESTABLISHMENTS = [
     id: 'furniture_factory',
     name: 'Furniture Factory',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FACTORY,
     rolls: [8],
     cost: 3,
     baseIncome: 3,
@@ -215,7 +218,7 @@ export const ESTABLISHMENTS = [
     id: 'produce_market',
     name: 'Produce Market',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FRUIT,
     rolls: [11, 12],
     cost: 2,
     baseIncome: 2,
@@ -261,7 +264,7 @@ export const ESTABLISHMENTS = [
     id: 'flower_orchard',
     name: 'Flower Orchard',
     type: TYPE.BLUE,
-    icon: ICON.FLOWER,
+    icon: ICON.WHEAT,
     rolls: [4],
     cost: 2,
     baseIncome: 1,
@@ -283,7 +286,7 @@ export const ESTABLISHMENTS = [
     id: 'loan_office',
     name: 'Loan Office',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.SUITCASE,
     rolls: [5, 6],
     cost: 0,
     baseIncome: 0,
@@ -363,7 +366,7 @@ export const ESTABLISHMENTS = [
     id: 'winery',
     name: 'Winery',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FACTORY,
     rolls: [9],
     cost: 3,
     baseIncome: 6,
@@ -387,7 +390,7 @@ export const ESTABLISHMENTS = [
     id: 'soda_bottling_plant',
     name: 'Soda Bottling Plant',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FACTORY,
     rolls: [11],
     cost: 5,
     baseIncome: 1,
@@ -410,7 +413,7 @@ export const ESTABLISHMENTS = [
     id: 'food_warehouse',
     name: 'Food Warehouse',
     type: TYPE.GREEN,
-    icon: ICON.BREAD,
+    icon: ICON.FACTORY,
     rolls: [12, 13],
     cost: 2,
     baseIncome: 2,
@@ -552,6 +555,11 @@ export function estsByIcon(icon) {
 // Count how many cards with a given icon a player owns (total across all copies)
 export function countByIcon(playerEstablishments, icon) {
   const ids = estsByIcon(icon);
+  return ids.reduce((sum, id) => sum + (playerEstablishments[id] || 0), 0);
+}
+
+// Count how many copies of specific card IDs a player owns
+export function countByIds(playerEstablishments, ids) {
   return ids.reduce((sum, id) => sum + (playerEstablishments[id] || 0), 0);
 }
 

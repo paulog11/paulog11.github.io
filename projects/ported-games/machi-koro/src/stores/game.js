@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import {
   ESTABLISHMENTS, LANDMARKS, TYPE, EFFECT, ICON,
-  buildShuffledDeck, getEst, getLandmark, countByIcon,
+  buildShuffledDeck, getEst, getLandmark, countByIcon, countByIds,
   activatesOn, DEFAULT_NAMES, PLAYER_COLORS,
 } from '../constants.js';
 import { audio } from '../audio.js';
@@ -228,7 +228,7 @@ export const useGameStore = defineStore('game', () => {
         incomePerCard = owner.landmarks.harbor ? est.baseIncome + bonus : 0;
         break;
       case EFFECT.PER_FLOWER:
-        incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.FLOWER) + bonus;
+        incomePerCard = est.baseIncome * countByIds(owner.establishments, ['flower_orchard']) + bonus;
         break;
       case EFFECT.PER_GRAPE:
         incomePerCard = est.baseIncome * countByIcon(owner.establishments, ICON.GRAPE) + bonus;
