@@ -1,12 +1,24 @@
-const CORS_PROXY = 'https://corsproxy.io/?'
 const JISHO_BASE = 'https://jisho.org/api/v1/search/words'
 
+const PROXIES = [
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+]
+
 export async function searchWords(keyword) {
-  const url = `${CORS_PROXY}${encodeURIComponent(`${JISHO_BASE}?keyword=${encodeURIComponent(keyword)}`)}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Jisho API error: ${res.status}`)
-  const json = await res.json()
-  return json.data.map(parseResult)
+  const target = `${JISHO_BASE}?keyword=${encodeURIComponent(keyword)}`
+  let lastError
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetch(proxy(target))
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      return json.data.map(parseResult)
+    } catch (err) {
+      lastError = err
+    }
+  }
+  throw new Error(`Jisho unavailable: ${lastError?.message}`)
 }
 
 function parseResult(item) {

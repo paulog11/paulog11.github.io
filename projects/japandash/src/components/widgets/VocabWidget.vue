@@ -59,6 +59,19 @@
           </button>
         </div>
 
+        <!-- Controls row 3: English voice picker -->
+        <div v-if="englishVoices.length > 0" class="flex items-center gap-2">
+          <span class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi shrink-0">EN Voice</span>
+          <select
+            v-model="selectedVoiceName"
+            class="flex-1 px-2 py-1 text-xs rounded-md border border-koshi bg-white/80 text-sumi focus:outline-none focus:ring-1 focus:ring-ai/40"
+          >
+            <option v-for="v in englishVoices" :key="v.name" :value="v.name">
+              {{ v.name }} ({{ v.lang }})
+            </option>
+          </select>
+        </div>
+
         <!-- Count -->
         <p class="text-[0.65rem] text-usuzumi">
           {{ filteredVocab.length }} words
@@ -174,6 +187,23 @@ const isPlaying = ref(false)
 const playingId = ref(null)
 const currentAudio = ref(null)
 
+// --- English voice picker ---
+const englishVoices = ref([])
+const selectedVoiceName = ref('')
+
+function loadVoices() {
+  const voices = window.speechSynthesis?.getVoices() ?? []
+  englishVoices.value = voices.filter(v => v.lang.startsWith('en'))
+  if (!selectedVoiceName.value && englishVoices.value.length > 0) {
+    selectedVoiceName.value = englishVoices.value[0].name
+  }
+}
+
+if (window.speechSynthesis) {
+  loadVoices()
+  window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+}
+
 // Trigger fetch once assignments are loaded
 watch(
   () => wk.assignments.value.length,
@@ -237,30 +267,43 @@ function playVocab(vocab) {
     const audio = new Audio(preferred.url)
     currentAudio.value = audio
     audio.onended = () => {
-      isPlaying.value = false
-      playingId.value = null
       currentAudio.value = null
-      if (listenMode.value) scheduleNext()
+      speakEnglish(vocab)
     }
     audio.onerror = () => {
       currentAudio.value = null
-      speakTTS(vocab)
+      speakJapaneseTTS(vocab)
     }
-    audio.play().catch(() => speakTTS(vocab))
+    audio.play().catch(() => speakJapaneseTTS(vocab))
   } else {
-    speakTTS(vocab)
+    speakJapaneseTTS(vocab)
   }
 }
 
-function speakTTS(vocab) {
+function speakJapaneseTTS(vocab) {
   if (!window.speechSynthesis) {
-    isPlaying.value = false
-    playingId.value = null
+    speakEnglish(vocab)
     return
   }
   const utt = new SpeechSynthesisUtterance(vocab.primaryReading)
   utt.lang = 'ja-JP'
   utt.rate = 0.9
+  utt.onend = () => speakEnglish(vocab)
+  window.speechSynthesis.speak(utt)
+}
+
+function speakEnglish(vocab) {
+  if (!window.speechSynthesis) {
+    isPlaying.value = false
+    playingId.value = null
+    if (listenMode.value) scheduleNext()
+    return
+  }
+  const utt = new SpeechSynthesisUtterance(vocab.primaryMeaning)
+  const voice = englishVoices.value.find(v => v.name === selectedVoiceName.value)
+  if (voice) utt.voice = voice
+  utt.lang = voice?.lang ?? 'en-US'
+  utt.rate = 0.95
   utt.onend = () => {
     isPlaying.value = false
     playingId.value = null
@@ -310,7 +353,10 @@ watch(filteredVocab, () => {
   if (listenMode.value) listenMode.value = false
 })
 
-onBeforeUnmount(() => stopCurrent())
+onBeforeUnmount(() => {
+  stopCurrent()
+  window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices)
+})
 
 // --- SRS color helpers ---
 
