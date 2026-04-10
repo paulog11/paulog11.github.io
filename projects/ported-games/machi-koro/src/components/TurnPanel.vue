@@ -44,9 +44,10 @@ const store = useGameStore();
         <div class="phase-prompt">Resolving income...</div>
       </template>
 
-      <!-- Buy phase: skip button is in Marketplace -->
+      <!-- Buy phase -->
       <template v-else-if="store.turnPhase === 'buy'">
         <div class="phase-prompt">Buy a building, or skip to end your turn.</div>
+        <button class="btn btn-skip" @click="store.skipBuy()">Skip — End Turn</button>
       </template>
 
     </div>

@@ -927,6 +927,11 @@ export const useGameStore = defineStore('game', () => {
     boughtThisTurn.value = false;
   }
 
+  function closeWinOverlay() {
+    winnerData.value = null;
+    screen.value = 'game';
+  }
+
   // ── AI Logic ──────────────────────────────────────────────────────────────
 
   function aiPickRichestOpponent(activeIdx) {
@@ -1093,7 +1098,7 @@ export const useGameStore = defineStore('game', () => {
     hasTrainStation, hasShoppingMall, hasAmusementPark, hasRadioTower, hasHarbor, hasAirport,
     canRoll, canReroll, canBuy, turnInstructions,
     // Actions
-    startGame, resetAll,
+    startGame, resetAll, closeWinOverlay,
     rollDice, chooseDiceCount, chooseReroll, skipReroll, useHarbor, skipHarbor,
     resolveIncome,
     pickTVStationTarget, pickBusinessCenterOpponent, pickBusinessCenterSwap,

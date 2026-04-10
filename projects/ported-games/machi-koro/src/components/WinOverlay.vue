@@ -36,7 +36,10 @@ const standings = computed(() =>
         </div>
       </div>
 
-      <button class="btn-start" @click="store.resetAll()">Play Again</button>
+      <div class="win-actions">
+        <button class="btn-start" @click="store.resetAll()">Play Again</button>
+        <button class="btn-view-board" @click="store.closeWinOverlay()">View Board</button>
+      </div>
     </div>
   </div>
 </template>

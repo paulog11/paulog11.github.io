@@ -59,6 +59,7 @@ const landmarkCount = computed(() =>
         class="est-chip"
         :class="est.typeClass"
       >
+        <span class="chip-roll">{{ est.rolls.length > 1 ? `${est.rolls[0]}-${est.rolls[est.rolls.length-1]}` : est.rolls[0] }}</span>
         <span>{{ est.icon }} {{ est.name }}</span>
         <span v-if="est.activeCount > 1" class="chip-count">{{ est.activeCount }}</span>
         <div class="est-tooltip">
@@ -74,6 +75,7 @@ const landmarkCount = computed(() =>
         :key="'renovated-' + est.id"
         class="est-chip est-chip-renovated"
       >
+        <span class="chip-roll">{{ est.rolls.length > 1 ? `${est.rolls[0]}-${est.rolls[est.rolls.length-1]}` : est.rolls[0] }}</span>
         <span>{{ est.icon }} {{ est.name }}</span>
         <span class="chip-count chip-renovated-badge">↩</span>
         <span v-if="est.renovatedCount > 1" class="chip-count">{{ est.renovatedCount }}</span>

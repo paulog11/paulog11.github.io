@@ -75,8 +75,5 @@ const availableEsts = computed(() =>
       </div>
     </div>
 
-    <div v-if="store.canBuy" style="margin-top:10px;text-align:center;">
-      <button class="btn btn-skip" @click="store.skipBuy()">Skip — End Turn</button>
-    </div>
   </div>
 </template>
