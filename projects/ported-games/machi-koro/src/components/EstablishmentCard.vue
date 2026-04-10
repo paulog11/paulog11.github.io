@@ -2,6 +2,22 @@
 import { computed } from 'vue';
 import { estTypeClass, estIconEmoji, rollLabel } from '../cardUtils.js';
 
+import imgWheatField       from '../images/mk-wheatfield.jpg';
+import imgCafe             from '../images/mk-cafe.jpg';
+import imgBakery           from '../images/mk-bakery.jpg';
+import imgConvenienceStore from '../images/mk-conveniencestore.jpg';
+import imgRanch            from '../images/mk-ranch.jpg';
+import imgForest           from '../images/mk-forest.jpg';
+
+const CARD_IMAGES = {
+  wheat_field:       imgWheatField,
+  cafe:              imgCafe,
+  bakery:            imgBakery,
+  convenience_store: imgConvenienceStore,
+  ranch:             imgRanch,
+  forest:            imgForest,
+};
+
 const props = defineProps({
   establishment: { type: Object, required: true },
   supply:        { type: Number, default: 0 },
@@ -16,9 +32,10 @@ const disabled = computed(() =>
   !props.canBuy || !props.canAfford || props.supply <= 0 || props.alreadyOwned
 );
 
-const typeClass = computed(() => estTypeClass(props.establishment.type));
-const icon      = computed(() => estIconEmoji(props.establishment.icon));
-const roll      = computed(() => rollLabel(props.establishment.rolls));
+const typeClass  = computed(() => estTypeClass(props.establishment.type));
+const icon       = computed(() => estIconEmoji(props.establishment.icon));
+const roll       = computed(() => rollLabel(props.establishment.rolls));
+const cardImage  = computed(() => CARD_IMAGES[props.establishment.id] ?? null);
 </script>
 
 <template>
@@ -32,7 +49,8 @@ const roll      = computed(() => rollLabel(props.establishment.rolls));
       <span class="est-card-roll">{{ roll }}</span>
     </div>
     <div class="est-card-body">
-      <div class="est-card-icon">{{ icon }}</div>
+      <img v-if="cardImage" :src="cardImage" :alt="establishment.name" class="est-card-img" />
+      <div v-else class="est-card-icon">{{ icon }}</div>
       <div class="est-card-name">{{ establishment.name }}</div>
       <div class="est-card-desc">{{ establishment.description }}</div>
     </div>
