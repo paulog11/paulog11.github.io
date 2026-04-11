@@ -2,12 +2,15 @@
 import { computed } from 'vue';
 import { estTypeClass, estIconEmoji, rollLabel } from '../cardUtils.js';
 
-import imgWheatField       from '../images/mk-wheatfield.jpg';
-import imgCafe             from '../images/mk-cafe.jpg';
+import imgWheatField       from '../images/mk-wheatfield.jpeg';
+import imgCafe             from '../images/mk-cafe.jpeg';
 import imgBakery           from '../images/mk-bakery.jpg';
-import imgConvenienceStore from '../images/mk-conveniencestore.jpg';
-import imgRanch            from '../images/mk-ranch.jpg';
+import imgConvenienceStore from '../images/mk-conveniencestore.jpeg';
+import imgRanch            from '../images/mk-ranch.jpeg';
 import imgForest           from '../images/mk-forest.jpg';
+import imgStadium         from '../images/mk-stadium.jpeg';
+import imgTVStation       from '../images/mk-tvstation.jpg';
+import imgBusinessCenter  from '../images/mk-businesscenter.jpg';
 
 const CARD_IMAGES = {
   wheat_field:       imgWheatField,
@@ -16,6 +19,9 @@ const CARD_IMAGES = {
   convenience_store: imgConvenienceStore,
   ranch:             imgRanch,
   forest:            imgForest,
+  stadium:           imgStadium,
+  tv_station:        imgTVStation,
+  business_center:   imgBusinessCenter,
 };
 
 const props = defineProps({
