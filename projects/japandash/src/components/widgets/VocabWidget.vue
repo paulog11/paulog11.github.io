@@ -26,8 +26,8 @@
 
       <!-- Loaded -->
       <template v-else>
-        <!-- Controls row 1: SRS filter -->
-        <div class="flex gap-1 flex-wrap">
+        <!-- Controls row 1: SRS filter + Quiz button -->
+        <div class="flex gap-1 flex-wrap items-center">
           <button
             v-for="stage in ['All', 'apprentice', 'guru', 'master', 'enlightened', 'burned']"
             :key="stage"
@@ -35,137 +35,209 @@
             :class="filterSrs === stage
               ? srsActiveClass(stage)
               : 'border-koshi text-usuzumi hover:bg-koshi/40'"
+            :disabled="gameMode"
             @click="filterSrs = stage; selectedVocab = null"
           >
             {{ stage }}
           </button>
-        </div>
-
-        <!-- Controls row 2: search + listen mode -->
-        <div class="flex gap-2 items-center">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search word or meaning..."
-            class="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-koshi bg-white/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
-            @input="selectedVocab = null"
-          />
           <button
-            class="flex-shrink-0 px-3 py-1.5 text-xs rounded-md transition-colors font-medium"
-            :class="listenMode ? 'bg-beni text-white' : 'border border-koshi text-sumi hover:bg-koshi/40'"
-            @click="toggleListenMode"
+            v-if="!gameMode && filteredVocab.length >= ROUND_SIZE"
+            class="ml-auto px-3 py-1 text-[0.6rem] rounded border border-koshi text-sumi hover:bg-koshi/40 transition-colors"
+            @click="startGame"
           >
-            {{ listenMode ? '⏹ Stop' : '▶ Listen Mode' }}
+            🎮 Quiz
           </button>
         </div>
 
-        <!-- Controls row 3: English voice picker -->
-        <div v-if="englishVoices.length > 0" class="flex items-center gap-2">
-          <span class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi shrink-0">EN Voice</span>
-          <select
-            v-model="selectedVoiceName"
-            class="flex-1 px-2 py-1 text-xs rounded-md border border-koshi bg-white/80 text-sumi focus:outline-none focus:ring-1 focus:ring-ai/40"
-          >
-            <option v-for="v in englishVoices" :key="v.name" :value="v.name">
-              {{ v.name }} ({{ v.lang }})
-            </option>
-          </select>
-        </div>
-
-        <!-- Count -->
-        <p class="text-[0.65rem] text-usuzumi">
-          {{ filteredVocab.length }} words
-          <span v-if="filterSrs !== 'All' || searchQuery"> (filtered)</span>
-        </p>
-
-        <!-- Vocabulary list -->
-        <div class="max-h-56 overflow-y-auto space-y-0.5 pr-1">
-          <div
-            v-for="item in filteredVocab"
-            :key="item.subjectId"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors"
-            :class="selectedVocab?.subjectId === item.subjectId ? 'bg-ai-light/60' : 'hover:bg-koshi/30'"
-            @click="selectVocab(item)"
-          >
-            <span class="font-display text-base w-16 shrink-0">{{ item.characters }}</span>
-            <span class="font-mono text-xs text-usuzumi w-20 shrink-0 truncate">{{ item.primaryReading }}</span>
-            <span class="text-xs text-sumi flex-1 truncate">{{ item.primaryMeaning }}</span>
-            <span
-              class="text-[0.55rem] px-1.5 py-0.5 rounded-full font-medium shrink-0"
-              :style="srsBadgeStyle(item.srsLabel)"
-            >{{ item.srsLabel }}</span>
+        <!-- Game board -->
+        <template v-if="gameMode">
+          <!-- Game header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi">Match the pairs</span>
+              <span class="text-[0.6rem] px-1.5 py-0.5 rounded-full bg-ai-light text-ai font-medium">
+                {{ matched.size }} / {{ gameWords.length }}
+              </span>
+            </div>
             <button
-              class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
-              :class="isPlaying && playingId === item.subjectId
-                ? 'bg-beni text-white'
-                : 'bg-koshi/60 text-sumi hover:bg-koshi'"
-              @click.stop="playVocab(item)"
+              class="text-[0.65rem] text-usuzumi hover:text-sumi transition-colors"
+              @click="exitGame"
+            >✕ Exit</button>
+          </div>
+
+          <!-- Two-column grid -->
+          <div class="grid grid-cols-2 gap-2">
+            <!-- Left: Japanese characters -->
+            <div class="space-y-1.5">
+              <button
+                v-for="item in shuffledLeft"
+                :key="item.subjectId"
+                class="w-full px-3 py-2 rounded-md border text-left transition-all duration-150 font-display text-lg"
+                :class="[itemClassLeft(item), matched.has(item.subjectId) ? 'line-through' : '']"
+                @click="pickLeft(item)"
+              >
+                {{ item.characters }}
+              </button>
+            </div>
+
+            <!-- Right: English meanings -->
+            <div class="space-y-1.5">
+              <button
+                v-for="item in shuffledRight"
+                :key="item.subjectId"
+                class="w-full px-3 py-2 rounded-md border text-left transition-all duration-150 text-xs"
+                :class="[itemClassRight(item), matched.has(item.subjectId) ? 'line-through' : '']"
+                @click="pickRight(item)"
+              >
+                {{ item.primaryMeaning }}
+              </button>
+            </div>
+          </div>
+
+          <!-- End state -->
+          <div v-if="isGameOver" class="rounded-lg bg-matcha/10 border border-matcha/30 px-4 py-3 flex items-center justify-between">
+            <span class="text-sm font-medium text-matcha">All matched!</span>
+            <div class="flex gap-2">
+              <button
+                class="px-3 py-1.5 text-xs rounded-md bg-matcha text-white hover:bg-matcha/90 transition-colors"
+                @click="startGame"
+              >Play Again</button>
+              <button
+                class="px-3 py-1.5 text-xs rounded-md border border-koshi text-sumi hover:bg-koshi/40 transition-colors"
+                @click="exitGame"
+              >Exit</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Browse mode (hidden during game) -->
+        <template v-else>
+          <!-- Controls row 2: search + listen mode -->
+          <div class="flex gap-2 items-center">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search word or meaning..."
+              class="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-koshi bg-white/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
+              @input="selectedVocab = null"
+            />
+            <button
+              class="flex-shrink-0 px-3 py-1.5 text-xs rounded-md transition-colors font-medium"
+              :class="listenMode ? 'bg-beni text-white' : 'border border-koshi text-sumi hover:bg-koshi/40'"
+              @click="toggleListenMode"
             >
-              <span v-if="isPlaying && playingId === item.subjectId" class="absolute inset-0 rounded-full animate-ping bg-beni/30" />
-              <span class="text-[0.6rem] relative">{{ isPlaying && playingId === item.subjectId ? '■' : '▶' }}</span>
+              {{ listenMode ? '⏹ Stop' : '▶ Listen Mode' }}
             </button>
           </div>
-          <p v-if="filteredVocab.length === 0" class="text-center text-usuzumi text-xs py-4">
-            No matches for this filter
+
+          <!-- Controls row 3: English voice picker -->
+          <div v-if="englishVoices.length > 0" class="flex items-center gap-2">
+            <span class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi shrink-0">EN Voice</span>
+            <select
+              v-model="selectedVoiceName"
+              class="flex-1 px-2 py-1 text-xs rounded-md border border-koshi bg-white/80 text-sumi focus:outline-none focus:ring-1 focus:ring-ai/40"
+            >
+              <option v-for="v in englishVoices" :key="v.name" :value="v.name">
+                {{ v.name }} ({{ v.lang }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Count -->
+          <p class="text-[0.65rem] text-usuzumi">
+            {{ filteredVocab.length }} words
+            <span v-if="filterSrs !== 'All' || searchQuery"> (filtered)</span>
           </p>
-        </div>
 
-        <!-- Detail panel -->
-        <div v-if="selectedVocab" class="rounded-lg bg-koshi/30 p-4 space-y-3">
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="font-display text-4xl">{{ selectedVocab.characters }}</p>
-              <p class="font-mono text-sm text-usuzumi mt-0.5">{{ selectedVocab.primaryReading }}</p>
-            </div>
-            <div class="flex flex-col items-end gap-1.5">
-              <span
-                class="text-[0.6rem] px-2 py-0.5 rounded-full font-medium capitalize"
-                :style="srsBadgeStyle(selectedVocab.srsLabel)"
-              >{{ selectedVocab.srsLabel }}</span>
-              <span class="text-[0.6rem] text-usuzumi">Level {{ selectedVocab.level }}</span>
-            </div>
-          </div>
-
-          <!-- Meanings -->
-          <div>
-            <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi mb-1">Meanings</p>
-            <p class="text-sm">{{ selectedVocab.meanings.join('、') }}</p>
-          </div>
-
-          <!-- Readings -->
-          <div v-if="selectedVocab.readings.length > 1">
-            <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi mb-1">Readings</p>
-            <div class="flex flex-wrap gap-1.5">
-              <span
-                v-for="r in selectedVocab.readings"
-                :key="r.reading"
-                class="font-mono text-xs px-2 py-0.5 rounded bg-white/60 border border-koshi"
-                :class="r.primary ? 'font-semibold' : 'text-usuzumi'"
-              >{{ r.reading }}</span>
-            </div>
-          </div>
-
-          <!-- Audio info -->
-          <div class="flex items-center gap-2">
-            <button
-              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors relative overflow-hidden"
-              :class="isPlaying && playingId === selectedVocab.subjectId
-                ? 'bg-beni text-white'
-                : 'bg-ai text-white hover:bg-ai/90'"
-              @click="playVocab(selectedVocab)"
+          <!-- Vocabulary list -->
+          <div class="max-h-56 overflow-y-auto space-y-0.5 pr-1">
+            <div
+              v-for="item in filteredVocab"
+              :key="item.subjectId"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors"
+              :class="selectedVocab?.subjectId === item.subjectId ? 'bg-ai-light/60' : 'hover:bg-koshi/30'"
+              @click="selectVocab(item)"
             >
-              <span v-if="isPlaying && playingId === selectedVocab.subjectId" class="absolute inset-0 animate-pulse bg-white/10" />
-              <span class="relative">{{ isPlaying && playingId === selectedVocab.subjectId ? '■ Stop' : '▶ Play' }}</span>
-            </button>
-            <span class="text-[0.65rem] text-usuzumi">
-              {{ selectedVocab.audios.length > 0 ? `${selectedVocab.audios.length} audio file(s)` : 'TTS fallback' }}
-            </span>
-            <button
-              class="ml-auto text-[0.65rem] text-usuzumi hover:text-sumi transition-colors"
-              @click="wk.fetchLearnedVocabulary(true)"
-            >↻ Refresh</button>
+              <span class="font-display text-base w-16 shrink-0">{{ item.characters }}</span>
+              <span class="font-mono text-xs text-usuzumi w-20 shrink-0 truncate">{{ item.primaryReading }}</span>
+              <span class="text-xs text-sumi flex-1 truncate">{{ item.primaryMeaning }}</span>
+              <span
+                class="text-[0.55rem] px-1.5 py-0.5 rounded-full font-medium shrink-0"
+                :style="srsBadgeStyle(item.srsLabel)"
+              >{{ item.srsLabel }}</span>
+              <button
+                class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
+                :class="isPlaying && playingId === item.subjectId
+                  ? 'bg-beni text-white'
+                  : 'bg-koshi/60 text-sumi hover:bg-koshi'"
+                @click.stop="playVocab(item)"
+              >
+                <span v-if="isPlaying && playingId === item.subjectId" class="absolute inset-0 rounded-full animate-ping bg-beni/30" />
+                <span class="text-[0.6rem] relative">{{ isPlaying && playingId === item.subjectId ? '■' : '▶' }}</span>
+              </button>
+            </div>
+            <p v-if="filteredVocab.length === 0" class="text-center text-usuzumi text-xs py-4">
+              No matches for this filter
+            </p>
           </div>
-        </div>
+
+          <!-- Detail panel -->
+          <div v-if="selectedVocab" class="rounded-lg bg-koshi/30 p-4 space-y-3">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="font-display text-4xl">{{ selectedVocab.characters }}</p>
+                <p class="font-mono text-sm text-usuzumi mt-0.5">{{ selectedVocab.primaryReading }}</p>
+              </div>
+              <div class="flex flex-col items-end gap-1.5">
+                <span
+                  class="text-[0.6rem] px-2 py-0.5 rounded-full font-medium capitalize"
+                  :style="srsBadgeStyle(selectedVocab.srsLabel)"
+                >{{ selectedVocab.srsLabel }}</span>
+                <span class="text-[0.6rem] text-usuzumi">Level {{ selectedVocab.level }}</span>
+              </div>
+            </div>
+
+            <!-- Meanings -->
+            <div>
+              <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi mb-1">Meanings</p>
+              <p class="text-sm">{{ selectedVocab.meanings.join('、') }}</p>
+            </div>
+
+            <!-- Readings -->
+            <div v-if="selectedVocab.readings.length > 1">
+              <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi mb-1">Readings</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="r in selectedVocab.readings"
+                  :key="r.reading"
+                  class="font-mono text-xs px-2 py-0.5 rounded bg-white/60 border border-koshi"
+                  :class="r.primary ? 'font-semibold' : 'text-usuzumi'"
+                >{{ r.reading }}</span>
+              </div>
+            </div>
+
+            <!-- Audio info -->
+            <div class="flex items-center gap-2">
+              <button
+                class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors relative overflow-hidden"
+                :class="isPlaying && playingId === selectedVocab.subjectId
+                  ? 'bg-beni text-white'
+                  : 'bg-ai text-white hover:bg-ai/90'"
+                @click="playVocab(selectedVocab)"
+              >
+                <span v-if="isPlaying && playingId === selectedVocab.subjectId" class="absolute inset-0 animate-pulse bg-white/10" />
+                <span class="relative">{{ isPlaying && playingId === selectedVocab.subjectId ? '■ Stop' : '▶ Play' }}</span>
+              </button>
+              <span class="text-[0.65rem] text-usuzumi">
+                {{ selectedVocab.audios.length > 0 ? `${selectedVocab.audios.length} audio file(s)` : 'TTS fallback' }}
+              </span>
+              <button
+                class="ml-auto text-[0.65rem] text-usuzumi hover:text-sumi transition-colors"
+                @click="wk.fetchLearnedVocabulary(true)"
+              >↻ Refresh</button>
+            </div>
+          </div>
+        </template>
       </template>
     </div>
   </WidgetFrame>
@@ -351,7 +423,108 @@ function scheduleNext() {
 watch(filteredVocab, () => {
   if (isPlaying.value) stopCurrent()
   if (listenMode.value) listenMode.value = false
+  if (gameMode.value) exitGame()
 })
+
+// --- Matching Game ---
+
+const ROUND_SIZE = 6
+
+const gameMode     = ref(false)
+const gameWords    = ref([])
+const shuffledLeft = ref([])
+const shuffledRight = ref([])
+const selectedLeft  = ref(null)
+const selectedRight = ref(null)
+const matched      = ref(new Set())
+const wrongLeft    = ref(null)
+const wrongRight   = ref(null)
+
+const isGameOver = computed(() =>
+  matched.value.size === gameWords.value.length && gameWords.value.length > 0
+)
+
+function startGame() {
+  stopCurrent()
+  listenMode.value = false
+  selectedVocab.value = null
+
+  const pool = [...filteredVocab.value]
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  gameWords.value = pool.slice(0, ROUND_SIZE)
+  shuffledLeft.value  = [...gameWords.value].sort(() => Math.random() - 0.5)
+  shuffledRight.value = [...gameWords.value].sort(() => Math.random() - 0.5)
+  selectedLeft.value  = null
+  selectedRight.value = null
+  matched.value       = new Set()
+  wrongLeft.value     = null
+  wrongRight.value    = null
+  gameMode.value      = true
+}
+
+function exitGame() {
+  stopCurrent()
+  gameMode.value      = false
+  gameWords.value     = []
+  shuffledLeft.value  = []
+  shuffledRight.value = []
+  selectedLeft.value  = null
+  selectedRight.value = null
+  matched.value       = new Set()
+  wrongLeft.value     = null
+  wrongRight.value    = null
+}
+
+function pickLeft(item) {
+  if (matched.value.has(item.subjectId) || wrongLeft.value) return
+  selectedLeft.value = item
+  if (selectedRight.value) checkMatch()
+}
+
+function pickRight(item) {
+  if (matched.value.has(item.subjectId) || wrongRight.value) return
+  selectedRight.value = item
+  if (selectedLeft.value) checkMatch()
+}
+
+function checkMatch() {
+  const l = selectedLeft.value
+  const r = selectedRight.value
+  if (l.subjectId === r.subjectId) {
+    matched.value = new Set([...matched.value, l.subjectId])
+    playVocab(l)
+    selectedLeft.value  = null
+    selectedRight.value = null
+  } else {
+    wrongLeft.value  = l.subjectId
+    wrongRight.value = r.subjectId
+    setTimeout(() => {
+      wrongLeft.value     = null
+      wrongRight.value    = null
+      selectedLeft.value  = null
+      selectedRight.value = null
+    }, 500)
+  }
+}
+
+function itemClassLeft(item) {
+  const id = item.subjectId
+  if (matched.value.has(id))             return 'opacity-35 cursor-default border-koshi bg-white/40'
+  if (wrongLeft.value === id)            return 'border-beni bg-beni/10 text-beni'
+  if (selectedLeft.value?.subjectId === id) return 'border-ai bg-ai-light ring-1 ring-ai'
+  return 'border-koshi bg-white/60 hover:bg-koshi/40 cursor-pointer'
+}
+
+function itemClassRight(item) {
+  const id = item.subjectId
+  if (matched.value.has(id))              return 'opacity-35 cursor-default border-koshi bg-white/40'
+  if (wrongRight.value === id)            return 'border-beni bg-beni/10 text-beni'
+  if (selectedRight.value?.subjectId === id) return 'border-ai bg-ai-light ring-1 ring-ai'
+  return 'border-koshi bg-white/60 hover:bg-koshi/40 cursor-pointer'
+}
 
 onBeforeUnmount(() => {
   stopCurrent()
