@@ -16,11 +16,7 @@ const typeLabels = {
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center p-6">
     <div class="text-center mb-10">
-      <div class="text-5xl mb-4">&#128218;</div>
       <h1 class="font-serif text-3xl text-silver-100 mb-2">Reading Buddy</h1>
-      <p class="text-silver-400 text-sm max-w-md mx-auto">
-        Choose a book to begin. Unlock content as you read&mdash;no spoilers ahead.
-      </p>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">
