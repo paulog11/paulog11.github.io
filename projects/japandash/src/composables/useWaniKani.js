@@ -16,7 +16,7 @@ export function useWaniKani() {
   const learnedVocabulary = ref([])
   const vocabLoading = ref(false)
   const vocabError = ref(null)
-  const vocabCache = useLocalStorage('japandash:wanikani-vocab-cache', null)
+  const vocabCache = useLocalStorage('japandash:wanikani-vocab-cache-v2', null)
 
   const SRS_LABELS = {
     1: 'apprentice', 2: 'apprentice', 3: 'apprentice', 4: 'apprentice',
@@ -49,6 +49,7 @@ export function useWaniKani() {
       primaryReading,
       readings: sd.readings ?? [],
       audios,
+      contextSentences: (sd.context_sentences ?? []).map(s => ({ ja: s.ja, en: s.en })),
     }
   }
 

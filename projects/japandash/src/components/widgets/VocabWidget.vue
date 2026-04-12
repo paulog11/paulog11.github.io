@@ -166,6 +166,12 @@
                 :style="srsBadgeStyle(item.srsLabel)"
               >{{ item.srsLabel }}</span>
               <button
+                v-if="item.contextSentences?.length > 0"
+                class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center bg-koshi/60 text-sumi hover:bg-koshi transition-colors text-[0.6rem]"
+                title="Sample sentences"
+                @click.stop="showSentencesFor(item)"
+              >📖</button>
+              <button
                 class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
                 :class="isPlaying && playingId === item.subjectId
                   ? 'bg-beni text-white'
@@ -241,6 +247,43 @@
       </template>
     </div>
   </WidgetFrame>
+
+  <!-- Context sentences modal -->
+  <Teleport to="body">
+    <div
+      v-if="sentenceVocab"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4"
+    >
+      <div class="absolute inset-0 bg-sumi/40 backdrop-blur-sm" @click="closeSentences" />
+      <div class="relative bg-washi rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="font-display text-3xl">{{ sentenceVocab.characters }}</p>
+            <p class="font-mono text-sm text-usuzumi mt-0.5">{{ sentenceVocab.primaryReading }}</p>
+            <p class="text-xs text-usuzumi">{{ sentenceVocab.primaryMeaning }}</p>
+          </div>
+          <button class="text-usuzumi hover:text-sumi text-xl shrink-0" @click="closeSentences">✕</button>
+        </div>
+        <!-- Label -->
+        <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi">Sample Sentences</p>
+        <!-- Sentences -->
+        <div class="space-y-4">
+          <div
+            v-for="(s, i) in sentenceVocab.contextSentences"
+            :key="i"
+            class="space-y-0.5 border-l-2 border-ai/30 pl-3"
+          >
+            <p class="text-sm font-display leading-relaxed">{{ s.ja }}</p>
+            <p class="text-xs text-usuzumi">{{ s.en }}</p>
+          </div>
+        </div>
+        <p v-if="sentenceVocab.contextSentences?.length === 0" class="text-sm text-usuzumi text-center py-2">
+          No sample sentences available.
+        </p>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -253,6 +296,7 @@ const wk = useWaniKani()
 const filterSrs = ref('All')
 const searchQuery = ref('')
 const selectedVocab = ref(null)
+const sentenceVocab = ref(null)
 const listenMode = ref(false)
 const listenIndex = ref(0)
 const isPlaying = ref(false)
@@ -306,6 +350,9 @@ const filteredVocab = computed(() => {
 function selectVocab(item) {
   selectedVocab.value = item
 }
+
+function showSentencesFor(item) { sentenceVocab.value = item }
+function closeSentences()        { sentenceVocab.value = null }
 
 // --- Audio ---
 
