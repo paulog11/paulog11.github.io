@@ -3,6 +3,7 @@ import japaneseMindCover from './japanesemind-thumb.jpg'
 import japaneseCultureCover from './japaneseculture-thumb.jpg'
 import multiplyingChurchesCover from './multiplyingchurches-thumb.jpg'
 import gospelHumanCover from './gospelhuman-thumb.jpg'
+import chrysanthemumSwordCover from './chrysanthemumandsword-thumb.jpg'
 
 export const coverImages = {
   'brothers-karamazov': brothersKCover,
@@ -10,4 +11,5 @@ export const coverImages = {
   'japanese-culture': japaneseCultureCover,
   'multiplying-churches': multiplyingChurchesCover,
   'gospel-human-contexts': gospelHumanCover,
+  'chrysanthemum-sword': chrysanthemumSwordCover,
 }
