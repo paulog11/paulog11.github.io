@@ -242,6 +242,47 @@
                 @click="wk.fetchLearnedVocabulary(true)"
               >↻ Refresh</button>
             </div>
+
+            <!-- Pronunciation check -->
+            <div class="space-y-2">
+              <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi">Pronunciation</p>
+              <div class="flex items-center gap-3">
+                <button
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors relative overflow-hidden"
+                  :class="isRecording ? 'bg-beni text-white' : 'border border-koshi text-sumi hover:bg-koshi/40'"
+                  @click="checkPronunciation(selectedVocab)"
+                >
+                  <span v-if="isRecording" class="absolute inset-0 animate-pulse bg-white/10" />
+                  <span class="relative">{{ isRecording ? '⏹ Stop' : '🎤 Record' }}</span>
+                </button>
+                <span v-if="isRecording" class="text-xs text-usuzumi animate-pulse">Listening…</span>
+                <span v-if="pronError" class="text-xs text-beni">{{ pronError }}</span>
+              </div>
+
+              <div v-if="pronResult" class="space-y-2 pt-1">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-lg font-semibold"
+                    :class="pronResult.score >= 80 ? 'text-matcha' : pronResult.score >= 50 ? 'text-[#C0803A]' : 'text-beni'"
+                  >{{ pronResult.score }}%</span>
+                  <span class="text-xs text-usuzumi">
+                    {{ pronResult.score === 100 ? 'Perfect!' : pronResult.score >= 80 ? 'Great!' : pronResult.score >= 50 ? 'Close' : 'Try again' }}
+                  </span>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="(m, i) in pronResult.breakdown"
+                    :key="i"
+                    class="px-1.5 py-0.5 rounded text-xs font-mono"
+                    :class="m.match ? 'bg-matcha/15 text-matcha' : 'bg-beni/10 text-beni'"
+                    :title="m.match ? 'Correct' : `Expected: ${m.expected || '(none)'} · Heard: ${m.heard || '(none)'}`"
+                  >{{ m.expected || '?' }}</span>
+                </div>
+                <p class="text-[0.65rem] text-usuzumi">
+                  Heard: <span class="font-mono">{{ pronResult.heard }}</span>
+                </p>
+              </div>
+            </div>
           </div>
         </template>
       </template>
@@ -290,6 +331,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import WidgetFrame from '../WidgetFrame.vue'
 import { useWaniKani } from '../../composables/useWaniKani.js'
+import { compareReading } from '../../utils/pronunciation.js'
 
 const wk = useWaniKani()
 
@@ -302,6 +344,12 @@ const listenIndex = ref(0)
 const isPlaying = ref(false)
 const playingId = ref(null)
 const currentAudio = ref(null)
+
+// --- Pronunciation checker ---
+const isRecording = ref(false)
+const pronResult = ref(null)
+const pronError = ref(null)
+let recognizer = null
 
 // --- English voice picker ---
 const englishVoices = ref([])
@@ -466,6 +514,47 @@ function scheduleNext() {
   setTimeout(() => playAtIndex(listenIndex.value), 400)
 }
 
+function checkPronunciation(vocab) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) {
+    pronError.value = 'Speech recognition not supported in this browser (use Chrome or Edge).'
+    return
+  }
+  if (isRecording.value) {
+    recognizer?.stop()
+    return
+  }
+  pronResult.value = null
+  pronError.value = null
+  recognizer = new SR()
+  recognizer.lang = 'ja-JP'
+  recognizer.interimResults = false
+  recognizer.maxAlternatives = 3
+  isRecording.value = true
+
+  recognizer.onresult = (e) => {
+    const alts = Array.from(e.results[0]).map(r => r.transcript)
+    let best = alts[0], bestScore = -1
+    for (const alt of alts) {
+      const { score } = compareReading(vocab.primaryReading, alt)
+      if (score > bestScore) { bestScore = score; best = alt }
+    }
+    pronResult.value = { heard: best, ...compareReading(vocab.primaryReading, best) }
+  }
+  recognizer.onerror = (e) => {
+    pronError.value = e.error === 'not-allowed' ? 'Microphone access denied.' : `Error: ${e.error}`
+    isRecording.value = false
+  }
+  recognizer.onend = () => { isRecording.value = false; recognizer = null }
+  recognizer.start()
+}
+
+watch(selectedVocab, () => {
+  recognizer?.stop()
+  pronResult.value = null
+  pronError.value = null
+})
+
 // Stop audio if filter changes mid-listen
 watch(filteredVocab, () => {
   if (isPlaying.value) stopCurrent()
@@ -575,6 +664,7 @@ function itemClassRight(item) {
 
 onBeforeUnmount(() => {
   stopCurrent()
+  recognizer?.stop()
   window.speechSynthesis?.removeEventListener('voiceschanged', loadVoices)
 })
 

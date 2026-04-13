@@ -52,6 +52,69 @@
         </div>
       </div>
 
+      <!-- Pronunciation practice -->
+      <div>
+        <button
+          class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi hover:text-sumi flex items-center gap-1 transition-colors"
+          @click="practiceMode = !practiceMode; pronResult = null; pronError = null"
+        >
+          🎤 Pronunciation Practice
+          <span class="text-[0.55rem]">{{ practiceMode ? '▲' : '▼' }}</span>
+        </button>
+
+        <div v-if="practiceMode" class="mt-3 space-y-3 rounded-lg bg-koshi/20 p-4">
+          <!-- Sentence navigator -->
+          <div class="flex items-center justify-between">
+            <button
+              class="text-xs text-usuzumi hover:text-sumi disabled:opacity-30"
+              :disabled="practiceSentIdx === 0"
+              @click="practiceSentIdx--; pronResult = null"
+            >← Prev</button>
+            <span class="text-[0.6rem] text-usuzumi font-mono">
+              {{ practiceSentIdx + 1 }} / {{ practiceSentences.length }}
+            </span>
+            <button
+              class="text-xs text-usuzumi hover:text-sumi disabled:opacity-30"
+              :disabled="practiceSentIdx === practiceSentences.length - 1"
+              @click="practiceSentIdx++; pronResult = null"
+            >Next →</button>
+          </div>
+
+          <!-- Sentence to read -->
+          <p class="font-display text-lg leading-relaxed text-center py-2">{{ currentSentence }}</p>
+
+          <!-- Record button -->
+          <div class="flex items-center gap-3">
+            <button
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors relative overflow-hidden"
+              :class="isRecording ? 'bg-beni text-white' : 'border border-koshi text-sumi hover:bg-koshi/40'"
+              @click="checkSentencePronunciation"
+            >
+              <span v-if="isRecording" class="absolute inset-0 animate-pulse bg-white/10" />
+              <span class="relative">{{ isRecording ? '⏹ Stop' : '🎤 Record' }}</span>
+            </button>
+            <span v-if="isRecording" class="text-xs text-usuzumi animate-pulse">Listening…</span>
+            <span v-if="pronError" class="text-xs text-beni">{{ pronError }}</span>
+          </div>
+
+          <!-- Result -->
+          <div v-if="pronResult" class="space-y-2">
+            <div class="flex items-center gap-2">
+              <span
+                class="text-lg font-semibold"
+                :class="pronResult.score >= 80 ? 'text-matcha' : pronResult.score >= 50 ? 'text-[#C0803A]' : 'text-beni'"
+              >{{ pronResult.score }}%</span>
+              <span class="text-xs text-usuzumi">
+                {{ pronResult.score === 100 ? 'Perfect!' : pronResult.score >= 80 ? 'Great!' : pronResult.score >= 50 ? 'Close' : 'Try again' }}
+              </span>
+            </div>
+            <p class="text-[0.65rem] text-usuzumi">
+              Heard: <span class="font-mono">{{ pronResult.heard }}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Vocabulary -->
       <details>
         <summary class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi cursor-pointer hover:text-sumi">
@@ -119,15 +182,79 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch, onBeforeUnmount } from 'vue'
 import WidgetFrame from '../WidgetFrame.vue'
 import { passages } from '../../data/reading-passages.js'
+import { compareReading } from '../../utils/pronunciation.js'
 
 const currentIndex = ref(0)
 const furiganaMode = ref('hover')
 const revealedAnswers = reactive(new Set())
 
 const currentPassage = computed(() => passages[currentIndex.value])
+
+// --- Pronunciation practice ---
+const practiceMode = ref(false)
+const practiceSentIdx = ref(0)
+const isRecording = ref(false)
+const pronResult = ref(null)
+const pronError = ref(null)
+let recognizer = null
+
+const practiceSentences = computed(() =>
+  currentPassage.value.content
+    .split('。')
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+    .map(s => s + '。')
+)
+
+const currentSentence = computed(() => practiceSentences.value[practiceSentIdx.value] ?? '')
+
+watch(currentIndex, () => {
+  recognizer?.stop()
+  practiceMode.value = false
+  practiceSentIdx.value = 0
+  pronResult.value = null
+  pronError.value = null
+})
+
+function checkSentencePronunciation() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SR) {
+    pronError.value = 'Speech recognition not supported in this browser (use Chrome or Edge).'
+    return
+  }
+  if (isRecording.value) {
+    recognizer?.stop()
+    return
+  }
+  pronResult.value = null
+  pronError.value = null
+  recognizer = new SR()
+  recognizer.lang = 'ja-JP'
+  recognizer.interimResults = false
+  recognizer.maxAlternatives = 3
+  isRecording.value = true
+
+  recognizer.onresult = (e) => {
+    const alts = Array.from(e.results[0]).map(r => r.transcript)
+    let best = alts[0], bestScore = -1
+    for (const alt of alts) {
+      const { score } = compareReading(currentSentence.value, alt)
+      if (score > bestScore) { bestScore = score; best = alt }
+    }
+    pronResult.value = { heard: best, ...compareReading(currentSentence.value, best) }
+  }
+  recognizer.onerror = (e) => {
+    pronError.value = e.error === 'not-allowed' ? 'Microphone access denied.' : `Error: ${e.error}`
+    isRecording.value = false
+  }
+  recognizer.onend = () => { isRecording.value = false; recognizer = null }
+  recognizer.start()
+}
+
+onBeforeUnmount(() => { recognizer?.stop() })
 
 function toggleAnswer(i) {
   if (revealedAnswers.has(i)) {

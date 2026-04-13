@@ -13,10 +13,11 @@ export function useWaniKani() {
   const hasKey = computed(() => !!apiKey.value)
 
   // Vocabulary + audio state
-  const learnedVocabulary = ref([])
+  const vocabCache = useLocalStorage('japandash:wanikani-vocab-cache-v2', null)
+  // Pre-populate from cache immediately so the widget renders without waiting for assignments
+  const learnedVocabulary = ref(vocabCache.value?.items ?? [])
   const vocabLoading = ref(false)
   const vocabError = ref(null)
-  const vocabCache = useLocalStorage('japandash:wanikani-vocab-cache-v2', null)
 
   const SRS_LABELS = {
     1: 'apprentice', 2: 'apprentice', 3: 'apprentice', 4: 'apprentice',

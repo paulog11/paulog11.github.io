@@ -32,7 +32,8 @@ Pulls the user's learned WaniKani vocabulary and plays pronunciation audio.
 **Architecture:**
 - `fetchLearnedVocabulary()` in `useWaniKani.js` — triggered lazily by `VocabWidget` via `watch(assignments.length)`, not in the main `refresh()` call
 - Subject IDs are batched in chunks of ≤1000 and fetched via `Promise.all`
-- Results are cached in localStorage for 24 hours (key: `japandash:wanikani-vocab-cache`), keyed by userId
+- Results are cached in localStorage for 24 hours (key: `japandash:wanikani-vocab-cache-v2`), keyed by userId
+- Cache is pre-loaded into `learnedVocabulary` at startup so the widget renders immediately without waiting for the assignments API
 
 **Merged `LearnedVocabItem` shape:**
 ```js
@@ -45,6 +46,19 @@ Pulls the user's learned WaniKani vocabulary and plays pronunciation audio.
 **Audio playback:** prefers WaniKani CDN MP3 (female voice actor first), falls back to `SpeechSynthesisUtterance` (`lang: 'ja-JP'`, `rate: 0.9`)
 
 **Listen Mode:** auto-advances through the filtered list with a 400ms pause between words; stops at end of list
+
+## Context Sentences Modal (VocabWidget.vue)
+Clicking the 📖 button on a vocab list row opens a `<Teleport to="body">` modal showing WaniKani's sample sentences for that word (Japanese + English pairs). Button only appears when `contextSentences.length > 0`. The `contextSentences` field is extracted in `mergeVocabItem()` from `sd.context_sentences` and stored in the cache.
+
+## Vocab Matching Game (VocabWidget.vue)
+"🎮 Quiz" button (visible when filtered list has ≥6 words) switches into game mode: two columns — Japanese characters (left) vs. shuffled English meanings (right). Tap one from each side to match. Correct match plays audio; mismatch flashes red for 500ms. `matched` is a reassigned `Set` to trigger Vue reactivity. "Play Again" picks a new random set of 6.
+
+## Pronunciation Checker
+Uses the browser Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`, Chrome/Edge only). Shared helpers in `src/utils/pronunciation.js`: `toHiragana()` (katakana→hiragana normalization) and `compareReading(expected, heard)` → `{ score, breakdown }`.
+
+**VocabWidget detail panel:** "🎤 Record" listens for a single vocab word. Picks the best of up to 3 STT alternatives by score. Shows: score % (green ≥80%, amber 50–79%, red <50%), per-mora tile breakdown (green/red), and raw "Heard:" transcript. Clears when a different word is selected.
+
+**ReadingWidget:** Collapsible "🎤 Pronunciation Practice" section between the passage and vocabulary list. Splits `content` on `。` into sentences for sentence-by-sentence practice. Shows score + "Heard:" transcript (no per-tile breakdown — sentences too long). Resets when switching passages. Both widgets: `recognizer?.stop()` in `onBeforeUnmount`.
 
 ## Onomatopoeia Widget
 54 entries across three categories: giongo (environmental sounds), gitaigo (states/feelings), giseigo (human/animal sounds). Daily word is date-seeded (consistent all day). Related word navigation shows a breadcrumb (`← word`) with `jumpBack()` to return to the originating entry.
