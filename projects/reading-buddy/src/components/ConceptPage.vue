@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import ConceptCard from './ConceptCard.vue'
+import HistoryCard from './HistoryCard.vue'
 import { coverImages } from '../assets/coverImages.js'
 
 const props = defineProps({
@@ -52,7 +53,8 @@ const activeConcept = computed(() =>
 
     <!-- Single concept view -->
     <div v-else class="max-w-3xl mx-auto">
-      <ConceptCard :concept="activeConcept" />
+      <ConceptCard v-if="book.cardType !== 'history'" :concept="activeConcept" />
+      <HistoryCard v-else :concept="activeConcept" />
     </div>
   </div>
 </template>
