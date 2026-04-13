@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useApiKey } from './composables/useApiKey.js'
+
+const appVersion = __APP_VERSION__
 import { useInput } from './composables/useInput.js'
 import { useTranslation } from './composables/useTranslation.js'
 import ApiKeyBar from './components/ApiKeyBar.vue'
@@ -26,6 +28,7 @@ function onTranslate() {
     <header>
       <span class="title-jp">日本語</span>
       <span class="title-en">Quick Assist</span>
+      <span class="title-version">v{{ appVersion }}</span>
     </header>
 
     <ApiKeyBar

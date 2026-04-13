@@ -8,7 +8,7 @@
           日本語ダッシュボード
         </h1>
         <p class="font-mono text-[0.65rem] tracking-[0.12em] uppercase text-usuzumi mt-0.5">
-          Japanese Learning Dashboard
+          Japanese Learning Dashboard <span class="normal-case tracking-normal opacity-50">v{{ appVersion }}</span>
         </p>
       </div>
       <a
@@ -72,6 +72,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useLocalStorage } from './composables/useLocalStorage.js'
+
+const appVersion = __APP_VERSION__
 import WaniKaniWidget from './components/widgets/WaniKaniWidget.vue'
 import VocabWidget from './components/widgets/VocabWidget.vue'
 import JishoWidget from './components/widgets/JishoWidget.vue'

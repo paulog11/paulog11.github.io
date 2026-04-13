@@ -64,6 +64,11 @@ body {
   font-size: 20px; font-weight: 700; color: var(--text-muted);
   letter-spacing: 2px; text-transform: uppercase;
 }
+.title-version {
+  font-size: 11px; color: var(--text-muted); opacity: 0.5;
+  font-family: 'DM Mono', monospace; letter-spacing: 0.1em;
+  margin-top: -16px;
+}
 .title-cards-preview {
   display: flex; gap: 12px; perspective: 600px;
 }

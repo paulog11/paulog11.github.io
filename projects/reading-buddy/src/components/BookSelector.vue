@@ -1,6 +1,8 @@
 <script setup>
 import { coverImages } from '../assets/coverImages.js'
 
+const appVersion = __APP_VERSION__
+
 defineProps({
   books: { type: Array, required: true },
 })
@@ -17,6 +19,7 @@ const typeLabels = {
   <div class="min-h-screen flex flex-col items-center justify-center p-6">
     <div class="text-center mb-10">
       <h1 class="font-serif text-3xl text-silver-100 mb-2">Reading Buddy</h1>
+      <p class="font-mono text-xs text-silver-500 mt-1">v{{ appVersion }}</p>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">

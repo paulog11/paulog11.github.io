@@ -9,6 +9,7 @@
     <!-- Nav -->
     <nav class="nav">
       <span class="wordmark">Algo&nbsp;Lab</span>
+      <span class="wordmark-version">v{{ appVersion }}</span>
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -37,6 +38,8 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
+
+const appVersion = __APP_VERSION__
 import BoidsSimulation     from './components/simulations/BoidsSimulation.vue'
 import NBodySimulation     from './components/simulations/NBodySimulation.vue'
 import TrisolarisSimulation from './components/simulations/TrisolarisSimulation.vue'

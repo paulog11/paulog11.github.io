@@ -1,5 +1,7 @@
 <script setup>
 import { useVenueSearch } from './composables/useVenueSearch.js'
+
+const appVersion = __APP_VERSION__
 import { useFilters } from './composables/useFilters.js'
 import SearchForm from './components/SearchForm.vue'
 import VenueList from './components/VenueList.vue'
@@ -22,7 +24,7 @@ function handleReset() {
       <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         <div>
           <h1 class="font-display font-bold text-xl text-ink">会場探し</h1>
-          <p class="text-xs text-muted mt-0.5">Tokyo Venue Search</p>
+          <p class="text-xs text-muted mt-0.5">Tokyo Venue Search <span class="font-mono text-sand">v{{ appVersion }}</span></p>
         </div>
         <div class="flex items-center gap-3">
           <span v-if="hasSearched" class="text-xs text-muted font-mono bg-paper px-2.5 py-1 rounded-md border border-sand">

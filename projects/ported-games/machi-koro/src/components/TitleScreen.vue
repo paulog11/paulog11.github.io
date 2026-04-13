@@ -4,6 +4,7 @@ import { PLAYER_COLORS } from '../constants.js';
 import RulesBox from './RulesBox.vue';
 
 const store = useGameStore();
+const appVersion = __APP_VERSION__;
 </script>
 
 <template>
@@ -11,6 +12,7 @@ const store = useGameStore();
     <div>
       <div class="title-logo">🏙️ Machi Koro</div>
       <div class="title-logo-sub">Build Your City</div>
+      <div class="title-version">v{{ appVersion }}</div>
     </div>
 
     <div class="title-card">

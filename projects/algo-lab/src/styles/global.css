@@ -50,6 +50,16 @@ html, body, #app {
   white-space: nowrap;
   user-select: none;
 }
+.wordmark-version {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  opacity: 0.4;
+  letter-spacing: 0.08em;
+  margin-right: 24px;
+  margin-top: 1px;
+  user-select: none;
+}
 
 .nav-tab {
   position: relative;

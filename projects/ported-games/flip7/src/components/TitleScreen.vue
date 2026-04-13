@@ -2,6 +2,7 @@
   <div class="title-screen">
     <div class="title-logo">Flip 7</div>
     <div class="title-subtitle">The Card Game of Risky Math</div>
+    <div class="title-version">v{{ appVersion }}</div>
 
     <div class="title-cards-preview">
       <div v-for="n in [0, 2, 4, 6, 8, 10, 12]" :key="n" class="preview-card">{{ n }}</div>
@@ -61,6 +62,8 @@
 <script setup>
 import { useGameStore } from '../stores/game.js';
 import { PLAYER_COLORS } from '../constants.js';
+
+const appVersion = __APP_VERSION__;
 
 const store = useGameStore();
 const defaultNames = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'];
