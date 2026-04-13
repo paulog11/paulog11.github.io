@@ -138,6 +138,22 @@ header {
   flex-wrap: wrap;
 }
 
+.mode-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.mode-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  align-self: center;
+  margin-right: 4px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.08em;
+}
+
 .ctx-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -300,6 +316,12 @@ textarea::placeholder { color: var(--muted); font-weight: 300; }
   border-top: 1px solid var(--aged);
   padding-top: 6px;
   margin-top: 8px;
+}
+
+.result-note--transform {
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--ink);
 }
 
 .register-tag {
