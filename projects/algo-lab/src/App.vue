@@ -10,6 +10,7 @@
     <nav class="nav">
       <span class="wordmark">Algo&nbsp;Lab</span>
       <span class="wordmark-version">v{{ appVersion }}</span>
+      <!-- Desktop: tab buttons -->
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -22,6 +23,10 @@
         {{ tab.label }}
         <span class="underline"></span>
       </button>
+      <!-- Mobile: dropdown -->
+      <select class="nav-select" :value="activeTab" @change="switchTab($event.target.value)">
+        <option v-for="tab in tabs" :key="tab.id" :value="tab.id">{{ tab.label }}</option>
+      </select>
       <a href="../../../" class="nav-home">← Home</a>
     </nav>
 
@@ -87,4 +92,33 @@ onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
   transition: color 0.2s;
 }
 .nav-home:hover { color: var(--text); }
+
+.nav-select {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .nav-tab { display: none; }
+  .nav-select {
+    display: flex;
+    align-items: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .nav-select option {
+    background: #07080f;
+    color: rgba(255,255,255,0.85);
+  }
+}
 </style>
