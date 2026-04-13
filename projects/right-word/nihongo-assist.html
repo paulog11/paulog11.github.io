@@ -564,6 +564,12 @@ No explanations, no markdown, only the raw JSON array.`;
     btn.disabled = false;
   }
 
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s ?? '';
+    return d.innerHTML;
+  }
+
   function renderResults(items) {
     const out = document.getElementById('output');
     const tagMap = { casual: 'tag-casual', polite: 'tag-polite', formal: 'tag-formal' };
@@ -576,13 +582,13 @@ No explanations, no markdown, only the raw JSON array.`;
     items.forEach(item => {
       const tagClass = tagMap[item.register] || 'tag-polite';
       html += `<div class="result-card">
-        <div class="result-jp">${item.jp}</div>
+        <div class="result-jp">${esc(item.jp)}</div>
         <div class="result-row">
-          <span class="result-reading">${item.reading || ''}</span>
-          <span class="result-en">${item.en}</span>
-          <span class="register-tag ${tagClass}">${item.register}</span>
+          <span class="result-reading">${esc(item.reading || '')}</span>
+          <span class="result-en">${esc(item.en)}</span>
+          <span class="register-tag ${tagClass}">${esc(item.register)}</span>
         </div>
-        ${item.note ? `<div class="result-note">${item.note}</div>` : ''}
+        ${item.note ? `<div class="result-note">${esc(item.note)}</div>` : ''}
       </div>`;
     });
 
@@ -595,9 +601,9 @@ No explanations, no markdown, only the raw JSON array.`;
     const items = document.getElementById('showItems');
     items.innerHTML = lastResults.map(item => `
       <div class="show-item">
-        <div class="jp">${item.jp}</div>
-        <div class="reading">${item.reading || ''}</div>
-        <div class="en">${item.en}</div>
+        <div class="jp">${esc(item.jp)}</div>
+        <div class="reading">${esc(item.reading || '')}</div>
+        <div class="en">${esc(item.en)}</div>
       </div>
     `).join('');
     overlay.classList.add('active');
