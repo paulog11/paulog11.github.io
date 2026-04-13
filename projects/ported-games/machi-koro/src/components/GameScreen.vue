@@ -7,6 +7,7 @@ import TurnPanel    from './TurnPanel.vue';
 import IncomeLog    from './IncomeLog.vue';
 import Marketplace  from './Marketplace.vue';
 import PlayerBoard  from './PlayerBoard.vue';
+import PlayerHUD    from './PlayerHUD.vue';
 
 const store = useGameStore();
 
@@ -32,6 +33,8 @@ const aiPlayers   = computed(() => store.players.slice(1));
       :is-active="store.currentPlayerIdx === 0"
       :is-human="true"
     />
+
+    <PlayerHUD />
 
     <!-- AI player boards (compact row) -->
     <div v-if="aiPlayers.length" class="ai-boards">

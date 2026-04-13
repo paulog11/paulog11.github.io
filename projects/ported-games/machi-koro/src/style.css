@@ -570,6 +570,43 @@ body {
 .est-card-header.est-red    { background: var(--red-card); }
 .est-card-header.est-purple { background: var(--purple-card); }
 
+/* ── PLAYER HUD ── */
+.player-hud {
+  position: fixed;
+  top: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  z-index: 100;
+  pointer-events: none;
+}
+.hud-coins {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.hud-coin-icon { font-size: 18px; }
+.hud-coin-count {
+  font-family: 'Fredoka One', cursive;
+  font-size: 22px;
+  color: var(--coin-gold);
+  min-width: 24px; text-align: right;
+}
+.hud-notification {
+  font-family: 'Fredoka One', cursive;
+  font-size: 16px; font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+.hud-notif-positive { color: #2ecc71; background: rgba(46,204,113,0.15); }
+.hud-notif-negative { color: #e74c3c; background: rgba(231,76,60,0.15); }
+
+.hud-notif-enter-active { transition: opacity 0.2s, transform 0.2s; }
+.hud-notif-leave-active { transition: opacity 0.4s 2s, transform 0.4s 2s; }
+.hud-notif-enter-from  { opacity: 0; transform: translateY(-6px); }
+.hud-notif-leave-to   { opacity: 0; transform: translateY(-6px); }
+
 /* ── WIN OVERLAY ── */
 .win-overlay .overlay-panel { text-align: center; }
 .win-trophy { font-size: 64px; margin-bottom: 8px; }
