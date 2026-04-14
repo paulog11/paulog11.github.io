@@ -4,6 +4,7 @@ import japaneseCultureCover from './japaneseculture-thumb.jpg'
 import multiplyingChurchesCover from './multiplyingchurches-thumb.jpg'
 import gospelHumanCover from './gospelhuman-thumb.jpg'
 import chrysanthemumSwordCover from './chrysanthemumandsword-thumb.jpg'
+import jesusForJapanCover from './jesusforjapan-thumb.jpg'
 import historyJapanCover from './historyofjapan-thumb.jpg'
 
 export const coverImages = {
@@ -13,5 +14,6 @@ export const coverImages = {
   'multiplying-churches': multiplyingChurchesCover,
   'gospel-human-contexts': gospelHumanCover,
   'chrysanthemum-sword': chrysanthemumSwordCover,
+  'jesus-for-japan': jesusForJapanCover,
   'history-japan': historyJapanCover,
 }
