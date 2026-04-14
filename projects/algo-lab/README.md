@@ -1,6 +1,6 @@
 # Algo Lab
 
-Interactive algorithm and physics simulation playground built with Vue 3 and HTML Canvas. Each tab runs a different visualization.
+Interactive algorithm and physics simulation playground built with Vue 3 and HTML Canvas. Each tab runs a different visualization. Current version: **1.1.0**.
 
 ## Stack
 
@@ -17,6 +17,7 @@ Interactive algorithm and physics simulation playground built with Vue 3 and HTM
 | **N-Body** | `NBodySimulation.vue` | Gravitational N-body simulation using RK4 integration. Presets for Figure-8 choreography and orbital configurations. Click canvas to add bodies. |
 | **Trisolaris** | `TrisolarisSimulation.vue` | Three-body problem themed after Liu Cixin's novel. 5 sequential narrative events (Chaotic Era, Stable Era, Tri-Solar Day, Syzygy, Flying Stars) with atmospheric overlays and temperature/stability readings. |
 | **Big Bang** | `BigBangSimulation.vue` | Fine-tuning simulator exploring the anthropic principle. 10 physical constant sliders (G, electromagnetic force, strong nuclear force, cosmological constant, etc.) control particle physics outcomes (Life-Permitting Universe, Big Crunch, Heat Death, No Atoms, etc.). |
+| **Curvature** | `CurvatureSimulation.vue` | Curvature propulsion from Liu Cixin's universe, modeled via geometric phase locomotion. A flexible spine propels itself through a traveling curvature wave (Taylor swimming). Includes a shape-space (w₁, w₂) inset showing the gait loop whose enclosed area equals net displacement, and an optional 3-body gravity field. |
 
 ## Project Structure
 
@@ -38,12 +39,15 @@ algo-lab/
             ├── NBodySimulation.vue
             ├── TrisolarisSimulation.vue
             ├── BigBangSimulation.vue
+            ├── CurvatureSimulation.vue
             ├── boids/
             │   └── station.js              # Shinjuku station layout geometry
             ├── trisolaris/
             │   └── events.js               # 5 Trisolaris event definitions
-            └── bigbang/
-                └── constants.js            # 10 physical constants + outcomes
+            ├── bigbang/
+            │   └── constants.js            # 10 physical constants + outcomes
+            └── curvature/
+                └── physics.js              # Spine builder, shape modes, Taylor propulsion, gravity
 ```
 
 ## Getting Started
@@ -148,7 +152,7 @@ simulations/
   YourSimulation.vue
 ```
 
-See `trisolaris/events.js` and `bigbang/constants.js` for examples.
+See `trisolaris/events.js`, `bigbang/constants.js`, and `curvature/physics.js` for examples.
 
 ### 3. Add an accent color
 
