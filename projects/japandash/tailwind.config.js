@@ -38,4 +38,9 @@ export default {
     },
   },
   plugins: [],
+  safelist: [
+    'col-span-1', 'col-span-2', 'col-span-3',
+    'md:col-span-2', 'md:col-span-3',
+    'xl:col-span-2', 'xl:col-span-3',
+  ],
 }

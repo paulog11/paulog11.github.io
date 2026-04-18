@@ -55,14 +55,13 @@
 
     <!-- Widget grid -->
     <main class="p-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        <WaniKaniWidget />
-        <VocabWidget />
-        <JishoWidget />
-        <ShadowingWidget />
-        <OnomatopoeiaWidget />
-        <GrammarWidget />
-        <ReadingWidget />
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
+        <component
+          v-for="wid in widgetOrder"
+          :key="wid"
+          :is="widgetComponents[wid]"
+          :widget-id="wid"
+        />
       </div>
     </main>
 
@@ -72,6 +71,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useLocalStorage } from './composables/useLocalStorage.js'
+import { useWidgetLayout } from './composables/useWidgetLayout.js'
 
 const appVersion = __APP_VERSION__
 import WaniKaniWidget from './components/widgets/WaniKaniWidget.vue'
@@ -81,6 +81,18 @@ import ShadowingWidget from './components/widgets/ShadowingWidget.vue'
 import OnomatopoeiaWidget from './components/widgets/OnomatopoeiaWidget.vue'
 import GrammarWidget from './components/widgets/GrammarWidget.vue'
 import ReadingWidget from './components/widgets/ReadingWidget.vue'
+
+const { widgetOrder } = useWidgetLayout()
+
+const widgetComponents = {
+  wanikani: WaniKaniWidget,
+  vocab: VocabWidget,
+  jisho: JishoWidget,
+  shadowing: ShadowingWidget,
+  onomatopoeia: OnomatopoeiaWidget,
+  grammar: GrammarWidget,
+  reading: ReadingWidget,
+}
 
 const showSettings = ref(false)
 const storedKey = useLocalStorage('japandash:wanikani-key', '')
