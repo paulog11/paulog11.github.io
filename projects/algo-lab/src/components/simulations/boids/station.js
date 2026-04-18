@@ -68,71 +68,68 @@ export function createStationLayout(W, H) {
   const my = H * 0.06
 
   // Station bounding area
-  const L = mx              // left edge of station
-  const R = W - mx          // right edge
-  const T = my              // top edge
-  const B = H - my          // bottom edge
+  const L = mx
+  const R = W - mx
+  const T = my
+  const B = H - my
 
-  // Key x-coordinates
-  const leftWall    = L                  // left boundary
-  const midDivider  = L + (R - L) * 0.52 // vertical divider (concourse / right wing)
-  const rightWall   = R                  // right boundary
+  const leftWall   = L
+  const midDivider = L + (R - L) * 0.52
+  const rightWall  = R
+  const topWall    = T
+  const bottomWall = B
 
-  // Key y-coordinates
-  const topWall     = T
-  const bottomWall  = B
+  const exitGap = Math.max(32, (B - T) * 0.07)
 
-  // Exit gap size
-  const exitGap = Math.max(30, (B - T) * 0.06)
-
-  // Exit positions
-  // North Exit: gap in top wall, left-center area
   const northExitX = L + (midDivider - L) * 0.55
-  // East Gate: gap in left wall, upper area
-  const eastGateY = T + (B - T) * 0.25
-  // West Gate: gap in left wall, middle area
-  const westGateY = T + (B - T) * 0.50
-  // Central West Gate: gap in bottom, right area
-  const cwGateX = midDivider + (R - midDivider) * 0.3
+  const eastGateY  = T + (B - T) * 0.25
+  const westGateY  = T + (B - T) * 0.50
+  const cwGateX    = midDivider + (R - midDivider) * 0.3
 
   const walls = []
 
-  // ─── LEFT WALL (with gaps for East Gate and West Gate) ───
-  walls.push({ x1: leftWall, y1: topWall, x2: leftWall, y2: eastGateY - exitGap / 2 })
-  // East Gate gap
+  // ─── LEFT WALL (gaps for East Gate and West Gate) ───
+  walls.push({ x1: leftWall, y1: topWall,               x2: leftWall, y2: eastGateY - exitGap / 2 })
   walls.push({ x1: leftWall, y1: eastGateY + exitGap / 2, x2: leftWall, y2: westGateY - exitGap / 2 })
-  // West Gate gap
   walls.push({ x1: leftWall, y1: westGateY + exitGap / 2, x2: leftWall, y2: bottomWall })
 
-  // ─── TOP WALL (with gap for North Exit) ───
-  walls.push({ x1: leftWall, y1: topWall, x2: northExitX - exitGap / 2, y2: topWall })
-  // North Exit gap
-  walls.push({ x1: northExitX + exitGap / 2, y1: topWall, x2: midDivider, y2: topWall })
-  // Top wall right section (step down to right wing)
-  walls.push({ x1: midDivider, y1: topWall, x2: midDivider, y2: T + (B - T) * 0.08 })
-  walls.push({ x1: midDivider, y1: T + (B - T) * 0.08, x2: rightWall, y2: T + (B - T) * 0.08 })
-  // Right wall top
-  walls.push({ x1: rightWall, y1: T + (B - T) * 0.08, x2: rightWall, y2: bottomWall })
+  // ─── TOP WALL (gap for North Exit) ───
+  walls.push({ x1: leftWall,               y1: topWall, x2: northExitX - exitGap / 2, y2: topWall })
+  walls.push({ x1: northExitX + exitGap / 2, y1: topWall, x2: midDivider,             y2: topWall })
+  walls.push({ x1: midDivider, y1: topWall,             x2: midDivider, y2: T + (B - T) * 0.08 })
+  walls.push({ x1: midDivider, y1: T + (B - T) * 0.08, x2: rightWall,  y2: T + (B - T) * 0.08 })
+  walls.push({ x1: rightWall,  y1: T + (B - T) * 0.08, x2: rightWall,  y2: bottomWall })
 
-  // ─── BOTTOM WALL (with gap for Central West Gate) ───
-  walls.push({ x1: leftWall, y1: bottomWall, x2: midDivider - (midDivider - leftWall) * 0.05, y2: bottomWall })
-  // Step: bottom-left connects to mid-divider area
+  // ─── BOTTOM WALL (gap for Central West Gate) ───
   const stepX = midDivider - (midDivider - leftWall) * 0.05
   const stepY = bottomWall - (B - T) * 0.08
+  walls.push({ x1: leftWall, y1: bottomWall, x2: stepX, y2: bottomWall })
   walls.push({ x1: stepX, y1: bottomWall, x2: stepX, y2: stepY })
   walls.push({ x1: stepX, y1: stepY, x2: cwGateX - exitGap / 2, y2: stepY })
-  // Central West Gate gap at bottom
   walls.push({ x1: cwGateX + exitGap / 2, y1: stepY, x2: rightWall, y2: stepY })
-  // Right wall bottom connector
   walls.push({ x1: rightWall, y1: stepY, x2: rightWall, y2: bottomWall })
 
-  // ─── VERTICAL DIVIDER (concourse boundary, with gaps for track access) ───
+  // ─── EXIT CORRIDORS (walls extending to canvas edges, creating visible tunnels) ───
+  // North Exit: vertical corridor from station top wall to canvas top
+  walls.push({ x1: northExitX - exitGap / 2, y1: 0, x2: northExitX - exitGap / 2, y2: topWall })
+  walls.push({ x1: northExitX + exitGap / 2, y1: 0, x2: northExitX + exitGap / 2, y2: topWall })
+  // East Gate: horizontal corridor from canvas left to station left wall
+  walls.push({ x1: 0, y1: eastGateY - exitGap / 2, x2: leftWall, y2: eastGateY - exitGap / 2 })
+  walls.push({ x1: 0, y1: eastGateY + exitGap / 2, x2: leftWall, y2: eastGateY + exitGap / 2 })
+  // West Gate: horizontal corridor from canvas left to station left wall
+  walls.push({ x1: 0, y1: westGateY - exitGap / 2, x2: leftWall, y2: westGateY - exitGap / 2 })
+  walls.push({ x1: 0, y1: westGateY + exitGap / 2, x2: leftWall, y2: westGateY + exitGap / 2 })
+  // Central West Gate: vertical corridor from step down to canvas bottom
+  walls.push({ x1: cwGateX - exitGap / 2, y1: stepY, x2: cwGateX - exitGap / 2, y2: H })
+  walls.push({ x1: cwGateX + exitGap / 2, y1: stepY, x2: cwGateX + exitGap / 2, y2: H })
+
+  // ─── VERTICAL DIVIDER (4 platforms — wider passages between tracks) ───
   const divTop = T + (B - T) * 0.08
   const divBot = stepY
-  const numPlatforms = 7
+  const numPlatforms = 4
   const divHeight = divBot - divTop
   const platSpacing = divHeight / (numPlatforms + 1)
-  const platGapHalf = Math.max(8, platSpacing * 0.25)
+  const platGapHalf = Math.max(10, platSpacing * 0.32)
 
   let prevDivY = divTop
   for (let i = 0; i < numPlatforms; i++) {
@@ -146,57 +143,29 @@ export function createStationLayout(W, H) {
     walls.push({ x1: midDivider, y1: prevDivY, x2: midDivider, y2: divBot })
   }
 
-  // ─── PLATFORMS (horizontal track areas in the concourse) ───
+  // ─── PLATFORMS ───
   const platforms = []
-  const trackLabels = [
-    'Tracks 1 & 2', 'Tracks 3 & 4', 'Tracks 7 & 8',
-    'Tracks 9 & 10', 'Tracks 11 & 12', 'Tracks 13 & 14', 'Tracks 15 & 16'
-  ]
+  const trackLabels = ['Tracks 1 & 2', 'Tracks 5 & 6', 'Tracks 9 & 10', 'Tracks 13 & 14']
   const platW = (midDivider - leftWall) * 0.75
-  const platH = Math.max(6, platSpacing * 0.3)
+  const platH = Math.max(6, platSpacing * 0.28)
   const platX = leftWall + (midDivider - leftWall - platW) * 0.55
 
   for (let i = 0; i < numPlatforms; i++) {
     const cy = divTop + platSpacing * (i + 1)
     platforms.push({
-      x: platX,
-      y: cy - platH / 2,
-      w: platW,
-      h: platH,
-      label: trackLabels[i] || `Tracks ${i * 2 + 1} & ${i * 2 + 2}`,
+      x: platX, y: cy - platH / 2, w: platW, h: platH,
+      label: trackLabels[i],
     })
-    // Platform walls (top and bottom edges)
     walls.push({ x1: platX, y1: cy - platH / 2, x2: platX + platW, y2: cy - platH / 2 })
     walls.push({ x1: platX, y1: cy + platH / 2, x2: platX + platW, y2: cy + platH / 2 })
   }
 
-  // ─── EXITS ───
+  // ─── EXITS (spawn positions at far ends of corridors, near canvas edges) ───
   const exits = [
-    {
-      x: northExitX,
-      y: topWall - 5,
-      label: 'North Exit',
-      // Spawn direction: people enter walking downward
-      spawnDx: 0, spawnDy: 1.5,
-    },
-    {
-      x: leftWall - 5,
-      y: eastGateY,
-      label: 'East Gate',
-      spawnDx: 1.5, spawnDy: 0,
-    },
-    {
-      x: leftWall - 5,
-      y: westGateY,
-      label: 'West Gate',
-      spawnDx: 1.5, spawnDy: 0,
-    },
-    {
-      x: cwGateX,
-      y: stepY + 5,
-      label: 'Central West Gate',
-      spawnDx: 0, spawnDy: -1.5,
-    },
+    { x: northExitX, y: 4,       label: 'North Exit',        spawnDx: 0,   spawnDy: 1.5  },
+    { x: 4,          y: eastGateY, label: 'East Gate',        spawnDx: 1.5, spawnDy: 0    },
+    { x: 4,          y: westGateY, label: 'West Gate',        spawnDx: 1.5, spawnDy: 0    },
+    { x: cwGateX,    y: H - 4,   label: 'Central West Gate', spawnDx: 0,   spawnDy: -1.5 },
   ]
 
   return { walls, platforms, exits }

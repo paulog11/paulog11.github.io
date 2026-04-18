@@ -79,6 +79,7 @@ const WALL_AVOID_R = 20
 const WALL_FORCE   = 12.0
 const GOAL_WEIGHT  = 1.8
 const ARRIVAL_R    = 22
+const APPROACH_R   = 36  // head-on detection range for lateral steering
 
 /**
  * Resolve hard wall collisions: if boid crossed a wall, push it back.
@@ -162,17 +163,53 @@ class Boid {
     const sepR = this.isStation ? 16 : SEP_R
     const aliR = this.isStation ? 35 : ALI_R
     const cohR = this.isStation ? 45 : COH_R
+    // Station-mode: velocity-aware lateral separation accumulator
+    let staSepFx = 0, staSepFy = 0, staSepC = 0
 
     for (const b of boids) {
       if (b === this || b.gone) continue
       const dx = b.x - this.x, dy = b.y - this.y
       const d  = Math.sqrt(dx*dx + dy*dy)
-      if (d < sepR && d > 0) { sx -= dx/d; sy -= dy/d; sc++ }
-      if (d < aliR)           { ax += b.vx; ay += b.vy; ac++ }
-      if (d < cohR)           { cx += b.x;  cy += b.y;  cc++ }
+      if (this.isStation) {
+        if (d < APPROACH_R && d > 0) {
+          const nx = dx / d, ny = dy / d
+          if (d < sepR) {
+            // Hard separation zone: always push away, quadratic strength
+            const str = (1 - d / sepR) ** 2
+            staSepFx -= nx * str
+            staSepFy -= ny * str
+            staSepC++
+          } else {
+            // Soft approach zone: steer laterally on head-on collision course
+            const spd  = Math.sqrt(this.vx * this.vx + this.vy * this.vy)
+            const bSpd = Math.sqrt(b.vx * b.vx + b.vy * b.vy)
+            if (spd > 0.15 && bSpd > 0.15) {
+              const myVx = this.vx / spd, myVy = this.vy / spd
+              const bVx  = b.vx  / bSpd, bVy  = b.vy  / bSpd
+              const myApproach  =  myVx * nx + myVy * ny   // am I moving toward b?
+              const theirReturn = -(bVx * nx + bVy * ny)   // is b moving toward me?
+              if (myApproach > 0.4 && theirReturn > 0.4) {
+                // Head-on: right-hand traffic rule — steer so we pass each other
+                // cross > 0 means b is to my left; in that case steer right (-1), and vice versa
+                const cross = myVx * ny - myVy * nx
+                const side  = cross >= 0 ? 1 : -1
+                const str   = (1 - d / APPROACH_R) * 0.7
+                staSepFx += -ny * side * str
+                staSepFy +=  nx * side * str
+                staSepC++
+              }
+            }
+          }
+        }
+      } else {
+        if (d < sepR && d > 0) { sx -= dx/d; sy -= dy/d; sc++ }
+      }
+      if (d < aliR) { ax += b.vx; ay += b.vy; ac++ }
+      if (d < cohR) { cx += b.x;  cy += b.y;  cc++ }
     }
 
-    if (sc > 0) { const [fx,fy] = this.steer(sx,sy);           this.ax += fx*getSep(); this.ay += fy*getSep() }
+    if (!this.isStation && sc > 0)     { const [fx,fy] = this.steer(sx,sy);                         this.ax += fx*getSep(); this.ay += fy*getSep() }
+    if ( this.isStation && staSepC > 0) { const [fx,fy] = this.steer(staSepFx,staSepFy);             this.ax += fx*getSep(); this.ay += fy*getSep() }
     if (ac > 0) { const [fx,fy] = this.steer(ax/ac,ay/ac);     this.ax += fx*getAli(); this.ay += fy*getAli() }
     if (cc > 0) { const [fx,fy] = this.steer(cx/cc-this.x,cy/cc-this.y); this.ax += fx*getCoh(); this.ay += fy*getCoh() }
 
