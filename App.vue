@@ -27,7 +27,7 @@
     <main class="flex-1 flex flex-col items-center px-6 py-8 overflow-y-auto">
 
       <!-- Page title -->
-      <div class="text-center mb-10 animate-fade-up" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
+      <div class="text-center mb-8 animate-fade-up" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
         <h1 class="font-display text-4xl md:text-5xl text-ink leading-tight">
           Choose an app
         </h1>
@@ -36,16 +36,38 @@
         </p>
       </div>
 
+      <!-- Category filter -->
+      <div class="flex gap-2 mb-8 flex-wrap justify-center animate-fade-up" style="animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards;">
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          @click="selectedCategory = cat.id"
+          :class="[
+            'font-mono text-[0.72rem] tracking-[0.1em] uppercase px-4 py-1.5 rounded-sm border transition-all duration-150',
+            selectedCategory === cat.id
+              ? 'bg-ink text-parchment border-ink'
+              : 'bg-transparent text-muted border-warm hover:border-ink hover:text-ink'
+          ]"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+
       <!-- App grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">
         <AppCard
-          v-for="(app, i) in apps"
+          v-for="(app, i) in filteredApps"
           :key="app.id"
           :app="app"
-          :style="{ animationDelay: `${0.12 + i * 0.07}s` }"
+          :style="{ animationDelay: `${0.05 + i * 0.07}s` }"
           @select="handleSelect"
         />
       </div>
+
+      <!-- Empty state -->
+      <p v-if="filteredApps.length === 0" class="text-muted font-mono text-sm mt-8">
+        No apps in this category yet.
+      </p>
 
     </main>
 
@@ -60,16 +82,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AppCard from './components/AppCard.vue'
 
-// ── Config ──────────────────────────────────────────────
-// Replace with your actual GitHub Pages portfolio URL
 const portfolioUrl = ref('./projects/profile/')
 
-// ── App list ────────────────────────────────────────────
-// To add a new app: copy one entry, give it a unique id,
-// fill in title/description/tags, and set the url/comingSoon flag.
+const categories = [
+  { id: 'all',   label: 'All' },
+  { id: 'japan', label: 'Japan' },
+  { id: 'games', label: 'Games' },
+]
+
+const selectedCategory = ref('all')
+
 const apps = ref([
   {
     id: 'right-word-japanese',
@@ -80,16 +105,7 @@ const apps = ref([
     icon: '語',
     url: './projects/right-word/dist/index.html',
     comingSoon: false,
-  },
-  {
-    id: 'bible-hymn-kids',
-    title: 'Bible Hymn Learning',
-    subtitle: 'for Kids',
-    description: 'Interactive hymn and scripture learning experience designed for young learners.',
-    tags: ['Education', 'Music'],
-    icon: '♪',
-    url: './projects/bible-hymn/hymn-app.html',
-    comingSoon: false,
+    category: 'japan',
   },
   {
     id: 'japanese-dashboard',
@@ -100,36 +116,7 @@ const apps = ref([
     icon: '日',
     url: './projects/japandash/dist/index.html',
     comingSoon: false,
-  },
-  {
-    id: 'algo-lab',
-    title: 'Algorithm Lab',
-    subtitle: 'Simulations',
-    description: 'Canvas-based algorithm simulations — flocking boids, N-body gravity, three-body problem, and more.',
-    tags: ['Simulation', 'Physics'],
-    icon: '⚛',
-    url: './projects/algo-lab/dist/index.html',
-    comingSoon: false,
-  },
-  {
-    id: 'machi-koro',
-    title: 'Machi Koro',
-    subtitle: 'City Builder',
-    description: 'Build your city by rolling dice and buying establishments. First to complete all 4 landmarks wins!',
-    tags: ['Game', 'Board Game'],
-    icon: '🏙️',
-    url: './projects/ported-games/machi-koro/dist/index.html',
-    comingSoon: false,
-  },
-  {
-    id: 'flip7',
-    title: 'Flip 7',
-    subtitle: 'Card Game',
-    description: 'A multiplayer card game of risky math. Draw cards, dodge duplicates, and race to the target score.',
-    tags: ['Game', 'Multiplayer'],
-    icon: '🃏',
-    url: './projects/ported-games/flip7/dist/index.html',
-    comingSoon: false,
+    category: 'japan',
   },
   {
     id: 'reading-buddy',
@@ -140,6 +127,7 @@ const apps = ref([
     icon: '📚',
     url: './projects/reading-buddy/dist/index.html',
     comingSoon: false,
+    category: 'japan',
   },
   {
     id: 'venue-search',
@@ -150,8 +138,59 @@ const apps = ref([
     icon: '🏛',
     url: './projects/venue-search/dist/index.html',
     comingSoon: false,
+    category: 'japan',
+  },
+  {
+    id: 'machi-koro',
+    title: 'Machi Koro',
+    subtitle: 'City Builder',
+    description: 'Build your city by rolling dice and buying establishments. First to complete all 4 landmarks wins!',
+    tags: ['Game', 'Board Game'],
+    icon: '🏙️',
+    url: './projects/ported-games/machi-koro/dist/index.html',
+    comingSoon: false,
+    category: 'games',
+  },
+  {
+    id: 'flip7',
+    title: 'Flip 7',
+    subtitle: 'Card Game',
+    description: 'A multiplayer card game of risky math. Draw cards, dodge duplicates, and race to the target score.',
+    tags: ['Game', 'Multiplayer'],
+    icon: '🃏',
+    url: './projects/ported-games/flip7/dist/index.html',
+    comingSoon: false,
+    category: 'games',
+  },
+  {
+    id: 'algo-lab',
+    title: 'Algorithm Lab',
+    subtitle: 'Simulations',
+    description: 'Canvas-based algorithm simulations — flocking boids, N-body gravity, three-body problem, and more.',
+    tags: ['Simulation', 'Physics'],
+    icon: '⚛',
+    url: './projects/algo-lab/dist/index.html',
+    comingSoon: false,
+    category: 'other',
+  },
+  {
+    id: 'bible-hymn-kids',
+    title: 'Bible Hymn Learning',
+    subtitle: 'for Kids',
+    description: 'Interactive hymn and scripture learning experience designed for young learners.',
+    tags: ['Education', 'Music'],
+    icon: '♪',
+    url: './projects/bible-hymn/hymn-app.html',
+    comingSoon: false,
+    category: 'other',
   },
 ])
+
+const filteredApps = computed(() =>
+  selectedCategory.value === 'all'
+    ? apps.value
+    : apps.value.filter(a => a.category === selectedCategory.value)
+)
 
 function handleSelect(app) {
   if (app.comingSoon || !app.url) return
