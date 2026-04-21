@@ -38,6 +38,38 @@
     <div class="bb-canvas-wrap" ref="canvasWrap">
       <canvas ref="canvasEl"></canvas>
 
+      <!-- Context panel: current epoch + legend -->
+      <div class="bb-info-panel">
+        <div class="bb-info-section">
+          <div class="bb-info-label">Current Epoch</div>
+          <div class="bb-info-title">{{ currentEpoch.name }}</div>
+          <div class="bb-info-desc">{{ currentEpoch.desc }}</div>
+          <div class="bb-info-hint">
+            Epochs are named time-windows in the early universe, from the Big Bang (t ≈ 0) to structure formation. The Atom view steps through them in seconds; Celestial view sits in the last epoch, where stars, black holes and planets emerge.
+          </div>
+          <div v-if="activeView === 'atom'" class="bb-epoch-jump">
+            <div class="bb-info-label" style="margin-bottom:5px">Jump to Epoch</div>
+            <select class="bb-epoch-select" @change="jumpToEpoch(parseFloat($event.target.value)); $event.target.value = ''">
+              <option value="">— select —</option>
+              <option v-for="(ep, i) in EPOCHS" :key="i" :value="ep[0]">{{ ep[2] }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bb-info-section">
+          <div class="bb-info-label">Legend</div>
+          <div class="bb-legend-items">
+            <div v-for="item in legendItems" :key="item.label" class="bb-legend-item">
+              <span class="bb-legend-swatch" :style="{ background: item.color, boxShadow: `0 0 8px ${item.color}` }"></span>
+              <div class="bb-legend-text">
+                <div class="bb-legend-name">{{ item.label }}</div>
+                <div class="bb-legend-desc">{{ item.desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Outcome badge -->
       <div class="bb-outcome" :style="{ borderColor: outcomeData.borderColor }">
         <div class="bb-outcome-label">Universe Outcome</div>
@@ -53,6 +85,9 @@
         </div>
         <div class="bb-divider"></div>
         <button class="ctrl-btn" @click="resetSim">⟳ {{ activeView === 'atom' ? 'Big Bang' : 'Seed Universe' }}</button>
+        <button class="bb-pause-btn" :class="{ paused: isPaused }" @click="isPaused = !isPaused">
+          {{ isPaused ? '▶' : '⏸' }}
+        </button>
         <div class="bb-divider"></div>
         <div class="bb-zoom-controls">
           <button class="bb-zoom-btn" @click="zoom(-0.25)">−</button>
@@ -77,7 +112,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS } from './bigbang/constants.js'
+import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS, CELESTIAL_EPOCH } from './bigbang/constants.js'
 import { createCelestialField, celestialPhysicsStep, drawCelestialBodies } from './bigbang/celestial.js'
 
 const canvasEl  = ref(null)
@@ -90,6 +125,7 @@ const zoomLevel   = ref(1.0)
 const bbTime      = ref(0)
 const bbPhase     = ref('bang')
 const activeView  = ref('atom')
+const isPaused    = ref(false)
 let   particles   = []
 let   celestialBodies = []
 let   stars       = []
@@ -117,15 +153,56 @@ const tuningLabel = computed(() => {
   return t > 0.85 ? 'Our Universe' : t > 0.6 ? 'Close' : t > 0.35 ? 'Marginal' : 'Broken'
 })
 
-const epochLabel = computed(() => {
-  if (activeView.value === 'celestial') return 'Cosmic Structure Formation'
+const currentEpoch = computed(() => {
+  if (activeView.value === 'celestial') return CELESTIAL_EPOCH
   const ep = EPOCHS.find(([s,e]) => bbTime.value >= s && bbTime.value < e)
-  return ep ? ep[2] : 'Structure Formation'
+  const fallback = EPOCHS[EPOCHS.length - 1]
+  const [, , name, desc] = ep || fallback
+  return { name, desc }
 })
+const epochLabel = computed(() => currentEpoch.value.name)
+
+// ── EPOCH JUMP ───────────────────────────────────────────
+// Each physicsStep advances bbTime by DT = 0.004/3.
+// The furthest epoch start is 0.25 → ~190 iterations max, so sync is fine.
+const DT = 0.004 / 3
+function jumpToEpoch(targetTime) {
+  bigBang()
+  if (targetTime > 0) {
+    const MAX_STEPS = 2000
+    let steps = 0
+    while (bbTime.value < targetTime && steps < MAX_STEPS) {
+      physicsStep(DT)
+      if (particles.length === 0) break
+      steps++
+    }
+  }
+  isPaused.value = true
+}
+
+// ── LEGEND ───────────────────────────────────────────────
+const ATOM_LEGEND = [
+  { label: 'Matter',      desc: 'Baryons — build atoms, stars, planets.',          color: 'rgb(180,220,255)' },
+  { label: 'Photon',      desc: 'Radiation / light. Travels at c, carries energy.', color: 'rgb(255,240,180)' },
+  { label: 'Dark Matter', desc: 'Invisible mass. Interacts only via gravity.',      color: 'rgb(140,100,220)' },
+]
+const CELESTIAL_LEGEND = [
+  { label: 'Gas Cloud',        desc: 'Cold hydrogen/helium nebula. Collapses under gravity.', color: 'rgb(100,200,220)' },
+  { label: 'Dark Matter Halo', desc: 'Invisible scaffold that seeds structure growth.',        color: 'rgb(140,100,220)' },
+  { label: 'Proto-Star',       desc: 'Collapsing gas core heating toward fusion ignition.',    color: 'rgb(255,180,80)'  },
+  { label: 'Star',             desc: 'Fusion ignited. Emits radiation; spawns planets.',       color: 'rgb(220,240,255)' },
+  { label: 'Black Hole',       desc: 'Collapsed stellar core. Accretion disk spirals inward.', color: 'rgb(255,140,60)'  },
+  { label: 'Planet (habitable)', desc: 'Orbits a star. Chemistry permits complex molecules.',  color: 'rgb(80,160,120)'  },
+  { label: 'Planet (sterile)',   desc: 'Orbits a star, but chemistry is broken — no life.',    color: 'rgb(120,120,120)' },
+]
+const legendItems = computed(() =>
+  activeView.value === 'atom' ? ATOM_LEGEND : CELESTIAL_LEGEND
+)
 
 // ── VIEW SWITCHING ───────────────────────────────────────
 function switchView(view) {
   activeView.value = view
+  isPaused.value = false
   if (view === 'celestial') {
     celestialBodies = createCelestialField(W, H, constValues)
     celestialTime = 0
@@ -133,6 +210,7 @@ function switchView(view) {
 }
 
 function resetSim() {
+  isPaused.value = false
   if (activeView.value === 'atom') {
     bigBang()
   } else {
@@ -346,26 +424,30 @@ function loop() {
   drawBG()
 
   if (activeView.value === 'atom') {
-    for (let s=0;s<3;s++) physicsStep(0.004/3)
+    if (!isPaused.value) {
+      for (let s=0;s<3;s++) physicsStep(0.004/3)
+      if (particles.length===0) bigBang()
+    }
     drawOutcomeViz(); drawFlash()
     ctx.save()
     ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
     for (const p of particles) drawParticle(p)
     ctx.restore()
-    if (particles.length===0) bigBang()
   } else {
-    const dt = 0.016
-    celestialTime += dt
-    celestialBodies = celestialPhysicsStep(celestialBodies, dt, constValues, W, H)
+    if (!isPaused.value) {
+      const dt = 0.016
+      celestialTime += dt
+      celestialBodies = celestialPhysicsStep(celestialBodies, dt, constValues, W, H)
+      if (celestialBodies.length === 0) {
+        celestialBodies = createCelestialField(W, H, constValues)
+        celestialTime = 0
+      }
+    }
     drawOutcomeViz()
     ctx.save()
     ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
     drawCelestialBodies(ctx, celestialBodies, W, H, zoomLevel.value, celestialTime)
     ctx.restore()
-    if (celestialBodies.length === 0) {
-      celestialBodies = createCelestialField(W, H, constValues)
-      celestialTime = 0
-    }
   }
 }
 
@@ -417,7 +499,7 @@ onUnmounted(() => {
 }
 .bb-sidebar-sub {
   font-size: 8px; letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.2); line-height: 1.6;
+  color: rgba(255,255,255,0.55); line-height: 1.6;
 }
 .bb-constants-list {
   flex: 1; overflow-y: auto; padding: 10px 0;
@@ -435,7 +517,7 @@ onUnmounted(() => {
 }
 .bb-const-name  { font-size: 9px; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); text-transform: uppercase; }
 .bb-const-symbol { font-size: 11px; color: var(--accent-bang); opacity: 0.8; font-style: italic; }
-.bb-const-desc  { font-size: 8px; color: rgba(255,255,255,0.2); letter-spacing: 0.04em; margin-top: 4px; }
+.bb-const-desc  { font-size: 8px; color: rgba(255,255,255,0.55); letter-spacing: 0.04em; margin-top: 4px; line-height: 1.5; }
 .bb-const-slider-row { display: flex; align-items: center; gap: 8px; }
 .bb-const-slider-row input[type=range] {
   flex: 1; width: auto; height: 2px;
@@ -472,6 +554,56 @@ onUnmounted(() => {
 .bb-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
 canvas { display: block; width: 100%; height: 100%; }
 
+/* ── Info panel (epoch + legend) ── */
+.bb-info-panel {
+  position: absolute; top: 16px; left: 16px; width: 260px;
+  max-height: calc(100% - 96px);
+  padding: 14px 16px; background: rgba(7,8,15,0.88);
+  border: 1px solid rgba(192,132,252,0.2); border-radius: 12px;
+  backdrop-filter: blur(12px); z-index: 20;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(192,132,252,0.25) transparent;
+}
+.bb-info-section { display: flex; flex-direction: column; gap: 6px; }
+.bb-info-section + .bb-info-section {
+  padding-top: 12px;
+  border-top: 1px solid rgba(192,132,252,0.1);
+}
+.bb-info-label {
+  font-size: 7px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+.bb-info-title {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+  color: var(--accent-bang); line-height: 1.2;
+}
+.bb-info-desc {
+  font-size: 8px; line-height: 1.65; color: rgba(255,255,255,0.7);
+  letter-spacing: 0.02em;
+}
+.bb-info-hint {
+  font-size: 7px; line-height: 1.65; color: rgba(255,255,255,0.45);
+  letter-spacing: 0.02em; font-style: italic;
+  padding-top: 4px; border-top: 1px dashed rgba(192,132,252,0.12);
+}
+.bb-legend-items { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+.bb-legend-item { display: flex; align-items: flex-start; gap: 8px; }
+.bb-legend-swatch {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 2px;
+}
+.bb-legend-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bb-legend-name {
+  font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+}
+.bb-legend-desc {
+  font-size: 8px; line-height: 1.5; color: rgba(255,255,255,0.55);
+  letter-spacing: 0.02em;
+}
+
 /* ── Outcome ── */
 .bb-outcome {
   position: absolute; top: 16px; right: 16px; max-width: 240px;
@@ -481,13 +613,13 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .bb-outcome-label {
   font-size: 7px; letter-spacing: 0.2em; text-transform: uppercase;
-  color: rgba(255,255,255,0.25); margin-bottom: 6px;
+  color: rgba(255,255,255,0.55); margin-bottom: 6px;
 }
 .bb-outcome-name {
   font-family: 'Syne',sans-serif; font-size: 15px; font-weight: 800;
   margin-bottom: 6px; line-height: 1.2; transition: color 0.4s;
 }
-.bb-outcome-desc { font-size: 8px; line-height: 1.65; color: rgba(255,255,255,0.35); }
+.bb-outcome-desc { font-size: 8px; line-height: 1.65; color: rgba(255,255,255,0.65); }
 
 /* ── Bottom bar ── */
 .bb-bottom-bar {
@@ -500,10 +632,10 @@ canvas { display: block; width: 100%; height: 100%; }
 .bb-view-btn {
   font-family: 'Space Mono',monospace; font-size: 8px; letter-spacing: 0.1em;
   text-transform: uppercase; padding: 6px 12px; background: none; border: none;
-  color: rgba(255,255,255,0.3); cursor: none; transition: all 0.2s; outline: none;
+  color: rgba(255,255,255,0.55); cursor: none; transition: all 0.2s; outline: none;
 }
 .bb-view-btn.active { background: rgba(192,132,252,0.12); color: var(--accent-bang); }
-.bb-view-btn:hover:not(.active) { color: rgba(255,255,255,0.5); }
+.bb-view-btn:hover:not(.active) { color: rgba(255,255,255,0.8); }
 .bb-divider { width:1px; height:20px; background:rgba(192,132,252,0.1); flex-shrink:0; }
 .bb-zoom-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
 .bb-zoom-btn {
@@ -514,11 +646,46 @@ canvas { display: block; width: 100%; height: 100%; }
   cursor: none; transition: all 0.15s; outline: none;
 }
 .bb-zoom-btn:hover { color: var(--accent-bang); border-color: rgba(192,132,252,0.3); }
-.bb-zoom-label { font-size:8px; letter-spacing:0.1em; color:rgba(192,132,252,0.4); min-width:34px; text-align:center; }
-.bb-tuning-meter { display:flex; align-items:center; gap:8px; font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.2); flex-shrink:0; }
+.bb-zoom-label { font-size:8px; letter-spacing:0.1em; color:rgba(192,132,252,0.75); min-width:34px; text-align:center; }
+.bb-tuning-meter { display:flex; align-items:center; gap:8px; font-size:8px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(255,255,255,0.6); flex-shrink:0; }
 .bb-tuning-bar-wrap { width:90px; height:3px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
 .bb-tuning-bar { height:100%; width:100%; border-radius:3px; background:linear-gradient(90deg,#f87171,#fb923c,#facc15,#4ade80); transition:clip-path 0.6s ease; }
 .bb-tuning-label { font-size:8px; min-width:70px; }
-.bb-epoch { font-size:9px; letter-spacing:0.14em; color:rgba(255,255,255,0.2); text-transform:uppercase; white-space:nowrap; }
-.bb-epoch span { color:rgba(192,132,252,0.6); }
+.bb-epoch { font-size:9px; letter-spacing:0.14em; color:rgba(255,255,255,0.6); text-transform:uppercase; white-space:nowrap; }
+.bb-epoch span { color:rgba(192,132,252,0.9); }
+
+/* ── Pause button ── */
+.bb-pause-btn {
+  font-size: 11px; color: rgba(192,132,252,0.6);
+  background: rgba(192,132,252,0.06); border: 1px solid rgba(192,132,252,0.2);
+  border-radius: 6px; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: none; transition: all 0.15s; outline: none; flex-shrink: 0;
+}
+.bb-pause-btn:hover { color: var(--accent-bang); border-color: rgba(192,132,252,0.4); }
+.bb-pause-btn.paused {
+  color: var(--accent-bang); background: rgba(192,132,252,0.14);
+  border-color: rgba(192,132,252,0.45);
+}
+
+/* ── Epoch jump dropdown ── */
+.bb-epoch-jump { margin-top: 8px; }
+.bb-epoch-select {
+  width: 100%;
+  font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 0.08em;
+  color: rgba(192,132,252,0.9);
+  background: rgba(7,8,15,0.85);
+  border: 1px solid rgba(192,132,252,0.25); border-radius: 7px;
+  padding: 6px 10px; outline: none; cursor: none;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(192,132,252,0.6)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  transition: border-color 0.15s;
+}
+.bb-epoch-select:hover { border-color: rgba(192,132,252,0.5); }
+.bb-epoch-select option {
+  background: #0a080f; color: rgba(255,255,255,0.85); font-size: 11px;
+}
 </style>

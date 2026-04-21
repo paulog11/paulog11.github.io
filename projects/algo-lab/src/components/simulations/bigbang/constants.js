@@ -150,12 +150,26 @@ export const BB_OUTCOMES = {
   }
 }
 
+/**
+ * Epochs mark time windows in the Atom-view simulation as `bbTime` advances.
+ * Each entry: [startTime, endTime, name, description].
+ * The description explains what real-universe physics is being represented.
+ */
 export const EPOCHS = [
-  [0,      0.002, 'Planck Epoch'],
-  [0.002,  0.01,  'Grand Unification'],
-  [0.01,   0.025, 'Quark Epoch'],
-  [0.025,  0.06,  'Hadron Epoch'],
-  [0.06,   0.10,  'Lepton Epoch'],
-  [0.10,   0.25,  'Big Bang Nucleosynthesis'],
-  [0.25,   999,   'Structure Formation'],
+  [0,      0.002, 'Planck Epoch',              'First 10⁻⁴³ s. All four fundamental forces are unified and spacetime itself is ill-defined — quantum gravity rules.'],
+  [0.002,  0.01,  'Grand Unification',         'Gravity separates from the other three forces. Particles are still massless and the universe is a seething energy bath.'],
+  [0.01,   0.025, 'Quark Epoch',               'Free quarks and gluons swim in a quark-gluon plasma — the universe is too hot for them to bind into protons or neutrons yet.'],
+  [0.025,  0.06,  'Hadron Epoch',              'Quarks confine into hadrons — protons, neutrons, and their antiparticles — as the universe cools below a few trillion kelvin.'],
+  [0.06,   0.10,  'Lepton Epoch',              'Most hadrons annihilate with their antiparticles; leptons (electrons, neutrinos) dominate the remaining particle soup.'],
+  [0.10,   0.25,  'Big Bang Nucleosynthesis',  'Protons and neutrons fuse into the first light nuclei: hydrogen, helium, and trace lithium. The universe becomes transparent soon after.'],
+  [0.25,   999,   'Structure Formation',       'Gravity draws matter into filaments and halos. Over millions of years, the first stars and galaxies ignite.'],
 ]
+
+/**
+ * Celestial view operates on a post-nucleosynthesis timescale — gas collapsing
+ * into stars, black holes forming, and planets condensing.
+ */
+export const CELESTIAL_EPOCH = {
+  name: 'Cosmic Structure Formation',
+  desc: 'Gas clouds collapse under gravity, ignite fusion to become stars, and forge heavier elements. Dense cores become black holes; rocky debris condenses into planets.',
+}
