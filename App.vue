@@ -119,6 +119,17 @@ const apps = ref([
     category: 'japan',
   },
   {
+    id: 'japan-map',
+    title: 'Japan History Map',
+    subtitle: 'Interactive Map',
+    description: 'Explore significant events in Japanese history and Tokyo\'s train system on an interactive Leaflet map.',
+    tags: ['History', 'Map'],
+    icon: '🗾',
+    url: './projects/japan-map/dist/index.html',
+    comingSoon: false,
+    category: 'japan',
+  },
+  {
     id: 'reading-buddy',
     title: 'Reading Buddy',
     subtitle: 'Book Companion',
