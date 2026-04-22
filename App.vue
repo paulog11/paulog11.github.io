@@ -26,13 +26,13 @@
     <!-- ── Main ── -->
     <main class="flex-1 flex flex-col items-center px-6 py-8 overflow-y-auto">
 
-      <!-- Page title -->
-      <div class="text-center mb-8 animate-fade-up" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
-        <h1 class="font-display text-4xl md:text-5xl text-ink leading-tight">
-          Choose an app
+      <!-- Personal header -->
+      <div class="text-center mb-8 animate-fade-up w-full max-w-4xl" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
+        <h1 class="font-display text-5xl md:text-6xl text-ink leading-tight">
+          Paulo's Projects
         </h1>
-        <p class="mt-2 text-sm text-muted font-body font-light tracking-wide">
-          Select a project to open
+        <p class="mt-3 font-mono text-[0.8rem] tracking-[0.12em] uppercase text-muted">
+          Software · Languages · Games
         </p>
       </div>
 
@@ -53,21 +53,34 @@
         </button>
       </div>
 
-      <!-- App grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">
-        <AppCard
-          v-for="(app, i) in filteredApps"
-          :key="app.id"
-          :app="app"
-          :style="{ animationDelay: `${0.05 + i * 0.07}s` }"
+      <!-- Content area -->
+      <div class="w-full max-w-4xl">
+        <!-- Featured card (first app) -->
+        <FeaturedCard
+          v-if="filteredApps.length > 0"
+          :app="filteredApps[0]"
+          :style="{ animationDelay: '0.15s' }"
           @select="handleSelect"
+          class="mb-6 animate-fade-up"
         />
-      </div>
 
-      <!-- Empty state -->
-      <p v-if="filteredApps.length === 0" class="text-muted font-mono text-sm mt-8">
-        No apps in this category yet.
-      </p>
+        <!-- Compact list (remaining apps) -->
+        <div v-if="filteredApps.length > 1" class="flex flex-col gap-2">
+          <CompactCard
+            v-for="(app, i) in filteredApps.slice(1)"
+            :key="app.id"
+            :app="app"
+            :style="{ animationDelay: `${0.2 + i * 0.05}s` }"
+            @select="handleSelect"
+            class="animate-fade-up"
+          />
+        </div>
+
+        <!-- Empty state -->
+        <p v-if="filteredApps.length === 0" class="text-muted font-mono text-sm mt-8 text-center animate-fade-up">
+          No apps in this category yet.
+        </p>
+      </div>
 
     </main>
 
@@ -83,7 +96,8 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import AppCard from './components/AppCard.vue'
+import FeaturedCard from './components/FeaturedCard.vue'
+import CompactCard from './components/CompactCard.vue'
 
 const portfolioUrl = ref('./projects/profile/')
 
