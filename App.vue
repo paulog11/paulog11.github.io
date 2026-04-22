@@ -111,17 +111,6 @@ const selectedCategory = ref('all')
 
 const apps = ref([
   {
-    id: 'right-word-japanese',
-    title: 'The Right Word',
-    subtitle: 'Japanese',
-    description: 'Build precise vocabulary with context-driven word selection and spaced repetition.',
-    tags: ['Language', 'Japanese'],
-    icon: '語',
-    url: './projects/right-word/dist/index.html',
-    comingSoon: false,
-    category: 'japan',
-  },
-  {
     id: 'japanese-dashboard',
     title: 'Japanese Learning',
     subtitle: 'Dashboard',
@@ -129,6 +118,17 @@ const apps = ref([
     tags: ['Language', 'Analytics'],
     icon: '日',
     url: './projects/japandash/dist/index.html',
+    comingSoon: false,
+    category: 'japan',
+  },
+  {
+    id: 'right-word-japanese',
+    title: 'The Right Word',
+    subtitle: 'Japanese',
+    description: 'Build precise vocabulary with context-driven word selection and spaced repetition.',
+    tags: ['Language', 'Japanese'],
+    icon: '語',
+    url: './projects/right-word/dist/index.html',
     comingSoon: false,
     category: 'japan',
   },
