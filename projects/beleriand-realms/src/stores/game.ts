@@ -1,0 +1,94 @@
+import { ref } from 'vue'
+import { defineStore } from 'pinia'
+import {
+  type Card,
+  type GameState,
+  type PlayerState,
+  type Stronghold,
+  Faction,
+  PlayerId,
+  TurnPhase,
+  FATE_TRACK_MIN,
+  FATE_TRACK_MAX,
+} from '../types/game'
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function makePlayerState(): PlayerState {
+  return { deck: [], hand: [], discard: [], inPlay: [], resources: 0, attack: 0 }
+}
+
+export const useGameStore = defineStore('game', () => {
+  const players = ref<Record<PlayerId, PlayerState>>({
+    [PlayerId.PlayerOne]: makePlayerState(),
+    [PlayerId.PlayerTwo]: makePlayerState(),
+  })
+
+  const beleriandDeck = ref<Card[]>([])
+  const beleriandRow = ref<Card[]>([])
+
+  // Immutable faction assignment — asymmetrical game, each side has a fixed role
+  const playerFactions: Record<PlayerId, Faction> = {
+    [PlayerId.PlayerOne]: Faction.FreePeoples,
+    [PlayerId.PlayerTwo]: Faction.Morgoth,
+  }
+
+  const strongholds = ref<Partial<Record<PlayerId, Stronghold>>>({})
+
+  const gameState = ref<GameState>({
+    fateTrack: 0,
+    turnPhase: TurnPhase.Start,
+    activePlayer: PlayerId.PlayerOne,
+  })
+
+  function drawCards(playerId: PlayerId, count: number): void {
+    const player = players.value[playerId]
+    let remaining = count
+
+    while (remaining > 0) {
+      if (player.deck.length === 0) {
+        if (player.discard.length === 0) break
+        // Shuffle discard pile back into deck
+        player.deck = shuffle(player.discard)
+        player.discard = []
+      }
+      player.hand.push(player.deck.pop()!)
+      remaining--
+    }
+  }
+
+  function gainResources(playerId: PlayerId, amount: number): void {
+    players.value[playerId].resources += amount
+  }
+
+  function gainAttack(playerId: PlayerId, amount: number): void {
+    players.value[playerId].attack += amount
+  }
+
+  function adjustFate(amount: number): void {
+    gameState.value.fateTrack = Math.max(
+      FATE_TRACK_MIN,
+      Math.min(FATE_TRACK_MAX, gameState.value.fateTrack + amount),
+    )
+  }
+
+  return {
+    players,
+    beleriandDeck,
+    beleriandRow,
+    gameState,
+    playerFactions,
+    strongholds,
+    drawCards,
+    gainResources,
+    gainAttack,
+    adjustFate,
+  }
+})
