@@ -12,100 +12,183 @@
     <!-- Info badge -->
     <div class="info-badge">
       <span class="badge-dot" style="background:var(--accent-curve);box-shadow:0 0 6px var(--accent-curve);" />
-      Curvature Wave → Geometric Phase → Propulsion
+      {{ mode === 'ftl' ? 'Curvature Drive → Spacetime Wake → FTL Travel' : 'Curvature Wave → Geometric Phase → Propulsion' }}
     </div>
 
-    <!-- Phase counter -->
-    <div class="phase-counter" :style="{ color: 'var(--accent-curve)' }">
+    <!-- Phase counter (geometric mode only) -->
+    <div v-if="mode === 'geometric'" class="phase-counter" :style="{ color: 'var(--accent-curve)' }">
       PHASE ×{{ phaseCount }}
+    </div>
+
+    <!-- FTL HUD (FTL mode only) -->
+    <div v-if="mode === 'ftl'" class="ftl-hud">
+      <div class="ftl-row">
+        <span class="ftl-label">v</span>
+        <span class="ftl-value">{{ ftlSpeedText }}</span>
+      </div>
+      <div class="ftl-row">
+        <span class="ftl-label">γ</span>
+        <span class="ftl-value">{{ ftlGammaText }}</span>
+      </div>
+      <div class="ftl-row">
+        <span class="ftl-label">progress</span>
+        <span class="ftl-value">{{ ftlProgressText }}</span>
+      </div>
+      <div class="ftl-phase-badge" :class="'ftl-phase-' + ftlMission.phase">{{ ftlPhaseName }}</div>
     </div>
 
     <!-- Physics explanation panel -->
     <transition name="panel-slide">
       <div v-if="params.showPhysics" class="physics-panel">
-        <div class="panel-section">
-          <div class="panel-title">Curvature Drive</div>
-          <p class="panel-body">
-            In Liu Cixin's <em>Three-Body Problem</em>, curvature propulsion bends
-            local spacetime — ships ride the curvature like a wave, reaching light
-            speed with no reaction mass.
-          </p>
-        </div>
-
-        <div class="panel-divider" />
-
-        <div class="panel-section">
-          <div class="panel-heading">The Real Physics</div>
-          <p class="panel-body">
-            The physical analog is <span class="hl">geometric phase locomotion</span>:
-            a deformable body achieves net displacement through cyclic internal
-            shape changes — zero external force, conserved angular momentum.
-            The same principle explains how a cat flips mid-air and how
-            microorganisms swim.
-          </p>
-        </div>
-
-        <div class="panel-divider" />
-
-        <div class="panel-section">
-          <div class="panel-heading">How the Wave Propels</div>
-          <p class="panel-body">
-            A traveling curvature wave <span class="mono">κ(s,t) = A·sin(2πsλ/L − ωt)</span>
-            runs along the spine. Each segment bends and straightens in sequence,
-            pushing asymmetrically against the surrounding medium. These micro-pushes
-            never fully cancel over a cycle — the body drifts forward even though
-            momentum is conserved globally.
-          </p>
-        </div>
-
-        <div class="panel-divider" />
-
-        <div class="panel-section">
-          <div class="panel-heading">Key Equation</div>
-          <div class="equation">v ∝ A² · f · λ</div>
-          <div class="eq-labels">
-            <span>amplitude²</span>
-            <span>frequency</span>
-            <span>wavelengths</span>
+        <!-- Geometric mode sections -->
+        <template v-if="mode === 'geometric'">
+          <div class="panel-section">
+            <div class="panel-title">Curvature Drive</div>
+            <p class="panel-body">
+              In Liu Cixin's <em>Three-Body Problem</em>, curvature propulsion bends
+              local spacetime — ships ride the curvature like a wave, reaching light
+              speed with no reaction mass.
+            </p>
           </div>
-          <p class="panel-body" style="margin-top:8px;">
-            Speed is <span class="hl">quadratic in amplitude</span> — doubling the
-            wave height quadruples the speed. Frequency and wavelength scale linearly.
-            Try the sliders to see this directly.
-          </p>
-        </div>
 
-        <div class="panel-divider" />
+          <div class="panel-divider" />
 
-        <div class="panel-section">
-          <div class="panel-heading">The Shape Space Inset</div>
-          <p class="panel-body">
-            The <span class="hl">(w₁, w₂)</span> panel shows the body's curvature
-            decomposed into two Fourier modes. Each wave cycle traces one closed
-            loop. The <span class="hl">area enclosed by that loop</span> equals the
-            net displacement per cycle — this is the geometric phase. A larger loop
-            means more drift. No loop means no motion.
-          </p>
-        </div>
+          <div class="panel-section">
+            <div class="panel-heading">The Real Physics</div>
+            <p class="panel-body">
+              The physical analog is <span class="hl">geometric phase locomotion</span>:
+              a deformable body achieves net displacement through cyclic internal
+              shape changes — zero external force, conserved angular momentum.
+              The same principle explains how a cat flips mid-air and how
+              microorganisms swim.
+            </p>
+          </div>
 
-        <div class="panel-divider" />
+          <div class="panel-divider" />
 
-        <div class="panel-section">
-          <div class="panel-heading">Three-Body Context</div>
-          <p class="panel-body">
-            Enable <span class="hl">Gravity</span> to place three suns. The ship
-            navigates their potential wells using only internal shape changes — no
-            thruster plume, no propellant. The chaotic 3-body gravity field deflects
-            the trajectory; curvature propulsion steers it back.
-          </p>
-        </div>
+          <div class="panel-section">
+            <div class="panel-heading">How the Wave Propels</div>
+            <p class="panel-body">
+              A traveling curvature wave <span class="mono">κ(s,t) = A·sin(2πsλ/L − ωt)</span>
+              runs along the spine. Each segment bends and straightens in sequence,
+              pushing asymmetrically against the surrounding medium. These micro-pushes
+              never fully cancel over a cycle — the body drifts forward even though
+              momentum is conserved globally.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">Key Equation</div>
+            <div class="equation">v ∝ A² · f · λ</div>
+            <div class="eq-labels">
+              <span>amplitude²</span>
+              <span>frequency</span>
+              <span>wavelengths</span>
+            </div>
+            <p class="panel-body" style="margin-top:8px;">
+              Speed is <span class="hl">quadratic in amplitude</span> — doubling the
+              wave height quadruples the speed. Frequency and wavelength scale linearly.
+              Try the sliders to see this directly.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">The Shape Space Inset</div>
+            <p class="panel-body">
+              The <span class="hl">(w₁, w₂)</span> panel shows the body's curvature
+              decomposed into two Fourier modes. Each wave cycle traces one closed
+              loop. The <span class="hl">area enclosed by that loop</span> equals the
+              net displacement per cycle — this is the geometric phase. A larger loop
+              means more drift. No loop means no motion.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">Three-Body Context</div>
+            <p class="panel-body">
+              Enable <span class="hl">Gravity</span> to place three suns. The ship
+              navigates their potential wells using only internal shape changes — no
+              thruster plume, no propellant. The chaotic 3-body gravity field deflects
+              the trajectory; curvature propulsion steers it back.
+            </p>
+          </div>
+        </template>
+
+        <!-- FTL mode sections -->
+        <template v-if="mode === 'ftl'">
+          <div class="panel-section">
+            <div class="panel-title">FTL Travel</div>
+            <p class="panel-body">
+              In <em>Death's End</em>, curvature drive works by <span class="hl">flattening
+              spacetime behind the ship</span>. The gradient between normal space ahead
+              and the flattened wake propels the craft — no reaction mass, no propellant.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">Asymptotic Lightspeed</div>
+            <p class="panel-body">
+              The ship accelerates continuously toward — but never past — <span class="hl">c</span>.
+              Stronger drive settings raise the cruise speed ceiling. Sliders tune
+              drive strength: <span class="mono">drive = A² · f · λ</span>.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">Time Dilation</div>
+            <div class="equation">γ = 1/√(1−v²/c²)</div>
+            <p class="panel-body" style="margin-top:8px;">
+              At cruise speed, the Lorentz factor γ shows how much slower ship-time
+              passes vs. the outside universe. At 0.9c, γ ≈ 2.3 — every year aboard
+              equals 2.3 years outside.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">The Permanent Wake</div>
+            <p class="panel-body">
+              The flattened spacetime region left behind is <span class="hl">permanent</span>.
+              In the novel this wake (痕迹) reduces local lightspeed — any civilization
+              caught inside goes dark. Every FTL journey leaves a visible scar.
+              Toggle <span class="hl">Wake Trail</span> to reveal it.
+            </p>
+          </div>
+
+          <div class="panel-divider" />
+
+          <div class="panel-section">
+            <div class="panel-heading">Relativistic Effects</div>
+            <p class="panel-body">
+              Near <span class="hl">c</span>, the spine's nose blue-shifts and the tail
+              red-shifts — the classic Doppler signature of relativistic travel.
+              The destination star's glow intensifies as you approach (headlight effect).
+            </p>
+          </div>
+        </template>
       </div>
     </transition>
 
     <!-- Controls -->
     <div class="controls-bar">
+      <!-- Mode switch -->
+      <button class="ctrl-btn" :class="{ active: mode === 'geometric' }" @click="switchMode('geometric')">Geometric</button>
+      <button class="ctrl-btn" :class="{ active: mode === 'ftl' }" @click="switchMode('ftl')">FTL Travel</button>
+      <div class="ctrl-divider" />
+
       <div class="slider-group">
-        <span class="ctrl-label">Amplitude</span>
+        <span class="ctrl-label">{{ mode === 'ftl' ? 'Drive Power' : 'Amplitude' }}</span>
         <input type="range" v-model.number="params.amplitude" min="0.05" max="2.0" step="0.05"
           :style="sliderStyle" />
       </div>
@@ -122,9 +205,22 @@
           :style="sliderStyle" />
       </div>
       <div class="ctrl-divider" />
-      <button class="ctrl-btn" :class="{ active: params.gravity }" @click="params.gravity = !params.gravity">
-        Gravity
-      </button>
+
+      <!-- Gravity toggle (geometric) / Wake Trail + Engage (FTL) -->
+      <template v-if="mode === 'geometric'">
+        <button class="ctrl-btn" :class="{ active: params.gravity }" @click="params.gravity = !params.gravity">
+          Gravity
+        </button>
+      </template>
+      <template v-if="mode === 'ftl'">
+        <button class="ctrl-btn" :class="{ active: params.showWake }" @click="params.showWake = !params.showWake">
+          Wake Trail
+        </button>
+        <button class="ctrl-btn ftl-engage-btn" :class="{ active: ftlMission.phase !== 'idle' }" @click="ftlEngage">
+          {{ ftlEngageLabel }}
+        </button>
+      </template>
+
       <button class="ctrl-btn" :class="{ active: params.showShape }" @click="params.showShape = !params.showShape">
         Shape Space
       </button>
@@ -146,6 +242,14 @@ import {
   gravityAccel,
   defaultSuns,
   BODY_LENGTH,
+  // FTL helpers
+  FTL_C_PX,
+  ftlTargetSpeed,
+  ftlAccelStep,
+  ftlDecelStep,
+  lorentzGamma,
+  steerHeading,
+  defaultStarPair,
 } from './curvature/physics.js'
 
 // ── Canvas refs ──────────────────────────────────────────────────────────────
@@ -153,66 +257,143 @@ const canvasEl = ref(null)
 const shapeEl  = ref(null)
 let ctx, shapeCtx, W, H, animId
 
+// ── Mode ─────────────────────────────────────────────────────────────────────
+const mode = ref('geometric')  // 'geometric' | 'ftl'
+
 // ── Reactive params ──────────────────────────────────────────────────────────
 const params = reactive({
-  amplitude:  0.8,
-  freq:       1.2,
+  amplitude:   0.8,
+  freq:        1.2,
   wavelengths: 1.5,
-  gravity:    false,
-  showShape:  true,
+  gravity:     false,
+  showShape:   true,
   showPhysics: true,
+  showWake:    true,
 })
 
 const sliderStyle = computed(() => {
-  const c = 'rgba(79,255,176,0.35)'
-  return `background:${c};`
+  return `background:rgba(79,255,176,0.35);`
 })
 
 // ── Simulation state ─────────────────────────────────────────────────────────
-let state = null   // initialized in reset()
+let state = null
 let suns  = []
+let stars = []  // FTL star pair
 const phaseCount = ref(0)
-let lastPhase = 0  // track zero-crossings for phase cycle count
 
-// Trail: ring buffer of {x,y} positions
+// Geometric trail ring buffer
 const TRAIL_MAX = 350
 let trail = []
 
-// Shape-space history: ring buffer of {w1,w2}
+// FTL permanent wake (capped to protect perf)
+const WAKE_MAX = 5000
+let wakeTrail = []
+
+// Shape-space history ring buffer
 const SHAPE_MAX = 600
 let shapeHistory = []
 
-function reset() {
-  state = {
-    cx:       W ? W / 2 : 400,
-    cy:       H ? H / 2 : 300,
-    heading:  -Math.PI / 2,  // pointing upward
-    vx:       0,
-    vy:       0,
-    wavePhase: 0,
+// ── FTL mission state ────────────────────────────────────────────────────────
+const ftlMission = reactive({
+  phase:     'idle',   // idle | engaging | accelerating | cruise | decelerating | arrived
+  chargeTime: 0,
+  vFrac:     0,
+  progress:  0,
+})
+
+const ftlPhaseName = computed(() => {
+  const map = {
+    idle:          'STANDBY',
+    engaging:      'ENGAGING',
+    accelerating:  'ACCELERATING',
+    cruise:        'CRUISE',
+    decelerating:  'DECELERATING',
+    arrived:       'ARRIVED',
   }
-  suns = W ? defaultSuns(W, H) : []
-  trail = []
+  return map[ftlMission.phase] || ftlMission.phase.toUpperCase()
+})
+
+const ftlSpeedText = computed(() => `${ftlMission.vFrac.toFixed(3)}c`)
+const ftlGammaText = computed(() => lorentzGamma(ftlMission.vFrac).toFixed(2))
+const ftlProgressText = computed(() => `${Math.round(ftlMission.progress * 100)}%`)
+const ftlEngageLabel = computed(() => {
+  if (ftlMission.phase === 'idle')    return 'Engage'
+  if (ftlMission.phase === 'arrived') return 'New Mission'
+  return 'Abort'
+})
+
+// ── Mode switching ────────────────────────────────────────────────────────────
+function switchMode(newMode) {
+  mode.value = newMode
+  reset()
+}
+
+function ftlEngage() {
+  if (ftlMission.phase === 'idle') {
+    ftlMission.phase = 'engaging'
+    ftlMission.chargeTime = 0
+  } else if (ftlMission.phase === 'arrived') {
+    reset()
+  } else {
+    // Abort
+    ftlMission.phase = 'idle'
+    ftlMission.vFrac = 0
+    state.vx = 0
+    state.vy = 0
+  }
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function reset() {
+  if (mode.value === 'ftl') {
+    stars = W ? defaultStarPair(W, H) : []
+    const origin = stars[0] || { x: 100, y: 300 }
+    const dest   = stars[1] || { x: 700, y: 300 }
+    state = {
+      cx:       origin.x + 35,
+      cy:       origin.y,
+      heading:  Math.atan2(dest.y - origin.y, dest.x - origin.x),
+      vx:       0,
+      vy:       0,
+      wavePhase: 0,
+    }
+    ftlMission.phase     = 'idle'
+    ftlMission.chargeTime = 0
+    ftlMission.vFrac     = 0
+    ftlMission.progress  = 0
+    wakeTrail = []
+  } else {
+    state = {
+      cx:       W ? W / 2 : 400,
+      cy:       H ? H / 2 : 300,
+      heading:  -Math.PI / 2,
+      vx:       0,
+      vy:       0,
+      wavePhase: 0,
+    }
+    suns = W ? defaultSuns(W, H) : []
+    trail = []
+    phaseCount.value = 0
+  }
   shapeHistory = []
-  phaseCount.value = 0
-  lastPhase = 0
 }
 
 // ── Resize ───────────────────────────────────────────────────────────────────
 function resize() {
   W = canvasEl.value.width  = canvasEl.value.offsetWidth
   H = canvasEl.value.height = canvasEl.value.offsetHeight
-  // Re-place suns relative to new canvas size
   if (state) {
-    suns = defaultSuns(W, H)
+    if (mode.value === 'ftl') {
+      stars = defaultStarPair(W, H)
+    } else {
+      suns = defaultSuns(W, H)
+    }
   }
 }
 
-// ── Draw gravity field contours ──────────────────────────────────────────────
+// ── Draw: gravity field (geometric mode) ─────────────────────────────────────
 function drawGravityField() {
   if (!params.gravity) return
-
-  // Draw potential field as subtle concentric rings around each sun
   for (const sun of suns) {
     const maxR = Math.min(W, H) * 0.45
     const steps = 6
@@ -227,8 +408,6 @@ function drawGravityField() {
       ctx.fillStyle = grad
       ctx.fill()
     }
-
-    // Sun glow core
     const glow = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 28)
     glow.addColorStop(0, sun.color)
     glow.addColorStop(0.3, sun.color + 'aa')
@@ -237,8 +416,6 @@ function drawGravityField() {
     ctx.arc(sun.x, sun.y, 28, 0, Math.PI * 2)
     ctx.fillStyle = glow
     ctx.fill()
-
-    // Sun label
     ctx.font = '10px "Space Mono", monospace'
     ctx.fillStyle = 'rgba(255,255,255,0.4)'
     ctx.textAlign = 'center'
@@ -246,7 +423,72 @@ function drawGravityField() {
   }
 }
 
-// ── Draw trail ───────────────────────────────────────────────────────────────
+// ── Draw: star systems (FTL mode) ────────────────────────────────────────────
+function drawStarSystems(vFrac) {
+  for (const star of stars) {
+    const isDest = star.role === 'destination'
+    // Destination star grows brighter as ship approaches at relativistic speed
+    const glowScale = isDest ? 1 + 1.5 * vFrac * vFrac : 1
+    const coreR = 18 * (isDest ? 1 + 0.6 * vFrac : 1)
+    const maxR  = 100 * glowScale
+
+    // Outer glow rings
+    for (let i = 4; i >= 1; i--) {
+      const r = (i / 4) * maxR
+      const alpha = 0.04 + (1 - i / 4) * 0.05
+      const grad = ctx.createRadialGradient(star.x, star.y, r * 0.5, star.x, star.y, r)
+      const hex = star.color
+      grad.addColorStop(0, `${hex}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`)
+      grad.addColorStop(1, 'transparent')
+      ctx.beginPath()
+      ctx.arc(star.x, star.y, r, 0, Math.PI * 2)
+      ctx.fillStyle = grad
+      ctx.fill()
+    }
+
+    // Core
+    const core = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, coreR)
+    core.addColorStop(0, '#ffffff')
+    core.addColorStop(0.35, star.color)
+    core.addColorStop(1, 'transparent')
+    ctx.beginPath()
+    ctx.arc(star.x, star.y, coreR, 0, Math.PI * 2)
+    ctx.fillStyle = core
+    ctx.fill()
+
+    // Label
+    ctx.font = '10px "Space Mono", monospace'
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'
+    ctx.textAlign = 'center'
+    ctx.fillText(star.label, star.x, star.y - 28)
+
+    ctx.font = '8px "Space Mono", monospace'
+    ctx.fillStyle = isDest ? 'rgba(122,180,247,0.55)' : 'rgba(247,201,122,0.55)'
+    ctx.fillText(isDest ? 'DESTINATION' : 'ORIGIN', star.x, star.y + 32)
+  }
+
+  // Aberration streaks at high speed (destination star radiates forward streaks)
+  if (vFrac > 0.5 && stars.length === 2) {
+    const destStar = stars[1]
+    const streakAlpha = (vFrac - 0.5) * 0.6
+    const streakLen = 40 + 120 * (vFrac - 0.5)
+    const heading = state ? state.heading : 0
+    ctx.save()
+    ctx.globalAlpha = streakAlpha * 0.5
+    for (let i = -2; i <= 2; i++) {
+      const angle = heading + i * 0.12
+      ctx.beginPath()
+      ctx.moveTo(destStar.x, destStar.y)
+      ctx.lineTo(destStar.x + Math.cos(angle) * streakLen, destStar.y + Math.sin(angle) * streakLen)
+      ctx.strokeStyle = '#7ab4f7'
+      ctx.lineWidth = i === 0 ? 1.5 : 0.7
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+}
+
+// ── Draw: geometric trail ────────────────────────────────────────────────────
 function drawTrail() {
   if (trail.length < 2) return
   const accent = [79, 255, 176]
@@ -262,29 +504,68 @@ function drawTrail() {
   }
 }
 
-// ── Draw spacecraft spine ─────────────────────────────────────────────────────
-function drawSpine(spine) {
+// ── Draw: FTL permanent wake trail ───────────────────────────────────────────
+function drawWakeTrail() {
+  if (!params.showWake || wakeTrail.length < 2) return
+
+  // Dark desaturated band — the lightspeed-reduction scar
+  ctx.save()
+  ctx.lineCap = 'round'
+  for (let i = 1; i < wakeTrail.length; i++) {
+    const p0 = wakeTrail[i - 1]
+    const p1 = wakeTrail[i]
+    ctx.beginPath()
+    ctx.moveTo(p0.x, p0.y)
+    ctx.lineTo(p1.x, p1.y)
+    ctx.strokeStyle = 'rgba(10,20,14,0.5)'
+    ctx.lineWidth = 7
+    ctx.stroke()
+  }
+  // Teal centerline — the curvature trace
+  for (let i = 1; i < wakeTrail.length; i++) {
+    const p0 = wakeTrail[i - 1]
+    const p1 = wakeTrail[i]
+    ctx.beginPath()
+    ctx.moveTo(p0.x, p0.y)
+    ctx.lineTo(p1.x, p1.y)
+    ctx.strokeStyle = 'rgba(79,255,176,0.1)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+// ── Draw: spacecraft spine ────────────────────────────────────────────────────
+function drawSpine(spine, vFrac = 0) {
   if (spine.length < 2) return
   const N = spine.length
+  const tintAmount = Math.max(0, (vFrac - 0.5) * 2)  // 0 at 0.5c, 1 at ~c
 
-  // Draw glow pass first (wide, low alpha)
   ctx.save()
   ctx.shadowBlur = 18
   ctx.shadowColor = 'rgba(79,255,176,0.5)'
 
   for (let i = 1; i < N; i++) {
     const t = i / N  // 0→tail, 1→nose
-    const width = 1.5 + 4.5 * Math.sin(t * Math.PI)  // taper at ends
+    const width = 1.5 + 4.5 * Math.sin(t * Math.PI)
 
     const kappa = (spine[i].kappa + spine[i - 1].kappa) / 2
     const kappaAbs = Math.abs(kappa)
-    // Color: teal for +κ, dark-teal for -κ, dim near 0
     const intensity = Math.min(1, kappaAbs / (params.amplitude * 1.2 + 0.01))
-    const r = kappa >= 0 ? 79  : 32
-    const g = kappa >= 0 ? 255 : 180
-    const b = kappa >= 0 ? 176 : 140
-    const alpha = 0.35 + 0.65 * intensity
+    let r = kappa >= 0 ? 79  : 32
+    let g = kappa >= 0 ? 255 : 180
+    let b = kappa >= 0 ? 176 : 140
 
+    // Relativistic Doppler tint: blue at nose, red at tail
+    if (tintAmount > 0) {
+      const noseFactor = t * t * tintAmount
+      const tailFactor = (1 - t) * (1 - t) * tintAmount
+      r = Math.min(255, Math.max(0, r + Math.round(tailFactor * 70 - noseFactor * 30)))
+      g = Math.min(255, Math.max(0, g - Math.round((tailFactor + noseFactor) * 60)))
+      b = Math.min(255, Math.max(0, b + Math.round(noseFactor * 80 - tailFactor * 30)))
+    }
+
+    const alpha = 0.35 + 0.65 * intensity
     ctx.beginPath()
     ctx.moveTo(spine[i - 1].x, spine[i - 1].y)
     ctx.lineTo(spine[i].x, spine[i].y)
@@ -323,7 +604,7 @@ function drawSpine(spine) {
   ctx.shadowBlur = 0
 }
 
-// ── Draw shape space inset ────────────────────────────────────────────────────
+// ── Draw: shape space inset ───────────────────────────────────────────────────
 function drawShapeSpace() {
   if (!shapeCtx) return
   const SW = shapeEl.value.width  = shapeEl.value.offsetWidth
@@ -331,9 +612,8 @@ function drawShapeSpace() {
   shapeCtx.clearRect(0, 0, SW, SH)
 
   const cx = SW / 2, cy = SH / 2
-  const scale = SW * 0.38  // map w1/w2 ±1 → ±scale pixels
+  const scale = SW * 0.38
 
-  // Axes
   shapeCtx.strokeStyle = 'rgba(255,255,255,0.08)'
   shapeCtx.lineWidth = 1
   shapeCtx.beginPath()
@@ -341,7 +621,6 @@ function drawShapeSpace() {
   shapeCtx.moveTo(cx, 8); shapeCtx.lineTo(cx, SH - 8)
   shapeCtx.stroke()
 
-  // Axis labels
   shapeCtx.font = '7px "Space Mono", monospace'
   shapeCtx.fillStyle = 'rgba(255,255,255,0.2)'
   shapeCtx.textAlign = 'center'
@@ -349,7 +628,6 @@ function drawShapeSpace() {
   shapeCtx.textAlign = 'left'
   shapeCtx.fillText('w₂', cx + 4, 14)
 
-  // Title
   shapeCtx.font = '7px "Space Mono", monospace'
   shapeCtx.fillStyle = 'rgba(79,255,176,0.5)'
   shapeCtx.textAlign = 'center'
@@ -357,7 +635,6 @@ function drawShapeSpace() {
 
   if (shapeHistory.length < 2) return
 
-  // Shade enclosed area (approximate loop fill)
   if (shapeHistory.length > 20) {
     shapeCtx.beginPath()
     const first = shapeHistory[0]
@@ -370,19 +647,16 @@ function drawShapeSpace() {
     shapeCtx.fill()
   }
 
-  // Fading trail
   for (let i = 1; i < shapeHistory.length; i++) {
     const t = i / shapeHistory.length
-    const alpha = t * 0.7
     shapeCtx.beginPath()
     shapeCtx.moveTo(cx + shapeHistory[i - 1].w1 * scale, cy - shapeHistory[i - 1].w2 * scale)
     shapeCtx.lineTo(cx + shapeHistory[i].w1 * scale,     cy - shapeHistory[i].w2 * scale)
-    shapeCtx.strokeStyle = `rgba(79,255,176,${alpha})`
+    shapeCtx.strokeStyle = `rgba(79,255,176,${t * 0.7})`
     shapeCtx.lineWidth = 1.2
     shapeCtx.stroke()
   }
 
-  // Current position dot
   const last = shapeHistory[shapeHistory.length - 1]
   const px = cx + last.w1 * scale
   const py = cy - last.w2 * scale
@@ -395,6 +669,110 @@ function drawShapeSpace() {
   shapeCtx.shadowBlur = 0
 }
 
+// ── Physics update: geometric mode ───────────────────────────────────────────
+function updateGeometric(dt) {
+  const prevPhase = state.wavePhase
+  state.wavePhase += 2 * Math.PI * params.freq * dt
+
+  if (Math.floor(state.wavePhase / (2 * Math.PI)) > Math.floor(prevPhase / (2 * Math.PI))) {
+    phaseCount.value++
+  }
+
+  const vProp = propulsionSpeed(params.amplitude, params.freq, params.wavelengths)
+  state.vx += Math.cos(state.heading) * vProp * dt
+  state.vy += Math.sin(state.heading) * vProp * dt
+
+  if (params.gravity) {
+    const { ax, ay } = gravityAccel(state.cx, state.cy, suns)
+    state.vx += ax * dt
+    state.vy += ay * dt
+  }
+
+  const drag = params.gravity ? 0.992 : 0.978
+  state.vx *= drag
+  state.vy *= drag
+
+  state.cx += state.vx * dt
+  state.cy += state.vy * dt
+
+  const pad = BODY_LENGTH
+  if (state.cx < -pad) { state.cx = W + pad; trail = [] }
+  if (state.cx > W + pad) { state.cx = -pad;  trail = [] }
+  if (state.cy < -pad) { state.cy = H + pad; trail = [] }
+  if (state.cy > H + pad) { state.cy = -pad;  trail = [] }
+
+  trail.push({ x: state.cx, y: state.cy })
+  if (trail.length > TRAIL_MAX) trail.shift()
+}
+
+// ── Physics update: FTL mode ─────────────────────────────────────────────────
+function updateFTL(dt) {
+  state.wavePhase += 2 * Math.PI * params.freq * dt
+
+  const ph = ftlMission.phase
+  if (ph === 'idle' || ph === 'arrived') return
+
+  const dest = stars[1]
+  const targetHeading = Math.atan2(dest.y - state.cy, dest.x - state.cx)
+
+  // Engaging: warm-up, steer toward destination, don't move
+  if (ph === 'engaging') {
+    ftlMission.chargeTime += dt
+    state.heading = steerHeading(state.heading, targetHeading, 2.5, dt)
+    if (ftlMission.chargeTime >= 1.5) {
+      ftlMission.phase = 'accelerating'
+    }
+    return
+  }
+
+  const vTarget = ftlTargetSpeed(params.amplitude, params.freq, params.wavelengths)
+
+  if (ph === 'accelerating') {
+    ftlMission.vFrac = ftlAccelStep(ftlMission.vFrac, vTarget, params.amplitude, params.freq, params.wavelengths, dt)
+    state.heading    = steerHeading(state.heading, targetHeading, 1.5, dt)
+    if (ftlMission.vFrac >= vTarget * 0.94) ftlMission.phase = 'cruise'
+  }
+
+  if (ph === 'cruise') {
+    ftlMission.vFrac = ftlAccelStep(ftlMission.vFrac, vTarget, params.amplitude, params.freq, params.wavelengths, dt)
+    state.heading    = steerHeading(state.heading, targetHeading, 1.0, dt)
+    if (ftlMission.progress >= 0.75) ftlMission.phase = 'decelerating'
+  }
+
+  if (ph === 'decelerating') {
+    ftlMission.vFrac = ftlDecelStep(ftlMission.vFrac, dt)
+    state.heading    = steerHeading(state.heading, targetHeading, 1.5, dt)
+    const distToDest = Math.hypot(dest.x - state.cx, dest.y - state.cy)
+    if (ftlMission.vFrac < 0.04 || distToDest < 30) {
+      ftlMission.phase    = 'arrived'
+      ftlMission.vFrac    = 0
+      ftlMission.progress = 1
+      state.vx = 0
+      state.vy = 0
+      return
+    }
+  }
+
+  // Move ship
+  const speed = ftlMission.vFrac * FTL_C_PX
+  state.cx += Math.cos(state.heading) * speed * dt
+  state.cy += Math.sin(state.heading) * speed * dt
+
+  // Update progress (distance from origin / total distance)
+  if (stars.length === 2) {
+    const origin = stars[0]
+    const totalDist = Math.hypot(dest.x - origin.x, dest.y - origin.y)
+    const covered   = Math.hypot(state.cx - origin.x, state.cy - origin.y)
+    ftlMission.progress = Math.min(1, Math.max(0, covered / totalDist))
+  }
+
+  // Accumulate permanent wake
+  if (params.showWake) {
+    wakeTrail.push({ x: state.cx, y: state.cy })
+    if (wakeTrail.length > WAKE_MAX) wakeTrail.shift()
+  }
+}
+
 // ── Main loop ─────────────────────────────────────────────────────────────────
 let lastTime = null
 
@@ -405,67 +783,38 @@ function loop(ts) {
   const dt = lastTime ? Math.min((ts - lastTime) / 1000, 0.05) : 0.016
   lastTime = ts
 
-  // ── Physics update ─────────────────────────────────────────────────────────
-  // Advance wave phase
-  const prevPhase = state.wavePhase
-  state.wavePhase += 2 * Math.PI * params.freq * dt
-
-  // Count completed gait cycles (each 2π of phase = one cycle)
-  if (Math.floor(state.wavePhase / (2 * Math.PI)) > Math.floor(prevPhase / (2 * Math.PI))) {
-    phaseCount.value++
+  // Physics
+  if (mode.value === 'ftl') {
+    updateFTL(dt)
+  } else {
+    updateGeometric(dt)
   }
 
-  // Propulsion in body-frame heading direction (Taylor swimming)
-  const vProp = propulsionSpeed(params.amplitude, params.freq, params.wavelengths)
-  state.vx += Math.cos(state.heading) * vProp * dt
-  state.vy += Math.sin(state.heading) * vProp * dt
-
-  // Gravity
-  if (params.gravity) {
-    const { ax, ay } = gravityAccel(state.cx, state.cy, suns)
-    state.vx += ax * dt
-    state.vy += ay * dt
-  }
-
-  // Gentle drag to keep things legible
-  const drag = params.gravity ? 0.992 : 0.978
-  state.vx *= drag
-  state.vy *= drag
-
-  // Integrate position
-  state.cx += state.vx * dt
-  state.cy += state.vy * dt
-
-  // Soft wrap at canvas edges (teleport with trail break)
-  const pad = BODY_LENGTH
-  if (state.cx < -pad) { state.cx = W + pad; trail = [] }
-  if (state.cx > W + pad) { state.cx = -pad;  trail = [] }
-  if (state.cy < -pad) { state.cy = H + pad; trail = [] }
-  if (state.cy > H + pad) { state.cy = -pad;  trail = [] }
-
-  // ── Build spine ────────────────────────────────────────────────────────────
+  // Build spine (shared between modes)
   const spine = buildSpine(
     state.cx, state.cy, state.heading,
     state.wavePhase, params.amplitude, params.wavelengths, 40
   )
 
-  // ── Trail ──────────────────────────────────────────────────────────────────
-  trail.push({ x: state.cx, y: state.cy })
-  if (trail.length > TRAIL_MAX) trail.shift()
-
-  // ── Shape space ────────────────────────────────────────────────────────────
+  // Shape-space modes (shared)
   const modes = computeShapeModes(spine)
   shapeHistory.push(modes)
   if (shapeHistory.length > SHAPE_MAX) shapeHistory.shift()
 
-  // ── Draw ───────────────────────────────────────────────────────────────────
-  // Clear with slight fade for motion blur effect
+  // Clear with motion-blur fade
   ctx.fillStyle = 'rgba(7,8,15,0.88)'
   ctx.fillRect(0, 0, W, H)
 
-  drawGravityField()
-  drawTrail()
-  drawSpine(spine)
+  // Draw background / field
+  if (mode.value === 'ftl') {
+    drawStarSystems(ftlMission.vFrac)
+    drawWakeTrail()
+  } else {
+    drawGravityField()
+    drawTrail()
+  }
+
+  drawSpine(spine, mode.value === 'ftl' ? ftlMission.vFrac : 0)
   drawShapeSpace()
 }
 
@@ -481,7 +830,6 @@ onMounted(() => {
 
   animId = requestAnimationFrame(loop)
 
-  // Clean up on unmount via closure
   canvasEl.value._ro = ro
 })
 
@@ -521,6 +869,71 @@ onUnmounted(() => {
   pointer-events: none;
   user-select: none;
   opacity: 0.75;
+}
+
+/* ── FTL HUD ── */
+.ftl-hud {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(7, 8, 15, 0.72);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  user-select: none;
+  min-width: 130px;
+}
+
+.ftl-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ftl-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
+  min-width: 48px;
+}
+
+.ftl-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #4fffb0;
+  letter-spacing: 0.06em;
+}
+
+.ftl-phase-badge {
+  margin-top: 4px;
+  font-family: 'Space Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(79, 255, 176, 0.55);
+  padding-top: 4px;
+  border-top: 1px solid rgba(79, 255, 176, 0.15);
+}
+
+.ftl-phase-cruise    { color: #4fffb0; }
+.ftl-phase-arrived   { color: #7ab4f7; }
+.ftl-phase-engaging  { color: rgba(247, 201, 122, 0.8); }
+
+/* ── FTL engage button ── */
+.ftl-engage-btn {
+  color: rgba(79, 255, 176, 0.7) !important;
+  border-color: rgba(79, 255, 176, 0.4) !important;
+}
+.ftl-engage-btn.active {
+  color: #4fffb0 !important;
+  border-color: #4fffb0 !important;
 }
 
 input[type=range] {
@@ -634,7 +1047,6 @@ input[type=range]::-webkit-slider-thumb {
   padding: 0 2px;
 }
 
-/* slide-in from left */
 .panel-slide-enter-active,
 .panel-slide-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

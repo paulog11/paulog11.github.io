@@ -153,4 +153,70 @@ export function defaultSuns(W, H) {
   ]
 }
 
+// ── FTL Travel helpers ────────────────────────────────────────────────────────
+
+/** Canvas px/sec that maps to the speed of light in FTL mode. */
+export const FTL_C_PX = 90
+
+/** Max drive strength for normalization (all sliders at max). */
+const FTL_MAX_STRENGTH = 2.0 * 2.0 * 3.0 * 3.0
+
+/**
+ * Target v/c fraction based on current drive settings.
+ * Scales from 0.30c (minimum drive) to 0.995c (maximum drive).
+ */
+export function ftlTargetSpeed(amplitude, freq, wavelengths) {
+  const strength = amplitude * amplitude * freq * wavelengths
+  return 0.30 + 0.695 * Math.min(1, strength / FTL_MAX_STRENGTH)
+}
+
+/**
+ * Advance v_frac toward v_target via exponential approach.
+ * Charge rate k is proportional to drive strength so stronger settings accelerate faster.
+ */
+export function ftlAccelStep(vFrac, vTarget, amplitude, freq, wavelengths, dt) {
+  const driveStrength = amplitude * amplitude * freq * wavelengths
+  const k = 0.25 * driveStrength / FTL_MAX_STRENGTH + 0.05
+  const dvdt = (vTarget - vFrac) * k
+  return Math.min(vTarget, vFrac + dvdt * dt)
+}
+
+/**
+ * Decelerate v_frac toward zero at a fixed exponential rate.
+ */
+export function ftlDecelStep(vFrac, dt) {
+  return Math.max(0, vFrac - vFrac * 0.9 * dt)
+}
+
+/**
+ * Lorentz factor γ = 1 / √(1 − v²/c²).
+ * vFrac must be in [0, 1).
+ */
+export function lorentzGamma(vFrac) {
+  return 1 / Math.sqrt(1 - Math.min(0.9999, vFrac * vFrac))
+}
+
+/**
+ * Interpolate heading toward target by at most maxRate rad/s.
+ * Handles wraparound correctly.
+ */
+export function steerHeading(current, target, maxRate, dt) {
+  let diff = ((target - current + Math.PI * 3) % (Math.PI * 2)) - Math.PI
+  const maxDelta = maxRate * dt
+  const delta = Math.max(-maxDelta, Math.min(maxDelta, diff))
+  return current + delta
+}
+
+/**
+ * Two star systems at opposite sides of the canvas for FTL mode.
+ * Index 0 = origin (Sol), index 1 = destination (Trisolaris).
+ */
+export function defaultStarPair(W, H) {
+  const cy = H / 2
+  return [
+    { x: W * 0.13, y: cy, mass: 0.6, color: '#f7c97a', label: 'Sol',       role: 'origin'      },
+    { x: W * 0.87, y: cy, mass: 0.6, color: '#7ab4f7', label: 'Trisolaris', role: 'destination' },
+  ]
+}
+
 export { BODY_LENGTH }
