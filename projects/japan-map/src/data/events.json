@@ -1,0 +1,890 @@
+[
+  {
+    "id": 1,
+    "name": "Jomon Pottery Tradition",
+    "year": -3000,
+    "era": "ancient",
+    "period": "Jomon",
+    "category": "cultural",
+    "description": "The Jomon people produced some of the world's oldest known pottery, with distinctive cord-marked patterns. These hunter-gatherers developed a remarkably sophisticated culture that lasted over 10,000 years.",
+    "lat": 40.8228,
+    "lng": 140.6947,
+    "contemporarySite": {
+      "name": "Sannai-Maruyama Archaeological Site",
+      "query": "Sannai Maruyama Archaeological Site Aomori Japan"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Introduction of Rice Cultivation",
+    "year": -300,
+    "era": "ancient",
+    "period": "Yayoi",
+    "category": "cultural",
+    "description": "Wet-rice paddy farming was introduced to Japan from the Korean Peninsula and mainland Asia, first arriving in northern Kyushu. This agricultural revolution transformed Japanese society from hunter-gatherer to agrarian, enabling population growth and social stratification.",
+    "lat": 33.3824,
+    "lng": 130.4917,
+    "contemporarySite": {
+      "name": "Yoshinogari Historical Park",
+      "query": "Yoshinogari Historical Park Saga Japan"
+    }
+  },
+  {
+    "id": 3,
+    "name": "Queen Himiko Rules Yamatai",
+    "year": 240,
+    "era": "ancient",
+    "period": "Yayoi",
+    "category": "political",
+    "description": "According to the Chinese Wei Zhi chronicle, the shamaness-queen Himiko ruled the confederation of Yamatai. She sent envoys to the Wei dynasty in China and received a gold seal, representing Japan's earliest recorded diplomacy.",
+    "lat": 33.3180,
+    "lng": 130.9700,
+    "contemporarySite": {
+      "name": "Hashihaka Kofun (possible Himiko tomb)",
+      "query": "Hashihaka Kofun Sakurai Nara Japan"
+    }
+  },
+  {
+    "id": 4,
+    "name": "Construction of Nintoku-ryo Kofun",
+    "year": 400,
+    "era": "ancient",
+    "period": "Kofun",
+    "category": "cultural",
+    "description": "The massive keyhole-shaped burial mound attributed to Emperor Nintoku was constructed in Sakai. At 486 meters long, it is one of the largest tombs in the world by area, rivaling the Great Pyramid of Giza.",
+    "lat": 34.5636,
+    "lng": 135.4878,
+    "contemporarySite": {
+      "name": "Daisen Kofun (Mozu-Furuichi Kofun Group)",
+      "query": "Daisen Kofun Sakai Osaka Japan"
+    }
+  },
+  {
+    "id": 5,
+    "name": "Introduction of Buddhism to Japan",
+    "year": 552,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "cultural",
+    "description": "The King of Baekje in Korea sent a Buddhist statue and sutras to the Yamato court, traditionally dated to 552. The arrival of Buddhism sparked religious and political conflict but ultimately transformed Japanese culture, art, and governance.",
+    "lat": 34.4753,
+    "lng": 135.8090,
+    "contemporarySite": {
+      "name": "Asukadera Temple (Japan's oldest temple)",
+      "query": "Asukadera Temple Asuka Nara Japan"
+    }
+  },
+  {
+    "id": 6,
+    "name": "Battle of Baekgang",
+    "year": 663,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "battle",
+    "description": "Japan sent a massive naval fleet to aid its ally Baekje against the Tang-Silla alliance at the mouth of the Geum River in Korea. The devastating Japanese defeat ended Japan's involvement in Korean peninsula affairs for centuries.",
+    "lat": 33.9500,
+    "lng": 130.9400,
+    "contemporarySite": {
+      "name": "Dazaifu Government Ruins (defensive HQ built after defeat)",
+      "query": "Dazaifu Government Ruins Fukuoka Japan"
+    }
+  },
+  {
+    "id": 7,
+    "name": "Taika Reforms",
+    "year": 645,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "political",
+    "description": "After a coup against the powerful Soga clan, Emperor Kotoku enacted sweeping reforms modeled on Tang China's centralized bureaucracy. Land was nationalized, a tax system established, and provincial governance restructured — laying the foundation of the Japanese imperial state.",
+    "lat": 34.6851,
+    "lng": 135.5197,
+    "contemporarySite": {
+      "name": "Naniwa Palace Ruins (reform capital)",
+      "query": "Naniwa Palace Ruins Osaka Japan"
+    }
+  },
+  {
+    "id": 8,
+    "name": "Prince Shotoku's Seventeen-Article Constitution",
+    "year": 604,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "political",
+    "description": "Prince Shotoku promulgated a set of moral guidelines for officials blending Buddhist, Confucian, and Shinto principles. Though not a constitution in the modern sense, it established ideals of harmony and centralized authority that shaped Japanese governance.",
+    "lat": 34.6133,
+    "lng": 135.7340,
+    "contemporarySite": {
+      "name": "Shitennoji Temple (founded by Shotoku)",
+      "query": "Shitennoji Temple Osaka Japan"
+    }
+  },
+  {
+    "id": 9,
+    "name": "Jinshin War",
+    "year": 672,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "battle",
+    "description": "A succession war between Prince Oama and his nephew Prince Otomo that lasted about a month. Prince Oama's victory led him to become Emperor Tenmu, who strengthened imperial authority and commissioned Japan's first official histories.",
+    "lat": 34.7728,
+    "lng": 136.3968,
+    "contemporarySite": {
+      "name": "Fuwa Barrier Ruins (key defensive point in the war)",
+      "query": "Fuwa Barrier Ruins Sekigahara Gifu Japan"
+    }
+  },
+  {
+    "id": 10,
+    "name": "Kojiki Compiled",
+    "year": 712,
+    "era": "ancient",
+    "period": "Asuka",
+    "category": "cultural",
+    "description": "The Kojiki (Record of Ancient Matters), Japan's oldest surviving written chronicle, was completed. It contains creation myths, genealogies of the gods, and the legendary origins of the imperial line, forming the foundation of Shinto mythology.",
+    "lat": 34.6851,
+    "lng": 135.8048,
+    "contemporarySite": {
+      "name": "Nara National Museum",
+      "query": "Nara National Museum Japan"
+    }
+  },
+  {
+    "id": 11,
+    "name": "Capital Moved to Nara (Heijo-kyo)",
+    "year": 710,
+    "era": "classical",
+    "period": "Nara",
+    "category": "political",
+    "description": "Empress Genmei established the first permanent capital at Nara, modeled on the Chinese Tang capital Chang'an. The city became a center of Buddhist art, scholarship, and international exchange along the eastern terminus of the Silk Road.",
+    "lat": 34.6851,
+    "lng": 135.8048,
+    "contemporarySite": {
+      "name": "Heijo Palace Ruins",
+      "query": "Heijo Palace Ruins Nara Japan"
+    }
+  },
+  {
+    "id": 12,
+    "name": "Great Buddha of Todaiji Completed",
+    "year": 752,
+    "era": "classical",
+    "period": "Nara",
+    "category": "cultural",
+    "description": "Emperor Shomu dedicated the Great Buddha (Daibutsu) at Todaiji, a 15-meter bronze statue representing Vairocana Buddha. The project consumed most of Japan's bronze production and symbolized the state's embrace of Buddhism as a unifying force.",
+    "lat": 34.6893,
+    "lng": 135.8400,
+    "contemporarySite": {
+      "name": "Todaiji Temple",
+      "query": "Todaiji Temple Nara Japan"
+    }
+  },
+  {
+    "id": 13,
+    "name": "Capital Moved to Heian-kyo (Kyoto)",
+    "year": 794,
+    "era": "classical",
+    "period": "Heian",
+    "category": "political",
+    "description": "Emperor Kanmu relocated the capital to Heian-kyo to escape the political influence of Nara's powerful Buddhist monasteries. Kyoto would remain the imperial capital for over a thousand years, becoming synonymous with Japanese high culture.",
+    "lat": 35.0116,
+    "lng": 135.7681,
+    "contemporarySite": {
+      "name": "Kyoto Imperial Palace",
+      "query": "Kyoto Imperial Palace Japan"
+    }
+  },
+  {
+    "id": 14,
+    "name": "Tale of Genji Written",
+    "year": 1010,
+    "era": "classical",
+    "period": "Heian",
+    "category": "cultural",
+    "description": "Lady Murasaki Shikibu completed The Tale of Genji, widely considered the world's first novel. The work depicts the romantic and political life of the Heian court with extraordinary psychological depth, and it remains a masterpiece of world literature.",
+    "lat": 34.9994,
+    "lng": 135.6889,
+    "contemporarySite": {
+      "name": "The Tale of Genji Museum",
+      "query": "Tale of Genji Museum Uji Kyoto Japan"
+    }
+  },
+  {
+    "id": 15,
+    "name": "Fujiwara Clan Dominance (Regency Government)",
+    "year": 1016,
+    "era": "classical",
+    "period": "Heian",
+    "category": "political",
+    "description": "Fujiwara no Michinaga reached the height of his power, marrying his daughters to successive emperors and ruling as regent. His era epitomized the Fujiwara domination of the court, which lasted for centuries through strategic marriage politics.",
+    "lat": 34.9559,
+    "lng": 135.7554,
+    "contemporarySite": {
+      "name": "Byodoin Temple (built by Michinaga's son)",
+      "query": "Byodoin Temple Uji Kyoto Japan"
+    }
+  },
+  {
+    "id": 16,
+    "name": "Former Nine Years' War",
+    "year": 1062,
+    "era": "classical",
+    "period": "Heian",
+    "category": "battle",
+    "description": "Minamoto no Yoriyoshi waged a prolonged campaign against the Abe clan in northern Honshu. The war established the Minamoto as a major warrior clan and demonstrated the growing military power of provincial samurai families.",
+    "lat": 39.0017,
+    "lng": 141.1147,
+    "contemporarySite": {
+      "name": "Kuriyagawa Ruins (final battle site)",
+      "query": "Kuriyagawa Ruins Morioka Iwate Japan"
+    }
+  },
+  {
+    "id": 17,
+    "name": "Hogen Rebellion",
+    "year": 1156,
+    "era": "classical",
+    "period": "Heian",
+    "category": "battle",
+    "description": "A brief but violent power struggle between rival claimants to the throne drew the Taira and Minamoto warrior clans directly into court politics for the first time. The conflict marked the beginning of the end of civilian aristocratic rule.",
+    "lat": 35.0116,
+    "lng": 135.7681,
+    "contemporarySite": {
+      "name": "Shirakawa-dono Palace Site (battle location)",
+      "query": "Shirakawa Jinja Shrine Kyoto Japan"
+    }
+  },
+  {
+    "id": 18,
+    "name": "Heiji Rebellion",
+    "year": 1160,
+    "era": "classical",
+    "period": "Heian",
+    "category": "battle",
+    "description": "Minamoto no Yoshitomo launched a coup against the Taira-backed court and was crushed by Taira no Kiyomori. The Taira consolidated control and Kiyomori's young grandson was placed on the throne, setting the stage for the Genpei War.",
+    "lat": 35.0200,
+    "lng": 135.7600,
+    "contemporarySite": {
+      "name": "Rokuharamitsuji Temple (Taira clan headquarters)",
+      "query": "Rokuharamitsuji Temple Kyoto Japan"
+    }
+  },
+  {
+    "id": 19,
+    "name": "Mount Koya Monastery Founded",
+    "year": 816,
+    "era": "classical",
+    "period": "Heian",
+    "category": "cultural",
+    "description": "The monk Kukai (Kobo Daishi) founded a monastery on Mount Koya as the headquarters of Shingon Buddhism. It became one of Japan's most sacred sites, housing over 100 temples and a vast cemetery where Kukai is believed to rest in eternal meditation.",
+    "lat": 34.2131,
+    "lng": 135.5833,
+    "contemporarySite": {
+      "name": "Okunoin Cemetery, Mount Koya",
+      "query": "Okunoin Cemetery Mount Koya Wakayama Japan"
+    }
+  },
+  {
+    "id": 20,
+    "name": "Genpei War Begins",
+    "year": 1180,
+    "era": "classical",
+    "period": "Heian",
+    "category": "battle",
+    "description": "Minamoto no Yoritomo raised an army against the Taira clan, beginning the five-year Genpei War. The conflict engulfed western Japan and culminated in the destruction of the Taira, fundamentally transforming Japan's political structure.",
+    "lat": 35.0300,
+    "lng": 139.0900,
+    "contemporarySite": {
+      "name": "Ishibashiyama Battlefield (Yoritomo's first battle)",
+      "query": "Ishibashiyama Battlefield Odawara Kanagawa Japan"
+    }
+  },
+  {
+    "id": 21,
+    "name": "Battle of Dan-no-ura",
+    "year": 1185,
+    "era": "medieval",
+    "period": "Kamakura",
+    "category": "battle",
+    "description": "The decisive naval battle that ended the Genpei War, resulting in the defeat of the Taira clan by the Minamoto. The child emperor Antoku perished, and the Imperial Regalia were lost to the sea.",
+    "lat": 33.9667,
+    "lng": 130.9333,
+    "contemporarySite": {
+      "name": "Dan-no-ura Battle Memorial (Mimosusogawa Park)",
+      "query": "Mimosusogawa Park Shimonoseki Japan"
+    }
+  },
+  {
+    "id": 22,
+    "name": "Kamakura Shogunate Founded",
+    "year": 1192,
+    "era": "medieval",
+    "period": "Kamakura",
+    "category": "political",
+    "description": "Minamoto no Yoritomo was appointed Seii Taishogun, establishing Japan's first military government in Kamakura. This marked the beginning of nearly 700 years of samurai rule.",
+    "lat": 35.3192,
+    "lng": 139.5467,
+    "contemporarySite": {
+      "name": "Tsurugaoka Hachimangu Shrine",
+      "query": "Tsurugaoka Hachimangu Shrine Kamakura Japan"
+    }
+  },
+  {
+    "id": 23,
+    "name": "First Mongol Invasion",
+    "year": 1274,
+    "era": "medieval",
+    "period": "Kamakura",
+    "category": "battle",
+    "description": "Kublai Khan launched his first invasion of Japan with 900 ships and 40,000 troops landing at Hakata Bay. A sudden storm destroyed much of the Mongol fleet, forcing a retreat.",
+    "lat": 33.6200,
+    "lng": 130.3800,
+    "contemporarySite": {
+      "name": "Genko Borui (Mongol Invasion Stone Wall)",
+      "query": "Genko Borui Mongol Invasion Wall Fukuoka Japan"
+    }
+  },
+  {
+    "id": 24,
+    "name": "Second Mongol Invasion",
+    "year": 1281,
+    "era": "medieval",
+    "period": "Kamakura",
+    "category": "battle",
+    "description": "Kublai Khan's second and far larger invasion force of 140,000 men again targeted Hakata Bay. A massive typhoon — the divine wind, or kamikaze — obliterated the fleet and ended the Mongol threat.",
+    "lat": 33.5904,
+    "lng": 130.4017,
+    "contemporarySite": {
+      "name": "Hakozaki Shrine",
+      "query": "Hakozaki Shrine Fukuoka Japan"
+    }
+  },
+  {
+    "id": 25,
+    "name": "Onin War Begins",
+    "year": 1467,
+    "era": "medieval",
+    "period": "Muromachi",
+    "category": "battle",
+    "description": "A dispute over shogunal succession ignited the Onin War in Kyoto, which lasted a decade and left the capital in ruins. It ushered in the Sengoku period of a century of civil war.",
+    "lat": 35.0116,
+    "lng": 135.7681,
+    "contemporarySite": {
+      "name": "Nishiki Tenmangu Shrine (near Onin War site)",
+      "query": "Nishiki Tenmangu Shrine Kyoto Japan"
+    }
+  },
+  {
+    "id": 26,
+    "name": "Battle of Kawanakajima",
+    "year": 1561,
+    "era": "medieval",
+    "period": "Sengoku",
+    "category": "battle",
+    "description": "The fourth and most famous of five battles between Takeda Shingen and Uesugi Kenshin on the plains of Kawanakajima in Shinano Province. The battle ended in a bloody stalemate.",
+    "lat": 36.6082,
+    "lng": 138.1890,
+    "contemporarySite": {
+      "name": "Kawanakajima Battlefield Historic Park",
+      "query": "Kawanakajima Battlefield Historic Park Nagano Japan"
+    }
+  },
+  {
+    "id": 27,
+    "name": "Battle of Nagashino",
+    "year": 1575,
+    "era": "medieval",
+    "period": "Sengoku",
+    "category": "battle",
+    "description": "Oda Nobunaga and Tokugawa Ieyasu decimated the Takeda cavalry using coordinated volley fire from 3,000 arquebusiers, revolutionizing Japanese warfare and demonstrating the dominance of firearms.",
+    "lat": 34.9333,
+    "lng": 137.5667,
+    "contemporarySite": {
+      "name": "Nagashino Castle Ruins & Battle Site",
+      "query": "Nagashino Castle Ruins Shinshiro Aichi Japan"
+    }
+  },
+  {
+    "id": 28,
+    "name": "Honnoji Incident",
+    "year": 1582,
+    "era": "medieval",
+    "period": "Sengoku",
+    "category": "political",
+    "description": "Oda Nobunaga was betrayed and surrounded by the forces of his general Akechi Mitsuhide at Honnoji temple in Kyoto. Nobunaga, on the verge of unifying Japan, died there — either killed or by suicide.",
+    "lat": 35.0074,
+    "lng": 135.7559,
+    "contemporarySite": {
+      "name": "Honnoji Temple",
+      "query": "Honnoji Temple Kyoto Japan"
+    }
+  },
+  {
+    "id": 29,
+    "name": "Battle of Sekigahara",
+    "year": 1600,
+    "era": "medieval",
+    "period": "Sengoku",
+    "category": "battle",
+    "description": "The largest and most decisive battle in Japanese history, fought between Tokugawa Ieyasu's eastern coalition and Ishida Mitsunari's western coalition. Tokugawa's victory paved the way for the Edo Shogunate.",
+    "lat": 35.3667,
+    "lng": 136.4667,
+    "contemporarySite": {
+      "name": "Sekigahara Battlefield Memorial Museum",
+      "query": "Sekigahara Battlefield Memorial Museum Gifu Japan"
+    }
+  },
+  {
+    "id": 30,
+    "name": "Siege of Osaka",
+    "year": 1615,
+    "era": "medieval",
+    "period": "Sengoku",
+    "category": "battle",
+    "description": "Tokugawa Ieyasu besieged Osaka Castle, the stronghold of Toyotomi Hideyori. The fall of the castle and death of Hideyori eliminated the last major threat to Tokugawa rule and unified Japan under the shogunate.",
+    "lat": 34.6875,
+    "lng": 135.5259,
+    "contemporarySite": {
+      "name": "Osaka Castle",
+      "query": "Osaka Castle Japan"
+    }
+  },
+  {
+    "id": 31,
+    "name": "Edo Shogunate Established",
+    "year": 1603,
+    "era": "edo",
+    "period": "Edo",
+    "category": "political",
+    "description": "Tokugawa Ieyasu was appointed Seii Taishogun and established his government in Edo. The Tokugawa shogunate would rule Japan for over 260 years, ushering in a long era of peace and isolation.",
+    "lat": 35.6852,
+    "lng": 139.7528,
+    "contemporarySite": {
+      "name": "Edo Castle (Imperial Palace East Gardens)",
+      "query": "Imperial Palace East Gardens Tokyo Japan"
+    }
+  },
+  {
+    "id": 32,
+    "name": "Shimabara Rebellion",
+    "year": 1637,
+    "era": "edo",
+    "period": "Edo",
+    "category": "battle",
+    "description": "A peasant and Christian uprising in the Shimabara Peninsula led by the young Amakusa Shiro. The shogunate crushed the revolt with overwhelming force, strengthening the ban on Christianity and closing Japan to the West.",
+    "lat": 32.7816,
+    "lng": 130.3671,
+    "contemporarySite": {
+      "name": "Shimabara Castle",
+      "query": "Shimabara Castle Nagasaki Japan"
+    }
+  },
+  {
+    "id": 33,
+    "name": "Dejima Trading Post Opens",
+    "year": 1641,
+    "era": "edo",
+    "period": "Edo",
+    "category": "cultural",
+    "description": "The Dutch East India Company was confined to the artificial island of Dejima in Nagasaki harbor, becoming the only Westerners permitted to trade with Japan during sakoku (the closed country period).",
+    "lat": 32.7448,
+    "lng": 129.8697,
+    "contemporarySite": {
+      "name": "Dejima Historic Site",
+      "query": "Dejima Historic Site Nagasaki Japan"
+    }
+  },
+  {
+    "id": 34,
+    "name": "Great Fire of Meireki",
+    "year": 1657,
+    "era": "edo",
+    "period": "Edo",
+    "category": "disaster",
+    "description": "A catastrophic fire swept through Edo over three days, destroying about two-thirds of the city and killing an estimated 100,000 people. It was the deadliest urban fire in Japanese history and led to major rebuilding of the capital.",
+    "lat": 35.6895,
+    "lng": 139.6917,
+    "contemporarySite": null
+  },
+  {
+    "id": 35,
+    "name": "47 Ronin Incident",
+    "year": 1703,
+    "era": "edo",
+    "period": "Edo",
+    "category": "cultural",
+    "description": "Forty-seven samurai, made masterless after their lord Asano Naganori was forced to commit seppuku, avenged his death by killing the official Kira Yoshinaka. They were ordered to commit ritual suicide but became celebrated as paragons of loyalty.",
+    "lat": 34.7500,
+    "lng": 134.3833,
+    "contemporarySite": {
+      "name": "Ako Castle Ruins",
+      "query": "Ako Castle Ruins Hyogo Japan"
+    }
+  },
+  {
+    "id": 36,
+    "name": "Hoei Eruption of Mt. Fuji",
+    "year": 1707,
+    "era": "edo",
+    "period": "Edo",
+    "category": "disaster",
+    "description": "The last eruption of Mount Fuji, occurring just 49 days after the great Hoei earthquake. Ash fell on Edo (now Tokyo) 100 km away, devastating crops and causing widespread hardship across the Kanto region.",
+    "lat": 35.3606,
+    "lng": 138.7274,
+    "contemporarySite": {
+      "name": "Mt. Fuji (Fujisan)",
+      "query": "Mount Fuji Shizuoka Japan"
+    }
+  },
+  {
+    "id": 37,
+    "name": "Great Kyoho Famine",
+    "year": 1732,
+    "era": "edo",
+    "period": "Edo",
+    "category": "disaster",
+    "description": "A devastating famine struck western Japan caused by locust infestations and flooding, killing an estimated one million people. The disaster exposed weaknesses in the Tokugawa system and triggered rice riots in Edo.",
+    "lat": 34.3853,
+    "lng": 132.4553,
+    "contemporarySite": null
+  },
+  {
+    "id": 38,
+    "name": "Perry's Black Ships Arrive",
+    "year": 1853,
+    "era": "edo",
+    "period": "Late Edo",
+    "category": "political",
+    "description": "U.S. Commodore Matthew Perry arrived at Uraga harbor with four steam-powered warships, demanding Japan open to trade. The technological disparity shocked Japan and set off political turmoil that led to the Meiji Restoration.",
+    "lat": 35.1167,
+    "lng": 139.6000,
+    "contemporarySite": {
+      "name": "Perry Road & Black Ship Memorial, Shimoda",
+      "query": "Perry Road Shimoda Shizuoka Japan"
+    }
+  },
+  {
+    "id": 39,
+    "name": "Opening of Yokohama Port",
+    "year": 1859,
+    "era": "edo",
+    "period": "Late Edo",
+    "category": "cultural",
+    "description": "Yokohama was opened as a treaty port under the Harris Treaty, becoming the primary gateway for foreign trade and culture. The port transformed Japan's economy and accelerated Western influence before the Meiji Restoration.",
+    "lat": 35.4437,
+    "lng": 139.6380,
+    "contemporarySite": {
+      "name": "Yokohama Port Opening Memorial Hall",
+      "query": "Yokohama Port Opening Memorial Hall Japan"
+    }
+  },
+  {
+    "id": 40,
+    "name": "Sakuradamon Incident",
+    "year": 1860,
+    "era": "edo",
+    "period": "Late Edo",
+    "category": "political",
+    "description": "Ii Naosuke, the powerful regent who signed the unequal treaties opening Japan, was assassinated outside Edo Castle's Sakuradamon gate by anti-shogunate samurai. The killing shattered the image of shogunal invincibility.",
+    "lat": 35.6785,
+    "lng": 139.7530,
+    "contemporarySite": {
+      "name": "Sakuradamon Gate, Imperial Palace",
+      "query": "Sakuradamon Gate Imperial Palace Tokyo Japan"
+    }
+  },
+  {
+    "id": 41,
+    "name": "Meiji Restoration",
+    "year": 1868,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "political",
+    "description": "The Tokugawa shogunate was overthrown and imperial rule was restored under Emperor Meiji. The new government launched a sweeping program of modernization, industrialization, and Westernization that transformed Japan from a feudal society into a modern nation-state.",
+    "lat": 35.0116,
+    "lng": 135.7681,
+    "contemporarySite": {
+      "name": "Nijo Castle (site of power transfer)",
+      "query": "Nijo Castle Kyoto Japan"
+    }
+  },
+  {
+    "id": 42,
+    "name": "Boshin War — Battle of Toba-Fushimi",
+    "year": 1868,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "battle",
+    "description": "The opening battle of the Boshin War between pro-imperial Satsuma-Choshu forces and the Tokugawa shogunate army. The imperial victory near Kyoto triggered the rapid collapse of shogunal resistance across Japan.",
+    "lat": 34.9250,
+    "lng": 135.7639,
+    "contemporarySite": {
+      "name": "Toba-Fushimi Battle Monument",
+      "query": "Toba Fushimi Battle Monument Kyoto Japan"
+    }
+  },
+  {
+    "id": 43,
+    "name": "First Sino-Japanese War",
+    "year": 1894,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "battle",
+    "description": "Japan fought and defeated Qing China over influence in Korea, winning control of Taiwan and the Liaodong Peninsula. The stunning victory demonstrated Japan's successful modernization and announced it as a major power in East Asia.",
+    "lat": 33.9560,
+    "lng": 131.0000,
+    "contemporarySite": {
+      "name": "Shimonoseki City (Treaty of Shimonoseki signed here)",
+      "query": "Shunpanro Hotel Shimonoseki Japan"
+    }
+  },
+  {
+    "id": 44,
+    "name": "Russo-Japanese War",
+    "year": 1904,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "battle",
+    "description": "Japan waged war against Tsarist Russia over territorial disputes in Manchuria and Korea. Japan's naval victory at Tsushima and the Treaty of Portsmouth made it the first modern Asian nation to defeat a European power.",
+    "lat": 34.0667,
+    "lng": 131.0333,
+    "contemporarySite": {
+      "name": "Mikasa Memorial Ship (Admiral Togo's flagship)",
+      "query": "Mikasa Memorial Ship Yokosuka Japan"
+    }
+  },
+  {
+    "id": 45,
+    "name": "Great Kanto Earthquake",
+    "year": 1923,
+    "era": "modern",
+    "period": "Taisho",
+    "category": "disaster",
+    "description": "A magnitude 7.9 earthquake struck the Kanto plain, devastating Tokyo and Yokohama. Fires raged for days, killing over 100,000 people and leaving millions homeless. The disaster reshaped Tokyo's urban planning and architecture.",
+    "lat": 35.6762,
+    "lng": 139.6503,
+    "contemporarySite": {
+      "name": "Great Kanto Earthquake Memorial Museum",
+      "query": "Tokyo Memorial Hall Great Kanto Earthquake Sumida Japan"
+    }
+  },
+  {
+    "id": 46,
+    "name": "Meiji Constitution Promulgated",
+    "year": 1889,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "political",
+    "description": "Emperor Meiji granted the Constitution of the Empire of Japan, establishing Asia's first parliamentary system. It created a bicameral legislature (the Diet) while preserving strong imperial prerogatives and executive power.",
+    "lat": 35.6762,
+    "lng": 139.7503,
+    "contemporarySite": {
+      "name": "National Diet Building",
+      "query": "National Diet Building Tokyo Japan"
+    }
+  },
+  {
+    "id": 47,
+    "name": "Manchurian Incident",
+    "year": 1931,
+    "era": "modern",
+    "period": "Showa",
+    "category": "political",
+    "description": "Japanese military officers staged a false-flag bombing on the South Manchuria Railway near Mukden, using it as a pretext to invade and occupy Manchuria. The incident marked the ascendancy of the military over civilian government and Japan's path toward wider war.",
+    "lat": 33.5902,
+    "lng": 130.4017,
+    "contemporarySite": null
+  },
+  {
+    "id": 48,
+    "name": "Rice Riots",
+    "year": 1918,
+    "era": "modern",
+    "period": "Taisho",
+    "category": "political",
+    "description": "Soaring rice prices triggered massive protests and riots across Japan, beginning in Toyama Prefecture. Over two million people participated, leading to the fall of the government and accelerating the movement toward universal suffrage and party politics.",
+    "lat": 36.6953,
+    "lng": 137.2114,
+    "contemporarySite": {
+      "name": "Rice Riot Memorial, Uozu",
+      "query": "Rice Riot Memorial Uozu Toyama Japan"
+    }
+  },
+  {
+    "id": 49,
+    "name": "Universal Male Suffrage Act",
+    "year": 1925,
+    "era": "modern",
+    "period": "Taisho",
+    "category": "political",
+    "description": "Japan enacted universal male suffrage, granting the vote to all men over 25 regardless of wealth or tax status. This quadrupled the electorate, though it was accompanied by the Peace Preservation Act that restricted political dissent.",
+    "lat": 35.6762,
+    "lng": 139.7450,
+    "contemporarySite": {
+      "name": "National Diet Building",
+      "query": "National Diet Building Tokyo Japan"
+    }
+  },
+  {
+    "id": 50,
+    "name": "February 26 Incident",
+    "year": 1936,
+    "era": "modern",
+    "period": "Showa",
+    "category": "battle",
+    "description": "Young ultranationalist army officers launched a coup in Tokyo, assassinating several senior government officials and occupying key buildings. Though the coup failed, it accelerated the military's dominance over Japanese politics in the lead-up to World War II.",
+    "lat": 35.6735,
+    "lng": 139.7409,
+    "contemporarySite": {
+      "name": "February 26 Incident Memorial",
+      "query": "February 26 Incident Memorial Roppongi Tokyo Japan"
+    }
+  },
+  {
+    "id": 51,
+    "name": "Atomic Bombing of Hiroshima",
+    "year": 1945,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "disaster",
+    "description": "The United States dropped the first atomic bomb used in warfare on Hiroshima, instantly killing an estimated 80,000 people with tens of thousands more dying from radiation in the following months. The bombing hastened Japan's surrender and the end of World War II.",
+    "lat": 34.3955,
+    "lng": 132.4534,
+    "contemporarySite": {
+      "name": "Hiroshima Peace Memorial (Genbaku Dome)",
+      "query": "Hiroshima Peace Memorial Genbaku Dome Japan"
+    }
+  },
+  {
+    "id": 52,
+    "name": "Atomic Bombing of Nagasaki",
+    "year": 1945,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "disaster",
+    "description": "Three days after Hiroshima, a second atomic bomb was dropped on Nagasaki, killing approximately 40,000 people instantly. Emperor Hirohito announced Japan's surrender the following day, ending the Pacific War.",
+    "lat": 32.7734,
+    "lng": 129.8636,
+    "contemporarySite": {
+      "name": "Nagasaki Atomic Bomb Museum",
+      "query": "Nagasaki Atomic Bomb Museum Japan"
+    }
+  },
+  {
+    "id": 53,
+    "name": "New Constitution Takes Effect",
+    "year": 1947,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "political",
+    "description": "Japan's postwar constitution came into effect, renouncing war (Article 9), establishing popular sovereignty, and guaranteeing fundamental human rights including women's suffrage. Drafted during the American occupation, it has never been amended.",
+    "lat": 35.6762,
+    "lng": 139.7450,
+    "contemporarySite": {
+      "name": "National Diet Building",
+      "query": "National Diet Building Tokyo Japan"
+    }
+  },
+  {
+    "id": 54,
+    "name": "Treaty of San Francisco",
+    "year": 1951,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "political",
+    "description": "Japan signed a peace treaty with 48 nations, formally ending World War II and restoring Japanese sovereignty. The treaty came into effect in 1952, ending the Allied occupation, though the U.S. retained military bases under a separate security treaty.",
+    "lat": 35.6762,
+    "lng": 139.7503,
+    "contemporarySite": null
+  },
+  {
+    "id": 55,
+    "name": "Tokyo Olympics",
+    "year": 1964,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "cultural",
+    "description": "Tokyo hosted the Summer Olympic Games, the first Olympics held in Asia. The event showcased Japan's dramatic postwar recovery and technological prowess, highlighted by the debut of the Shinkansen bullet train just days before the opening ceremony.",
+    "lat": 35.6784,
+    "lng": 139.7148,
+    "contemporarySite": {
+      "name": "Yoyogi National Gymnasium (1964 Olympic venue)",
+      "query": "Yoyogi National Gymnasium Tokyo Japan"
+    }
+  },
+  {
+    "id": 56,
+    "name": "Shinkansen (Bullet Train) Inaugurated",
+    "year": 1964,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "cultural",
+    "description": "The Tokaido Shinkansen between Tokyo and Osaka began service, becoming the world's first high-speed rail line. Traveling at 210 km/h, it revolutionized transportation and became an enduring symbol of Japan's technological innovation.",
+    "lat": 35.6812,
+    "lng": 139.7671,
+    "contemporarySite": {
+      "name": "Tokyo Station (Shinkansen terminal)",
+      "query": "Tokyo Station Japan"
+    }
+  },
+  {
+    "id": 57,
+    "name": "Okinawa Reversion",
+    "year": 1972,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "political",
+    "description": "The United States returned administrative control of Okinawa to Japan after 27 years of American military governance. The reversion fulfilled a long-standing Japanese demand, though large U.S. military bases remained on the island.",
+    "lat": 26.3344,
+    "lng": 127.8056,
+    "contemporarySite": {
+      "name": "Okinawa Prefectural Peace Memorial Museum",
+      "query": "Okinawa Prefectural Peace Memorial Museum Japan"
+    }
+  },
+  {
+    "id": 58,
+    "name": "Great Hanshin Earthquake",
+    "year": 1995,
+    "era": "postwar",
+    "period": "Heisei",
+    "category": "disaster",
+    "description": "A magnitude 6.9 earthquake struck Kobe and surrounding areas, killing over 6,400 people and causing $100 billion in damage. The disaster exposed inadequacies in earthquake preparedness and led to major reforms in building codes and disaster response.",
+    "lat": 34.6901,
+    "lng": 135.1956,
+    "contemporarySite": {
+      "name": "Kobe Earthquake Memorial Museum",
+      "query": "Disaster Reduction and Human Renovation Institution Kobe Japan"
+    }
+  },
+  {
+    "id": 59,
+    "name": "Tohoku Earthquake and Tsunami",
+    "year": 2011,
+    "era": "postwar",
+    "period": "Heisei",
+    "category": "disaster",
+    "description": "A magnitude 9.0 earthquake off the Pacific coast triggered a massive tsunami that devastated northeastern Japan, killing over 18,000 people. The tsunami also caused the Fukushima Daiichi nuclear meltdown, the worst nuclear disaster since Chernobyl.",
+    "lat": 38.3220,
+    "lng": 141.0330,
+    "contemporarySite": {
+      "name": "Ishinomaki Tsunami Memorial",
+      "query": "Ishinomaki Memorial Museum Miyagi Japan"
+    }
+  },
+  {
+    "id": 60,
+    "name": "Emperor Akihito Abdicates",
+    "year": 2019,
+    "era": "postwar",
+    "period": "Heisei/Reiwa",
+    "category": "political",
+    "description": "Emperor Akihito became the first Japanese emperor to abdicate in over 200 years, citing age and health. His son Naruhito ascended to the Chrysanthemum Throne, beginning the Reiwa era — a moment of national reflection and renewal.",
+    "lat": 35.6852,
+    "lng": 139.7528,
+    "contemporarySite": {
+      "name": "Imperial Palace, Tokyo",
+      "query": "Imperial Palace Tokyo Japan"
+    }
+  }
+]

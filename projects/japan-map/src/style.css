@@ -1,0 +1,17 @@
+:root {
+  font-family: system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Mute tile layer colors so train lines and markers stand out */
+.leaflet-layer img {
+  filter: saturate(0.4) brightness(1.05);
+}
