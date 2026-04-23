@@ -30,9 +30,15 @@
         <span class="ftl-label">γ</span>
         <span class="ftl-value">{{ ftlGammaText }}</span>
       </div>
+      <div class="ftl-inner-divider" />
+      <div class="ftl-section-label">time elapsed</div>
       <div class="ftl-row">
-        <span class="ftl-label">progress</span>
-        <span class="ftl-value">{{ ftlProgressText }}</span>
+        <span class="ftl-label">origin</span>
+        <span class="ftl-value">{{ ftlExtTimeText }}</span>
+      </div>
+      <div class="ftl-row">
+        <span class="ftl-label">ship</span>
+        <span class="ftl-value ftl-value-ship">{{ ftlShipTimeText }}</span>
       </div>
       <div class="ftl-phase-badge" :class="'ftl-phase-' + ftlMission.phase">{{ ftlPhaseName }}</div>
     </div>
@@ -180,6 +186,16 @@
       </div>
     </transition>
 
+    <!-- Heading nav panel (FTL mode only, floating above controls bar) -->
+    <div v-if="mode === 'ftl'" class="nav-panel">
+      <button class="ctrl-btn nav-btn" @click="ftlSetDirection(0)" title="Snap heading toward Sol">← Sol</button>
+      <div class="nav-arrows">
+        <button class="ctrl-btn nav-btn" @click="ftlRotateHeading(-Math.PI / 12)" title="Rotate heading up 15°">↑</button>
+        <button class="ctrl-btn nav-btn" @click="ftlRotateHeading(Math.PI / 12)" title="Rotate heading down 15°">↓</button>
+      </div>
+      <button class="ctrl-btn nav-btn" @click="ftlSetDirection(1)" title="Snap heading toward Trisolaris">Trisolaris →</button>
+    </div>
+
     <!-- Controls -->
     <div class="controls-bar">
       <!-- Mode switch -->
@@ -281,6 +297,36 @@ let suns  = []
 let stars = []  // FTL star pair
 const phaseCount = ref(0)
 
+// ── Starfield ─────────────────────────────────────────────────────────────────
+let starfield = []   // [{x, y, r, alpha, bright}]
+let nebulae   = []   // [{cx, cy, r, rgb}]
+
+function generateStarfield() {
+  starfield = []
+  nebulae   = []
+  const count = Math.round((W * H) / 3200)
+  for (let i = 0; i < count; i++) {
+    const roll = Math.random()
+    const r    = roll < 0.72 ? Math.random() * 0.5 + 0.25   // tiny (0.25–0.75)
+               : roll < 0.94 ? Math.random() * 0.7 + 0.75   // medium (0.75–1.45)
+               :               Math.random() * 0.8 + 1.5     // bright (1.5–2.3)
+    const alpha = r < 0.75  ? Math.random() * 0.35 + 0.15
+                : r < 1.45  ? Math.random() * 0.40 + 0.35
+                :             Math.random() * 0.30 + 0.65
+    starfield.push({ x: Math.random() * W, y: Math.random() * H, r, alpha, bright: r > 1.5 })
+  }
+  // Subtle nebula clouds
+  const nebDefs = [
+    { fx: 0.20, fy: 0.30, fr: 0.22, rgb: '90,70,160'  },
+    { fx: 0.70, fy: 0.65, fr: 0.26, rgb: '30,90,110'  },
+    { fx: 0.85, fy: 0.20, fr: 0.16, rgb: '110,50,140' },
+    { fx: 0.45, fy: 0.75, fr: 0.18, rgb: '40,80,130'  },
+  ]
+  for (const d of nebDefs) {
+    nebulae.push({ cx: d.fx * W, cy: d.fy * H, r: d.fr * Math.min(W, H), rgb: d.rgb })
+  }
+}
+
 // Geometric trail ring buffer
 const TRAIL_MAX = 350
 let trail = []
@@ -295,32 +341,43 @@ let shapeHistory = []
 
 // ── FTL mission state ────────────────────────────────────────────────────────
 const ftlMission = reactive({
-  phase:     'idle',   // idle | engaging | accelerating | cruise | decelerating | arrived
+  phase:      'idle',   // idle | engaging | accelerating | cruise
   chargeTime: 0,
-  vFrac:     0,
-  progress:  0,
+  vFrac:      0,
+  extTime:    0,   // coordinate time elapsed (star frame), seconds
+  shipTime:   0,   // proper time elapsed (ship frame), seconds
 })
 
 const ftlPhaseName = computed(() => {
   const map = {
-    idle:          'STANDBY',
-    engaging:      'ENGAGING',
-    accelerating:  'ACCELERATING',
-    cruise:        'CRUISE',
-    decelerating:  'DECELERATING',
-    arrived:       'ARRIVED',
+    idle:         'STANDBY',
+    engaging:     'ENGAGING',
+    accelerating: 'ACCELERATING',
+    cruise:       'CRUISE',
   }
   return map[ftlMission.phase] || ftlMission.phase.toUpperCase()
 })
 
-const ftlSpeedText = computed(() => `${ftlMission.vFrac.toFixed(3)}c`)
-const ftlGammaText = computed(() => lorentzGamma(ftlMission.vFrac).toFixed(2))
-const ftlProgressText = computed(() => `${Math.round(ftlMission.progress * 100)}%`)
-const ftlEngageLabel = computed(() => {
-  if (ftlMission.phase === 'idle')    return 'Engage'
-  if (ftlMission.phase === 'arrived') return 'New Mission'
-  return 'Abort'
-})
+const ftlSpeedText   = computed(() => `${ftlMission.vFrac.toFixed(3)}c`)
+const ftlGammaText   = computed(() => lorentzGamma(ftlMission.vFrac).toFixed(2))
+const ftlEngageLabel = computed(() => ftlMission.phase === 'idle' ? 'Engage' : 'Abort')
+
+// Sol → Trisolaris = Alpha Centauri ≈ 4.22 ly. Stars are placed at x = W*0.13 and W*0.87,
+// so their pixel separation = W*0.74. At c (FTL_C_PX px/s) that crossing takes
+// W*0.74/FTL_C_PX sim-seconds = 4.22 story-years → scale = 4.22*FTL_C_PX / (W*0.74).
+const STORY_DIST_LY = 4.22
+
+function yearPerSimSec() {
+  return W ? STORY_DIST_LY * FTL_C_PX / (W * 0.74) : 1
+}
+
+function fmtYears(y) {
+  if (y < 0.01) return '0.00 yr'
+  if (y < 10)   return `${y.toFixed(2)} yr`
+  return `${y.toFixed(1)} yr`
+}
+const ftlExtTimeText  = computed(() => fmtYears(ftlMission.extTime))
+const ftlShipTimeText = computed(() => fmtYears(ftlMission.shipTime))
 
 // ── Mode switching ────────────────────────────────────────────────────────────
 function switchMode(newMode) {
@@ -328,14 +385,25 @@ function switchMode(newMode) {
   reset()
 }
 
+// Snap heading toward a star without resetting the mission
+function ftlSetDirection(idx) {
+  if (!state || !stars[idx]) return
+  const s = stars[idx]
+  state.heading = Math.atan2(s.y - state.cy, s.x - state.cx)
+}
+
+// Rotate heading by delta radians (positive = clockwise / downward on canvas)
+function ftlRotateHeading(delta) {
+  if (!state) return
+  state.heading += delta
+}
+
 function ftlEngage() {
   if (ftlMission.phase === 'idle') {
     ftlMission.phase = 'engaging'
     ftlMission.chargeTime = 0
-  } else if (ftlMission.phase === 'arrived') {
-    reset()
   } else {
-    // Abort
+    // Abort → standby, keep position
     ftlMission.phase = 'idle'
     ftlMission.vFrac = 0
     state.vx = 0
@@ -347,20 +415,20 @@ function ftlEngage() {
 function reset() {
   if (mode.value === 'ftl') {
     stars = W ? defaultStarPair(W, H) : []
-    const origin = stars[0] || { x: 100, y: 300 }
-    const dest   = stars[1] || { x: 700, y: 300 }
+    const origin = stars[0] || { x: W * 0.13, y: H / 2 }
     state = {
-      cx:       origin.x + 35,
-      cy:       origin.y,
-      heading:  Math.atan2(dest.y - origin.y, dest.x - origin.x),
-      vx:       0,
-      vy:       0,
+      cx:        origin.x + 35,
+      cy:        origin.y,
+      heading:   0,   // start pointing right (toward Trisolaris)
+      vx:        0,
+      vy:        0,
       wavePhase: 0,
     }
-    ftlMission.phase     = 'idle'
+    ftlMission.phase      = 'idle'
     ftlMission.chargeTime = 0
-    ftlMission.vFrac     = 0
-    ftlMission.progress  = 0
+    ftlMission.vFrac      = 0
+    ftlMission.extTime    = 0
+    ftlMission.shipTime   = 0
     wakeTrail = []
   } else {
     state = {
@@ -378,10 +446,45 @@ function reset() {
   shapeHistory = []
 }
 
+// ── Draw: starfield ───────────────────────────────────────────────────────────
+function drawStarfield() {
+  // Nebula clouds
+  for (const neb of nebulae) {
+    const grad = ctx.createRadialGradient(neb.cx, neb.cy, 0, neb.cx, neb.cy, neb.r)
+    grad.addColorStop(0,   `rgba(${neb.rgb},0.055)`)
+    grad.addColorStop(0.5, `rgba(${neb.rgb},0.025)`)
+    grad.addColorStop(1,   `rgba(${neb.rgb},0)`)
+    ctx.beginPath()
+    ctx.arc(neb.cx, neb.cy, neb.r, 0, Math.PI * 2)
+    ctx.fillStyle = grad
+    ctx.fill()
+  }
+  // Stars — bright ones get a glow halo
+  ctx.save()
+  for (const s of starfield) {
+    if (s.bright) {
+      ctx.shadowBlur  = 6
+      ctx.shadowColor = `rgba(200,220,255,${s.alpha * 0.6})`
+    } else {
+      ctx.shadowBlur = 0
+    }
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+    // Slight blue-white tint for most stars, warm tint for a few
+    const warm = (s.x * 31 + s.y * 17) % 10 < 2  // ~20% warm
+    ctx.fillStyle = warm
+      ? `rgba(255,230,200,${s.alpha})`
+      : `rgba(210,225,255,${s.alpha})`
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 // ── Resize ───────────────────────────────────────────────────────────────────
 function resize() {
   W = canvasEl.value.width  = canvasEl.value.offsetWidth
   H = canvasEl.value.height = canvasEl.value.offsetHeight
+  generateStarfield()
   if (state) {
     if (mode.value === 'ftl') {
       stars = defaultStarPair(W, H)
@@ -468,11 +571,18 @@ function drawStarSystems(vFrac) {
   }
 
   // Aberration streaks at high speed (destination star radiates forward streaks)
-  if (vFrac > 0.5 && stars.length === 2) {
-    const destStar = stars[1]
+  if (vFrac > 0.5 && stars.length >= 1 && state) {
+    // Pick the star most aligned with the ship's heading
+    const heading = state.heading
+    const destStar = stars.reduce((best, s) => {
+      const a = Math.atan2(s.y - state.cy, s.x - state.cx)
+      const b = Math.atan2(best.y - state.cy, best.x - state.cx)
+      const da = Math.abs(((a - heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+      const db = Math.abs(((b - heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+      return da < db ? s : best
+    }, stars[0])
     const streakAlpha = (vFrac - 0.5) * 0.6
     const streakLen = 40 + 120 * (vFrac - 0.5)
-    const heading = state ? state.heading : 0
     ctx.save()
     ctx.globalAlpha = streakAlpha * 0.5
     for (let i = -2; i <= 2; i++) {
@@ -712,16 +822,10 @@ function updateFTL(dt) {
   const ph = ftlMission.phase
   if (ph === 'idle' || ph === 'arrived') return
 
-  const dest = stars[1]
-  const targetHeading = Math.atan2(dest.y - state.cy, dest.x - state.cx)
-
-  // Engaging: warm-up, steer toward destination, don't move
+  // Warm-up: hold position, let spine animate
   if (ph === 'engaging') {
     ftlMission.chargeTime += dt
-    state.heading = steerHeading(state.heading, targetHeading, 2.5, dt)
-    if (ftlMission.chargeTime >= 1.5) {
-      ftlMission.phase = 'accelerating'
-    }
+    if (ftlMission.chargeTime >= 1.5) ftlMission.phase = 'accelerating'
     return
   }
 
@@ -729,42 +833,29 @@ function updateFTL(dt) {
 
   if (ph === 'accelerating') {
     ftlMission.vFrac = ftlAccelStep(ftlMission.vFrac, vTarget, params.amplitude, params.freq, params.wavelengths, dt)
-    state.heading    = steerHeading(state.heading, targetHeading, 1.5, dt)
     if (ftlMission.vFrac >= vTarget * 0.94) ftlMission.phase = 'cruise'
   }
 
   if (ph === 'cruise') {
     ftlMission.vFrac = ftlAccelStep(ftlMission.vFrac, vTarget, params.amplitude, params.freq, params.wavelengths, dt)
-    state.heading    = steerHeading(state.heading, targetHeading, 1.0, dt)
-    if (ftlMission.progress >= 0.75) ftlMission.phase = 'decelerating'
   }
 
-  if (ph === 'decelerating') {
-    ftlMission.vFrac = ftlDecelStep(ftlMission.vFrac, dt)
-    state.heading    = steerHeading(state.heading, targetHeading, 1.5, dt)
-    const distToDest = Math.hypot(dest.x - state.cx, dest.y - state.cy)
-    if (ftlMission.vFrac < 0.04 || distToDest < 30) {
-      ftlMission.phase    = 'arrived'
-      ftlMission.vFrac    = 0
-      ftlMission.progress = 1
-      state.vx = 0
-      state.vy = 0
-      return
-    }
-  }
+  // Accumulate relativistic time in story-years (Sol–Trisolaris = 4.22 ly scale)
+  const yps = yearPerSimSec()
+  ftlMission.extTime  += dt * yps
+  ftlMission.shipTime += dt * yps / lorentzGamma(ftlMission.vFrac)
 
-  // Move ship
+  // Move ship in current heading direction
   const speed = ftlMission.vFrac * FTL_C_PX
   state.cx += Math.cos(state.heading) * speed * dt
   state.cy += Math.sin(state.heading) * speed * dt
 
-  // Update progress (distance from origin / total distance)
-  if (stars.length === 2) {
-    const origin = stars[0]
-    const totalDist = Math.hypot(dest.x - origin.x, dest.y - origin.y)
-    const covered   = Math.hypot(state.cx - origin.x, state.cy - origin.y)
-    ftlMission.progress = Math.min(1, Math.max(0, covered / totalDist))
-  }
+  // Edge wrapping — ship reappears on the opposite side, trail breaks
+  const pad = BODY_LENGTH
+  if (state.cx < -pad)    { state.cx = W + pad; wakeTrail = [] }
+  if (state.cx > W + pad) { state.cx = -pad;    wakeTrail = [] }
+  if (state.cy < -pad)    { state.cy = H + pad; wakeTrail = [] }
+  if (state.cy > H + pad) { state.cy = -pad;    wakeTrail = [] }
 
   // Accumulate permanent wake
   if (params.showWake) {
@@ -801,9 +892,12 @@ function loop(ts) {
   shapeHistory.push(modes)
   if (shapeHistory.length > SHAPE_MAX) shapeHistory.shift()
 
-  // Clear with motion-blur fade
+  // Motion-blur fade (dims previous frame content so trails fade out)
   ctx.fillStyle = 'rgba(7,8,15,0.88)'
   ctx.fillRect(0, 0, W, H)
+
+  // Starfield — drawn fresh every frame so stars stay bright despite the fade above
+  drawStarfield()
 
   // Draw background / field
   if (mode.value === 'ftl') {
@@ -848,7 +942,7 @@ onUnmounted(() => {
   height: 160px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(7, 8, 15, 0.75);
+  background: rgba(28, 34, 52, 0.80);
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
@@ -864,7 +958,7 @@ onUnmounted(() => {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 20px;
-  background: rgba(7, 8, 15, 0.6);
+  background: rgba(28, 34, 52, 0.72);
   backdrop-filter: blur(8px);
   pointer-events: none;
   user-select: none;
@@ -882,7 +976,7 @@ onUnmounted(() => {
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(7, 8, 15, 0.72);
+  background: rgba(28, 34, 52, 0.78);
   backdrop-filter: blur(10px);
   pointer-events: none;
   user-select: none;
@@ -926,6 +1020,57 @@ onUnmounted(() => {
 .ftl-phase-arrived   { color: #7ab4f7; }
 .ftl-phase-engaging  { color: rgba(247, 201, 122, 0.8); }
 
+/* ── FTL HUD inner divider / section label ── */
+.ftl-inner-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(79, 255, 176, 0.12);
+  margin: 4px 0 2px;
+}
+
+.ftl-section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.22);
+  margin-bottom: 4px;
+}
+
+.ftl-value-ship {
+  color: rgba(122, 200, 255, 0.85);
+}
+
+/* ── Nav panel (heading controls, floating above controls bar) ── */
+.nav-panel {
+  position: absolute;
+  bottom: 72px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(28, 34, 52, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+
+.nav-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-btn {
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+  min-height: unset !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
 /* ── FTL engage button ── */
 .ftl-engage-btn {
   color: rgba(79, 255, 176, 0.7) !important;
@@ -957,7 +1102,7 @@ input[type=range]::-webkit-slider-thumb {
   width: 252px;
   max-height: calc(100% - 130px);
   overflow-y: auto;
-  background: rgba(7, 8, 15, 0.82);
+  background: rgba(28, 34, 52, 0.85);
   border: 1px solid var(--border);
   border-radius: 14px;
   backdrop-filter: blur(16px);
@@ -997,7 +1142,7 @@ input[type=range]::-webkit-slider-thumb {
   font-family: 'Space Mono', monospace;
   font-size: 9.5px;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.58);
   font-style: normal;
 }
 .panel-body em {
