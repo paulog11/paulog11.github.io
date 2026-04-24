@@ -34,6 +34,7 @@ Card URLs should point to `./projects/<name>/dist/index.html` (relative paths fo
 
 ## Subprojects
 - `projects/algo-lab/` — algorithm simulation lab ([CLAUDE.md](projects/algo-lab/CLAUDE.md))
+- `projects/beleriand-realms/` — 2-player asymmetrical deckbuilder (Tolkien First Age) ([CLAUDE.md](projects/beleriand-realms/CLAUDE.md))
 - `projects/ported-games/flip7/` — Flip 7 card game ([CLAUDE.md](projects/ported-games/flip7/CLAUDE.md))
 - `projects/profile/` — static portfolio page ([CLAUDE.md](projects/profile/CLAUDE.md))
 - `projects/right-word/` — Japanese language assistant ([CLAUDE.md](projects/right-word/CLAUDE.md))
