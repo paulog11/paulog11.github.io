@@ -84,6 +84,29 @@ export const useGameStore = defineStore('game', () => {
     gameState.value.winner = faction
   }
 
+  function purchaseCard(buyerId: PlayerId, cardId: string): boolean {
+    const cardIndex = beleriandRow.value.findIndex(c => c.id === cardId)
+    if (cardIndex === -1) return false
+
+    const card = beleriandRow.value[cardIndex]
+
+    // Can only purchase same-faction or neutral cards; opposing-faction cards must be attacked
+    if (card.faction !== Faction.Neutral && card.faction !== playerFactions[buyerId]) return false
+
+    const player = players.value[buyerId]
+    if (player.resources < card.cost) return false
+
+    player.resources -= card.cost
+    beleriandRow.value.splice(cardIndex, 1)
+    player.discard.push(card)          // goes to discard, shuffled in when deck runs out
+
+    if (beleriandDeck.value.length > 0) {
+      beleriandRow.value.push(beleriandDeck.value.pop()!)
+    }
+
+    return true
+  }
+
   function endTurn(): void {
     const activeId = gameState.value.activePlayer
     const player = players.value[activeId]
@@ -116,6 +139,7 @@ export const useGameStore = defineStore('game', () => {
     gainResources,
     gainAttack,
     adjustFate,
+    purchaseCard,
     declareWinner,
     endTurn,
   }
