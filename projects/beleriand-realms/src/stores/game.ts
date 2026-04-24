@@ -46,6 +46,7 @@ export const useGameStore = defineStore('game', () => {
     fateTrack: 0,
     turnPhase: TurnPhase.Start,
     activePlayer: PlayerId.PlayerOne,
+    winner: null,
   })
 
   function drawCards(playerId: PlayerId, count: number): void {
@@ -79,6 +80,31 @@ export const useGameStore = defineStore('game', () => {
     )
   }
 
+  function declareWinner(faction: Faction): void {
+    gameState.value.winner = faction
+  }
+
+  function endTurn(): void {
+    const activeId = gameState.value.activePlayer
+    const player = players.value[activeId]
+
+    // All cards in play and in hand go to discard; both zones are cleared
+    player.discard.push(...player.inPlay, ...player.hand)
+    player.inPlay = []
+    player.hand = []
+
+    // Temporary pools reset to zero
+    player.resources = 0
+    player.attack = 0
+
+    // Draw a fresh hand of 5; drawCards handles shuffle-from-discard when deck runs out
+    drawCards(activeId, 5)
+
+    // Pass the turn to the other player
+    gameState.value.activePlayer =
+      activeId === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+  }
+
   return {
     players,
     beleriandDeck,
@@ -90,5 +116,7 @@ export const useGameStore = defineStore('game', () => {
     gainResources,
     gainAttack,
     adjustFate,
+    declareWinner,
+    endTurn,
   }
 })

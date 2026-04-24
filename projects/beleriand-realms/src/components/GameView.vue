@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useGameStore } from '../stores/game'
 import StrongholdCard from './Stronghold.vue'
 import PlayingCard from './PlayingCard.vue'
 import FateTrack from './FateTrack.vue'
 import MarketRow from './MarketRow.vue'
+import HelpModal from './HelpModal.vue'
+import TutorialDrawer from './TutorialDrawer.vue'
+import { useTutorial } from '../composables/useTutorial'
 import { CardType, Faction, PlayerId, type Card } from '../types/game'
 
 const store = useGameStore()
@@ -13,6 +16,9 @@ const p1 = computed(() => store.players[PlayerId.PlayerOne])
 const p2 = computed(() => store.players[PlayerId.PlayerTwo])
 const sh1 = computed(() => store.strongholds[PlayerId.PlayerOne])
 const sh2 = computed(() => store.strongholds[PlayerId.PlayerTwo])
+
+const showHelp = ref(false)
+const { onCardPlayed, onTurnEnded } = useTutorial()
 
 // ── Seed initial game state ──────────────────────────────────────────────
 function card(
@@ -69,6 +75,11 @@ onMounted(() => {
   )
 })
 
+// ── Game over ────────────────────────────────────────────────────────────
+function resetGame(): void {
+  window.location.reload()
+}
+
 // ── Play a card from hand ────────────────────────────────────────────────
 function playCard(c: Card): void {
   const hand = p1.value.hand
@@ -78,6 +89,13 @@ function playCard(c: Card): void {
   p1.value.inPlay.push(c)
   store.gainResources(PlayerId.PlayerOne, c.resources)
   store.gainAttack(PlayerId.PlayerOne, c.attack)
+  onCardPlayed()
+}
+
+// ── End turn ─────────────────────────────────────────────────────────────
+function handleEndTurn(): void {
+  store.endTurn()
+  onTurnEnded()
 }
 </script>
 
@@ -91,7 +109,9 @@ function playCard(c: Card): void {
       <div class="flex items-center gap-5">
 
         <!-- Stronghold -->
-        <StrongholdCard v-if="sh2" :stronghold="sh2" />
+        <div id="enemy-stronghold">
+          <StrongholdCard v-if="sh2" :stronghold="sh2" />
+        </div>
 
         <!-- Pool counters -->
         <div class="flex flex-col gap-2 text-sm">
@@ -109,6 +129,17 @@ function playCard(c: Card): void {
 
         <!-- Spacer -->
         <div class="flex-1" />
+
+        <!-- Help button -->
+        <button
+          class="w-8 h-8 rounded-full bg-card-bg border border-card-border text-muted
+                 hover:text-ink hover:border-muted transition-colors text-sm font-bold
+                 flex items-center justify-center flex-shrink-0"
+          title="Help &amp; Reference"
+          @click="showHelp = true"
+        >
+          ?
+        </button>
 
         <!-- Opponent hand — overlapping face-down card backs, fanned -->
         <div class="flex items-end" style="padding-bottom: 6px;">
@@ -136,10 +167,14 @@ function playCard(c: Card): void {
     <div class="flex-1 flex flex-col gap-4 overflow-y-auto px-6 py-4">
 
       <!-- Fate track -->
-      <FateTrack :fate-track="store.gameState.fateTrack" class="w-full max-w-2xl mx-auto" />
+      <FateTrack
+        id="fate-track"
+        :fate-track="store.gameState.fateTrack"
+        class="w-full max-w-2xl mx-auto"
+      />
 
       <!-- Player's in-play zone -->
-      <div v-if="p1.inPlay.length > 0" class="flex flex-col gap-1.5">
+      <div id="in-play-zone" v-if="p1.inPlay.length > 0" class="flex flex-col gap-1.5">
         <span class="text-[10px] font-bold uppercase tracking-widest text-free-peoples/70">In Play</span>
         <div class="flex gap-2 overflow-x-auto pb-1">
           <TransitionGroup name="arrive-to-play" tag="div" class="flex gap-2">
@@ -162,7 +197,10 @@ function playCard(c: Card): void {
       </div>
 
       <!-- Market -->
-      <MarketRow @select="(c) => console.log('market select', c.name)" />
+      <MarketRow
+        id="beleriand-row"
+        @select="(c) => console.log('market select', c.name)"
+      />
 
     </div>
 
@@ -172,10 +210,13 @@ function playCard(c: Card): void {
     <div class="flex-shrink-0 bg-free-peoples-bg/60 border-t border-free-peoples-dark px-6 py-3">
       <div class="flex items-start gap-5">
 
-        <!-- Stronghold + pool counters stacked on left -->
+        <!-- Stronghold + pool counters + end turn stacked on left -->
         <div class="flex flex-col gap-3 flex-shrink-0">
-          <StrongholdCard v-if="sh1" :stronghold="sh1" />
-          <div class="flex gap-4 text-sm">
+          <div id="player-stronghold">
+            <StrongholdCard v-if="sh1" :stronghold="sh1" />
+          </div>
+
+          <div id="player-pool" class="flex gap-4 text-sm">
             <div class="flex items-center gap-2">
               <span class="text-morgoth-light text-base">⚔</span>
               <span class="font-bold text-ink tabular-nums w-5 text-right">{{ p1.attack }}</span>
@@ -187,10 +228,20 @@ function playCard(c: Card): void {
               <span class="text-muted text-xs">resources</span>
             </div>
           </div>
+
+          <button
+            id="end-turn-btn"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide
+                   bg-free-peoples text-parchment hover:bg-free-peoples-dark transition-colors
+                   self-start"
+            @click="handleEndTurn"
+          >
+            End Turn
+          </button>
         </div>
 
         <!-- Player's hand — full-size cards, horizontally scrollable -->
-        <div class="flex flex-col gap-1.5 flex-1 min-w-0">
+        <div id="player-hand" class="flex flex-col gap-1.5 flex-1 min-w-0">
           <span class="text-[10px] font-bold uppercase tracking-widest text-muted">
             Hand ({{ p1.hand.length }}) — click to play
           </span>
@@ -208,6 +259,64 @@ function playCard(c: Card): void {
 
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         GAME OVER MODAL
+    ════════════════════════════════════════════════════════════════════ -->
+    <Transition name="fade">
+      <div
+        v-if="store.gameState.winner !== null"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+      >
+        <div
+          class="rounded-2xl border-2 p-10 text-center shadow-2xl w-80"
+          :class="store.gameState.winner === Faction.FreePeoples
+            ? 'bg-free-peoples-bg border-free-peoples'
+            : 'bg-morgoth-bg border-morgoth'"
+        >
+          <div class="text-5xl mb-4 select-none">
+            {{ store.gameState.winner === Faction.FreePeoples ? '⚔' : '🌑' }}
+          </div>
+
+          <h2
+            class="font-display text-2xl font-bold mb-2"
+            :class="store.gameState.winner === Faction.FreePeoples
+              ? 'text-free-peoples'
+              : 'text-morgoth-light'"
+          >
+            {{ store.gameState.winner === Faction.FreePeoples
+              ? 'The Light Prevails'
+              : 'Shadow Consumes All' }}
+          </h2>
+
+          <p class="text-muted text-sm mb-8">
+            {{ store.gameState.winner === Faction.FreePeoples
+              ? 'The Free Peoples of Beleriand stand victorious. Morgoth is driven back into the dark.'
+              : "Morgoth's dominion spreads across Beleriand. All hope is extinguished." }}
+          </p>
+
+          <button
+            class="w-full py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-colors"
+            :class="store.gameState.winner === Faction.FreePeoples
+              ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
+              : 'bg-morgoth text-ink hover:bg-morgoth-dark'"
+            @click="resetGame"
+          >
+            Play Again
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         HELP MODAL
+    ════════════════════════════════════════════════════════════════════ -->
+    <Transition name="fade">
+      <HelpModal v-if="showHelp" @close="showHelp = false" />
+    </Transition>
+
+    <!-- Tutorial drawer — always mounted so Transition works correctly -->
+    <TutorialDrawer />
 
   </div>
 </template>
@@ -235,6 +344,16 @@ function playCard(c: Card): void {
 }
 .play-from-hand-move {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Fade (help modal + game over overlay) ───────────────────────────────── */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* ─── Card arriving into in-play zone ────────────────────────────────────── */

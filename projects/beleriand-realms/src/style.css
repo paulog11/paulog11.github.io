@@ -7,3 +7,27 @@
     @apply bg-parchment text-ink font-body min-h-screen;
   }
 }
+
+/* ─── Tutorial highlight ──────────────────────────────────────────────────────
+   Applied via JS (classList.add) so must live in a non-scoped stylesheet.
+   The pulse draws attention without obscuring the underlying element.
+────────────────────────────────────────────────────────────────────────────── */
+.tutorial-highlight {
+  outline: 2px solid #C9A227;
+  outline-offset: 5px;
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
+  animation: tutorial-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tutorial-pulse {
+  0%, 100% {
+    outline-color: #C9A227;
+    box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.45);
+  }
+  50% {
+    outline-color: #F5E499;
+    box-shadow: 0 0 0 8px rgba(201, 162, 39, 0);
+  }
+}

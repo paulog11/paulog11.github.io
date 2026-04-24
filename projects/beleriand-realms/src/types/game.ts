@@ -80,6 +80,7 @@ export interface GameState {
   fateTrack: FateTrackPosition;
   turnPhase: TurnPhase;
   activePlayer: PlayerId;
+  winner: Faction | null;
 }
 
 export interface PlayerState {

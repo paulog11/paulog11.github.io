@@ -31,6 +31,9 @@ function applyReward(store: Store, beneficiary: PlayerId, reward: EffectReward):
       const stronghold = store.strongholds[opposingId]
       if (stronghold) {
         stronghold.currentHealth = Math.max(0, stronghold.currentHealth - reward.amount)
+        if (stronghold.currentHealth === 0) {
+          store.declareWinner(store.playerFactions[beneficiary])
+        }
       }
       break
     }
@@ -66,6 +69,8 @@ function attackStronghold(
 
   if (stronghold.currentHealth === 0) {
     events.push({ type: 'StrongholdDestroyed', strongholdId: targetId, faction: stronghold.faction })
+    // Each player currently has exactly one Stronghold; destroying it ends the game
+    store.declareWinner(store.playerFactions[attackerId])
   }
 
   return { success: true, events }
