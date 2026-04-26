@@ -11,10 +11,59 @@ import { type Card, CardType, Faction } from '../types/game'
 //   toward Shadow (-10), regardless of who triggered it.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STARTER CARDS — cost 0, go into personal decks at game start, never shuffled
+// into the Beleriand deck. Exported separately so GameView can build decks.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const FREE_PEOPLES_STARTER: readonly Card[] = [
+  // 7× resource card
+  {
+    id: 'fp-s-craftsman', name: 'Noldor Craftsman',
+    type: CardType.Character, faction: Faction.FreePeoples,
+    cost: 0, attack: 0, resources: 1, fateGeneration: 0,
+  },
+  // 2× attack card
+  {
+    id: 'fp-s-archer', name: 'Elven Archer',
+    type: CardType.Character, faction: Faction.FreePeoples,
+    cost: 0, attack: 1, resources: 0, fateGeneration: 0,
+  },
+  // 1× fate card
+  {
+    id: 'fp-s-scout', name: 'Dúnedain Scout',
+    type: CardType.Character, faction: Faction.FreePeoples,
+    cost: 0, attack: 0, resources: 0, fateGeneration: 1,
+    effect: { description: 'Shift the Fate marker 1 step toward Light.', reward: { type: 'adjustFate', amount: 1 } },
+  },
+]
+
+export const MORGOTH_STARTER: readonly Card[] = [
+  // 7× resource card
+  {
+    id: 'mg-s-thrall', name: 'Orc Thrall',
+    type: CardType.Character, faction: Faction.Morgoth,
+    cost: 0, attack: 0, resources: 1, fateGeneration: 0,
+  },
+  // 2× attack card
+  {
+    id: 'mg-s-soldier', name: 'Orc Soldier',
+    type: CardType.Character, faction: Faction.Morgoth,
+    cost: 0, attack: 1, resources: 0, fateGeneration: 0,
+  },
+  // 1× fate card
+  {
+    id: 'mg-s-spy', name: "Morgoth's Spy",
+    type: CardType.Character, faction: Faction.Morgoth,
+    cost: 0, attack: 0, resources: 0, fateGeneration: -1,
+    effect: { description: 'Shift the Fate marker 1 step toward Shadow.', reward: { type: 'adjustFate', amount: -1 } },
+  },
+]
+
 export const CARD_DATABASE: readonly Card[] = [
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  FREE PEOPLES  (20 cards)
+  //  FREE PEOPLES  (20 market cards)
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── Tier 1 (cost 1–2): cheap engine pieces ─────────────────────────────

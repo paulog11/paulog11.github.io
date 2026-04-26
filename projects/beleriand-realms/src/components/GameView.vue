@@ -9,7 +9,8 @@ import MarketRow from './MarketRow.vue'
 import HelpModal from './HelpModal.vue'
 import TutorialDrawer from './TutorialDrawer.vue'
 import { useTutorial } from '../composables/useTutorial'
-import { CardType, Faction, PlayerId, type Card } from '../types/game'
+import { Faction, PlayerId, type Card } from '../types/game'
+import { CARD_DATABASE, FREE_PEOPLES_STARTER, MORGOTH_STARTER } from '../data/cardDatabase'
 
 const store = useGameStore()
 const { executeAttack } = useCombatEngine()
@@ -74,17 +75,26 @@ function choosePendingBase(strongholdId: string): void {
 }
 
 // ── Seed initial game state ──────────────────────────────────────────────
-function card(
-  id: string, name: string, faction: Faction,
-  cost: number, atk: number, res: number, ability?: string,
-): Card {
-  return {
-    id, name,
-    type: cost >= 4 ? CardType.Champion : CardType.Character,
-    faction, cost, attack: atk, resources: res,
-    fateGeneration: faction === Faction.FreePeoples ? 1 : faction === Faction.Morgoth ? -1 : 0,
-    effect: ability ? { description: ability } : undefined,
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
+  return a
+}
+
+// Build a 10-card starter deck: 7× resource, 2× attack, 1× fate.
+// Each copy gets a unique id suffix so Vue keys and Set lookups stay distinct.
+function makeStarterDeck(starters: typeof FREE_PEOPLES_STARTER, prefix: string): Card[] {
+  const [resource, attack, fate] = starters
+  const copies: Card[] = [
+    ...Array.from({ length: 7 }, (_, i) => ({ ...resource, id: `${prefix}-r${i}` })),
+    ...Array.from({ length: 2 }, (_, i) => ({ ...attack,   id: `${prefix}-a${i}` })),
+    { ...fate, id: `${prefix}-f0` },
+  ]
+  return shuffle(copies)
 }
 
 onMounted(() => {
@@ -122,37 +132,22 @@ onMounted(() => {
       innateAbility: 'Orc and Troll cards cost 1 less Resource to acquire.',
     },
   ]
-  // First base in each list starts as the active stronghold.
   store.setActiveStronghold(PlayerId.PlayerOne, 'gondolin')
   store.setActiveStronghold(PlayerId.PlayerTwo, 'angband')
 
-  store.players[PlayerId.PlayerOne].hand.push(
-    card('fp-h1', 'Elven Archer',    Faction.FreePeoples, 2, 2, 1),
-    card('fp-h2', 'Dúnedain Scout',  Faction.FreePeoples, 1, 1, 1, 'Draw 1 card when played with another Ranger.'),
-    card('fp-h3', 'Círdan',          Faction.FreePeoples, 4, 2, 3, 'Gain +1 Resource for each card currently in hand.'),
-    card('fp-h4', 'Elf-Stone',       Faction.FreePeoples, 2, 0, 3, 'Artifact — gain 3 Resources.'),
-    card('fp-h5', 'Ranger of Ithil', Faction.FreePeoples, 3, 3, 1),
-  )
-  store.players[PlayerId.PlayerTwo].hand.push(
-    card('mg-h1', 'Orc Soldier',   Faction.Morgoth, 1, 2, 0),
-    card('mg-h2', 'Cave-Troll',    Faction.Morgoth, 3, 4, 0, 'Cannot be blocked by characters with cost < 2.'),
-    card('mg-h3', 'Warg Rider',    Faction.Morgoth, 2, 2, 1),
-    card('mg-h4', 'Dark Sorcerer', Faction.Morgoth, 3, 1, 2, 'Move the Fate marker 1 step toward Shadow.'),
-  )
+  // Build shuffled 10-card starter decks and deal opening hand of 5.
+  const fpDeck = makeStarterDeck(FREE_PEOPLES_STARTER, 'fp')
+  store.players[PlayerId.PlayerOne].deck = fpDeck.slice(5)
+  store.players[PlayerId.PlayerOne].hand = fpDeck.slice(0, 5)
 
-  store.beleriandRow.push(
-    card('mkt-1', 'Finrod Felagund',  Faction.FreePeoples, 5, 3, 2, 'Draw 1 card. Other Elf allies gain +1 Attack.'),
-    card('mkt-2', 'Lúthien Tinúviel', Faction.FreePeoples, 6, 2, 3, 'Adjust Fate +2.'),
-    card('mkt-3', 'Gothmog',          Faction.Morgoth, 4, 5, 0, 'Deal 2 damage to opposing Stronghold on play.'),
-    card('mkt-4', 'Ungoliant',         Faction.Morgoth, 5, 3, 1, 'Gain +3 Attack this turn.'),
-    card('mkt-5', 'Wandering Ranger',  Faction.Neutral, 2, 1, 1),
-    card('mkt-6', 'Ancient Stone',     Faction.Neutral, 1, 0, 2, 'Artifact — gain 2 Resources.'),
-  )
-  store.beleriandDeck.push(
-    card('dk-1', 'Círdan the Shipwright', Faction.FreePeoples, 4, 2, 3, 'Draw 2 cards.'),
-    card('dk-2', 'Balrog of Morgoth',     Faction.Morgoth, 7, 6, 0, 'Destroy target card in row with cost ≤ 3.'),
-    card('dk-3', 'Dwarven Prospector',    Faction.Neutral, 3, 1, 2, 'Gain 3 Resources.'),
-  )
+  const mgDeck = makeStarterDeck(MORGOTH_STARTER, 'mg')
+  store.players[PlayerId.PlayerTwo].deck = mgDeck.slice(5)
+  store.players[PlayerId.PlayerTwo].hand = mgDeck.slice(0, 5)
+
+  // Shuffle CARD_DATABASE into the Beleriand deck, deal 6 to the row.
+  const marketDeck = shuffle([...CARD_DATABASE])
+  store.beleriandRow.push(...marketDeck.slice(0, 6))
+  store.beleriandDeck.push(...marketDeck.slice(6))
 })
 
 // ── Game over ────────────────────────────────────────────────────────────
