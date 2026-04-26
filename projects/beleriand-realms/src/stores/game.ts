@@ -22,7 +22,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function makePlayerState(): PlayerState {
-  return { deck: [], hand: [], discard: [], inPlay: [], resources: 0, attack: 0 }
+  return { deck: [], hand: [], discard: [], inPlay: [], resources: 0, attack: 0, attackAssigned: new Set() }
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -47,6 +47,7 @@ export const useGameStore = defineStore('game', () => {
     turnPhase: TurnPhase.Start,
     activePlayer: PlayerId.PlayerOne,
     winner: null,
+    marketDamage: {},
   })
 
   function drawCards(playerId: PlayerId, count: number): void {
@@ -71,6 +72,19 @@ export const useGameStore = defineStore('game', () => {
 
   function gainAttack(playerId: PlayerId, amount: number): void {
     players.value[playerId].attack += amount
+  }
+
+  // Mark a specific in-play card's attack as spent toward a target.
+  function markAttackAssigned(playerId: PlayerId, cardId: string): void {
+    players.value[playerId].attackAssigned.add(cardId)
+  }
+
+  // Accumulate damage on a market card for this turn. Returns new total.
+  function applyMarketDamage(cardId: string, amount: number): number {
+    const current = gameState.value.marketDamage[cardId] ?? 0
+    const next = current + amount
+    gameState.value.marketDamage[cardId] = next
+    return next
   }
 
   function adjustFate(amount: number): void {
@@ -111,19 +125,18 @@ export const useGameStore = defineStore('game', () => {
     const activeId = gameState.value.activePlayer
     const player = players.value[activeId]
 
-    // All cards in play and in hand go to discard; both zones are cleared
     player.discard.push(...player.inPlay, ...player.hand)
     player.inPlay = []
     player.hand = []
-
-    // Temporary pools reset to zero
     player.resources = 0
     player.attack = 0
+    player.attackAssigned = new Set()
 
-    // Draw a fresh hand of 5; drawCards handles shuffle-from-discard when deck runs out
+    // Market damage resets each turn — cards fully recover between turns.
+    gameState.value.marketDamage = {}
+
     drawCards(activeId, 5)
 
-    // Pass the turn to the other player
     gameState.value.activePlayer =
       activeId === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
   }
@@ -138,6 +151,8 @@ export const useGameStore = defineStore('game', () => {
     drawCards,
     gainResources,
     gainAttack,
+    markAttackAssigned,
+    applyMarketDamage,
     adjustFate,
     purchaseCard,
     declareWinner,

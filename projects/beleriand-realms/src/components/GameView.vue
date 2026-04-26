@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useGameStore } from '../stores/game'
+import { useCombatEngine } from '../composables/useCombatEngine'
 import StrongholdCard from './Stronghold.vue'
 import PlayingCard from './PlayingCard.vue'
 import FateTrack from './FateTrack.vue'
@@ -11,14 +12,53 @@ import { useTutorial } from '../composables/useTutorial'
 import { CardType, Faction, PlayerId, type Card } from '../types/game'
 
 const store = useGameStore()
+const { executeAttack } = useCombatEngine()
 
-const p1 = computed(() => store.players[PlayerId.PlayerOne])
-const p2 = computed(() => store.players[PlayerId.PlayerTwo])
-const sh1 = computed(() => store.strongholds[PlayerId.PlayerOne])
-const sh2 = computed(() => store.strongholds[PlayerId.PlayerTwo])
+// Active player — drives all bottom-panel logic and attack assignment.
+const activeId = computed(() => store.gameState.activePlayer)
+const activePlayer = computed(() => store.players[activeId.value])
+
+// Enemy is whichever player is NOT active.
+const enemyId = computed(() =>
+  activeId.value === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+)
+const enemyStronghold = computed(() => store.strongholds[enemyId.value])
+const ownStronghold = computed(() => store.strongholds[activeId.value])
+
 
 const showHelp = ref(false)
 const { onCardPlayed, onTurnEnded } = useTutorial()
+
+// ── Attack assignment state ───────────────────────────────────────────────
+const selectedAttacker = ref<Card | null>(null)
+
+function selectAttacker(c: Card): void {
+  if (activePlayer.value.attackAssigned.has(c.id)) return
+  if (c.attack === 0) return
+  selectedAttacker.value = selectedAttacker.value?.id === c.id ? null : c
+}
+
+function cancelSelection(): void {
+  selectedAttacker.value = null
+}
+
+function handleStrongholdTarget(): void {
+  const attacker = selectedAttacker.value
+  if (!attacker || !enemyStronghold.value) return
+  executeAttack(activeId.value, attacker.id, 'Stronghold', enemyStronghold.value.id, attacker.attack)
+  selectedAttacker.value = null
+}
+
+function handleMarketAttack(marketCard: Card): void {
+  const attacker = selectedAttacker.value
+  if (!attacker) return
+  executeAttack(activeId.value, attacker.id, 'MarketCard', marketCard.id, attacker.attack)
+  selectedAttacker.value = null
+}
+
+const hasUnassignedAttack = computed(() =>
+  activePlayer.value.inPlay.some(c => c.attack > 0 && !activePlayer.value.attackAssigned.has(c.id))
+)
 
 // ── Seed initial game state ──────────────────────────────────────────────
 function card(
@@ -82,52 +122,76 @@ function resetGame(): void {
 
 // ── Play a card from hand ────────────────────────────────────────────────
 function playCard(c: Card): void {
-  const hand = p1.value.hand
-  const idx = hand.findIndex(h => h.id === c.id)
+  const player = activePlayer.value
+  const idx = player.hand.findIndex(h => h.id === c.id)
   if (idx === -1) return
-  hand.splice(idx, 1)
-  p1.value.inPlay.push(c)
-  store.gainResources(PlayerId.PlayerOne, c.resources)
-  store.gainAttack(PlayerId.PlayerOne, c.attack)
+  player.hand.splice(idx, 1)
+  player.inPlay.push(c)
+  store.gainResources(activeId.value, c.resources)
+  store.gainAttack(activeId.value, c.attack)
+  onCardPlayed()
+}
+
+// ── Play all cards from hand ──────────────────────────────────────────────
+function playAllCards(): void {
+  const player = activePlayer.value
+  if (player.hand.length === 0) return
+  const cards = [...player.hand]
+  player.hand.splice(0, player.hand.length)
+  for (const c of cards) {
+    player.inPlay.push(c)
+    store.gainResources(activeId.value, c.resources)
+    store.gainAttack(activeId.value, c.attack)
+  }
   onCardPlayed()
 }
 
 // ── End turn ─────────────────────────────────────────────────────────────
 function handleEndTurn(): void {
+  selectedAttacker.value = null
   store.endTurn()
   onTurnEnded()
 }
 </script>
 
 <template>
-  <div class="h-screen flex flex-col overflow-hidden">
+  <div class="h-screen flex flex-col overflow-hidden" @click.self="cancelSelection">
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         TOP — Opponent (Morgoth)
+         TOP — Enemy zone (whoever is NOT the active player)
     ════════════════════════════════════════════════════════════════════ -->
-    <div class="flex-shrink-0 bg-morgoth-bg/60 border-b border-morgoth-dark px-6 py-3">
+    <div
+      class="flex-shrink-0 border-b px-6 py-3"
+      :class="enemyId === PlayerId.PlayerTwo
+        ? 'bg-morgoth-bg/60 border-morgoth-dark'
+        : 'bg-free-peoples-bg/60 border-free-peoples-dark'"
+    >
       <div class="flex items-center gap-5">
 
-        <!-- Stronghold -->
+        <!-- Enemy stronghold — becomes a clickable target when an attacker is selected -->
         <div id="enemy-stronghold">
-          <StrongholdCard v-if="sh2" :stronghold="sh2" />
+          <StrongholdCard
+            v-if="enemyStronghold"
+            :stronghold="enemyStronghold"
+            :is-target="selectedAttacker !== null"
+            @target="handleStrongholdTarget"
+          />
         </div>
 
-        <!-- Pool counters -->
+        <!-- Enemy pool counters (read-only) -->
         <div class="flex flex-col gap-2 text-sm">
           <div class="flex items-center gap-2">
             <span class="text-morgoth-light text-base">⚔</span>
-            <span class="font-bold text-ink tabular-nums w-5 text-right">{{ p2.attack }}</span>
+            <span class="font-bold text-ink tabular-nums w-5 text-right">{{ store.players[enemyId].attack }}</span>
             <span class="text-muted text-xs">attack</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-neutral-light text-base">◈</span>
-            <span class="font-bold text-ink tabular-nums w-5 text-right">{{ p2.resources }}</span>
+            <span class="font-bold text-ink tabular-nums w-5 text-right">{{ store.players[enemyId].resources }}</span>
             <span class="text-muted text-xs">resources</span>
           </div>
         </div>
 
-        <!-- Spacer -->
         <div class="flex-1" />
 
         <!-- Help button -->
@@ -141,114 +205,154 @@ function handleEndTurn(): void {
           ?
         </button>
 
-        <!-- Opponent hand — overlapping face-down card backs, fanned -->
+        <!-- Enemy hand — face-down fanned cards -->
         <div class="flex items-end" style="padding-bottom: 6px;">
           <div
-            v-for="(_, i) in p2.hand"
+            v-for="(_, i) in store.players[enemyId].hand"
             :key="i"
             class="w-11 h-16 rounded-lg border border-card-border/70 bg-card-bg shadow-md flex items-center justify-center flex-shrink-0"
             :class="i > 0 ? '-ml-5' : ''"
             :style="{
               zIndex: i,
-              transform: `rotate(${(i - (p2.hand.length - 1) / 2) * 5}deg) translateY(${Math.abs(i - (p2.hand.length - 1) / 2) * 2}px)`,
+              transform: `rotate(${(i - (store.players[enemyId].hand.length - 1) / 2) * 5}deg) translateY(${Math.abs(i - (store.players[enemyId].hand.length - 1) / 2) * 2}px)`,
             }"
           >
             <span class="text-muted/30 text-sm select-none">🌑</span>
           </div>
-          <span class="ml-3 text-muted text-xs self-center">{{ p2.hand.length }} cards</span>
+          <span class="ml-3 text-muted text-xs self-center">{{ store.players[enemyId].hand.length }} cards</span>
         </div>
 
       </div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         MIDDLE — Fate Track · Player's In-Play · Market Row
+         MIDDLE — Fate Track · Active Player's In-Play · Market Row
     ════════════════════════════════════════════════════════════════════ -->
     <div class="flex-1 flex flex-col gap-4 overflow-y-auto px-6 py-4">
 
-      <!-- Fate track -->
       <FateTrack
         id="fate-track"
         :fate-track="store.gameState.fateTrack"
         class="w-full max-w-2xl mx-auto"
       />
 
-      <!-- Player's in-play zone -->
-      <div id="in-play-zone" v-if="p1.inPlay.length > 0" class="flex flex-col gap-1.5">
-        <span class="text-[10px] font-bold uppercase tracking-widest text-free-peoples/70">In Play</span>
+      <!-- Active player's in-play zone -->
+      <div id="in-play-zone" v-if="activePlayer.inPlay.length > 0" class="flex flex-col gap-1.5">
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-free-peoples/70">In Play</span>
+          <span v-if="hasUnassignedAttack && !selectedAttacker" class="text-[10px] text-morgoth-light animate-pulse">
+            ⚔ Click a card to assign its attack
+          </span>
+          <span v-if="selectedAttacker" class="text-[10px] text-morgoth-light font-bold">
+            ⚔ {{ selectedAttacker.attack }} — now click a target above
+            <button class="ml-2 text-muted underline" @click="cancelSelection">cancel</button>
+          </span>
+        </div>
         <div class="flex gap-2 overflow-x-auto pb-1">
           <TransitionGroup name="arrive-to-play" tag="div" class="flex gap-2">
-            <!--
-              Cards are scaled to 75% (120×180px) inside a clipping wrapper
-              so they don't break the flex row height while staying readable.
-            -->
             <div
-              v-for="c in p1.inPlay"
+              v-for="c in activePlayer.inPlay"
               :key="c.id"
-              class="flex-shrink-0 overflow-hidden rounded-xl"
-              style="width: 120px; height: 180px;"
+              class="flex flex-col items-center gap-1 flex-shrink-0"
             >
-              <div style="transform: scale(0.75); transform-origin: top left; width: 160px; height: 240px;">
-                <PlayingCard :card="c" @click="() => {}" />
+              <div
+                class="overflow-hidden rounded-xl transition-all duration-150"
+                :class="{
+                  'opacity-40': activePlayer.attackAssigned.has(c.id),
+                  'ring-2 ring-morgoth cursor-pointer hover:ring-morgoth-light': c.attack > 0 && !activePlayer.attackAssigned.has(c.id) && selectedAttacker?.id !== c.id,
+                  'ring-2 ring-offset-2 ring-offset-parchment ring-morgoth-light scale-105': selectedAttacker?.id === c.id,
+                }"
+                style="width: 120px; height: 180px;"
+                @click="c.attack > 0 && selectAttacker(c)"
+              >
+                <div style="transform: scale(0.75); transform-origin: top left; width: 160px; height: 240px;">
+                  <PlayingCard :card="c" @click="() => {}" />
+                </div>
+              </div>
+              <div
+                v-if="c.attack > 0"
+                class="text-[10px] font-bold px-2 py-0.5 rounded-full border select-none"
+                :class="activePlayer.attackAssigned.has(c.id)
+                  ? 'bg-card-border/30 text-muted/50 border-card-border/30'
+                  : 'bg-morgoth/10 text-morgoth-light border-morgoth/40'"
+              >
+                {{ activePlayer.attackAssigned.has(c.id) ? '⚔ spent' : `⚔ ${c.attack}` }}
               </div>
             </div>
           </TransitionGroup>
         </div>
       </div>
 
-      <!-- Market -->
       <MarketRow
         id="beleriand-row"
-        @select="(c) => console.log('market select', c.name)"
+        :selecting-attacker="selectedAttacker"
+        @attack="handleMarketAttack"
       />
 
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         BOTTOM — Player (Free Peoples)
+         BOTTOM — Active player zone
     ════════════════════════════════════════════════════════════════════ -->
-    <div class="flex-shrink-0 bg-free-peoples-bg/60 border-t border-free-peoples-dark px-6 py-3">
+    <div
+      class="flex-shrink-0 border-t px-6 py-3"
+      :class="activeId === PlayerId.PlayerOne
+        ? 'bg-free-peoples-bg/60 border-free-peoples-dark'
+        : 'bg-morgoth-bg/60 border-morgoth-dark'"
+    >
       <div class="flex items-start gap-5">
 
-        <!-- Stronghold + pool counters + end turn stacked on left -->
         <div class="flex flex-col gap-3 flex-shrink-0">
           <div id="player-stronghold">
-            <StrongholdCard v-if="sh1" :stronghold="sh1" />
+            <StrongholdCard v-if="ownStronghold" :stronghold="ownStronghold" />
           </div>
 
           <div id="player-pool" class="flex gap-4 text-sm">
             <div class="flex items-center gap-2">
               <span class="text-morgoth-light text-base">⚔</span>
-              <span class="font-bold text-ink tabular-nums w-5 text-right">{{ p1.attack }}</span>
+              <span class="font-bold text-ink tabular-nums w-5 text-right">{{ activePlayer.attack }}</span>
               <span class="text-muted text-xs">attack</span>
             </div>
             <div class="flex items-center gap-2">
               <span class="text-free-peoples text-base">◈</span>
-              <span class="font-bold text-ink tabular-nums w-5 text-right">{{ p1.resources }}</span>
+              <span class="font-bold text-ink tabular-nums w-5 text-right">{{ activePlayer.resources }}</span>
               <span class="text-muted text-xs">resources</span>
             </div>
           </div>
 
-          <button
-            id="end-turn-btn"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide
-                   bg-free-peoples text-parchment hover:bg-free-peoples-dark transition-colors
-                   self-start"
-            @click="handleEndTurn"
-          >
-            End Turn
-          </button>
+          <div class="flex gap-2">
+            <button
+              id="end-turn-btn"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors"
+              :class="activeId === PlayerId.PlayerOne
+                ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
+                : 'bg-morgoth text-parchment hover:bg-morgoth-dark'"
+              @click="handleEndTurn"
+            >
+              End Turn
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors"
+              :class="activePlayer.hand.length > 0
+                ? 'bg-card-border text-ink hover:bg-muted/30'
+                : 'bg-card-border/40 text-muted/40 cursor-not-allowed'"
+              :disabled="activePlayer.hand.length === 0"
+              @click="playAllCards"
+            >
+              Play All
+            </button>
+          </div>
         </div>
 
-        <!-- Player's hand — full-size cards, horizontally scrollable -->
+        <!-- Active player's hand -->
         <div id="player-hand" class="flex flex-col gap-1.5 flex-1 min-w-0">
           <span class="text-[10px] font-bold uppercase tracking-widest text-muted">
-            Hand ({{ p1.hand.length }}) — click to play
+            Hand ({{ activePlayer.hand.length }}) — click to play
           </span>
           <div class="overflow-x-auto pb-1">
             <TransitionGroup name="play-from-hand" tag="div" class="hand-group">
               <PlayingCard
-                v-for="c in p1.hand"
+                v-for="c in activePlayer.hand"
                 :key="c.id"
                 :card="c"
                 @click="playCard(c)"

@@ -14,7 +14,7 @@ import { type Card, CardType, Faction } from '../types/game'
 export const CARD_DATABASE: readonly Card[] = [
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  FREE PEOPLES  (10 cards)
+  //  FREE PEOPLES  (20 cards)
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── Tier 1 (cost 1–2): cheap engine pieces ─────────────────────────────
@@ -67,7 +67,33 @@ export const CARD_DATABASE: readonly Card[] = [
     fateGeneration: 1,
   },
 
-  // ── Tier 2 (cost 3): solid mid-range ────────────────────────────────────
+  // ── Tier 2 (cost 2–3): solid mid-range ──────────────────────────────────
+
+  {
+    id: 'fp-noldor-craftsman',
+    name: 'Noldor Craftsman',
+    type: CardType.Character,
+    faction: Faction.FreePeoples,
+    cost: 2,
+    attack: 0,
+    resources: 3,
+    fateGeneration: 1,
+  },
+
+  {
+    id: 'fp-elf-warrior-doriath',
+    name: 'Elf-Warrior of Doriath',
+    type: CardType.Character,
+    faction: Faction.FreePeoples,
+    cost: 2,
+    attack: 2,
+    resources: 1,
+    fateGeneration: 1,
+    effect: {
+      description: 'Draw 1 card.',
+      reward: { type: 'drawCards', count: 1 },
+    },
+  },
 
   {
     id: 'fp-phial-of-light',
@@ -99,11 +125,56 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
+  {
+    id: 'fp-mablung',
+    name: 'Mablung the Hunter',
+    type: CardType.Character,
+    faction: Faction.FreePeoples,
+    cost: 3,
+    attack: 3,
+    resources: 1,
+    fateGeneration: 1,
+    effect: {
+      description: 'Gain +1 Attack.',
+      reward: { type: 'gainAttack', amount: 1 },
+    },
+  },
+
+  {
+    id: 'fp-nauglamir',
+    name: 'Nauglamír',
+    type: CardType.Artifact,
+    faction: Faction.FreePeoples,
+    cost: 3,
+    attack: 0,
+    resources: 2,
+    fateGeneration: 2,
+    effect: {
+      description: 'Shift the Fate marker 2 steps toward Light.',
+      reward: { type: 'adjustFate', amount: 2 },
+    },
+  },
+
   // ── Tier 3 (cost 4–5): high-impact plays ────────────────────────────────
 
   {
-    id: 'fp-hurin',
-    name: 'Húrin of Dor-lómin',
+    id: 'fp-white-ships',
+    name: 'White Ships of Círdan',
+    type: CardType.Artifact,
+    faction: Faction.FreePeoples,
+    cost: 4,
+    attack: 0,
+    resources: 4,
+    fateGeneration: 1,
+    effect: {
+      description: 'Gain 2 Resources.',
+      reward: { type: 'gainResources', amount: 2 },
+    },
+  },
+
+  {
+    id: 'fp-tuor',
+    name: 'Tuor of Gondolin',
     type: CardType.Champion,
     faction: Faction.FreePeoples,
     cost: 4,
@@ -113,6 +184,52 @@ export const CARD_DATABASE: readonly Card[] = [
     effect: {
       description: 'Gain +2 Attack.',
       reward: { type: 'gainAttack', amount: 2 },
+    },
+  },
+
+  {
+    id: 'fp-glorfindel',
+    name: 'Glorfindel of Gondolin',
+    type: CardType.Champion,
+    faction: Faction.FreePeoples,
+    cost: 5,
+    attack: 5,
+    resources: 0,
+    fateGeneration: 2,
+    effect: {
+      description: 'Gain +3 Attack.',
+      reward: { type: 'gainAttack', amount: 3 },
+    },
+  },
+
+  {
+    id: 'fp-beren',
+    name: 'Beren One-Hand',
+    type: CardType.Champion,
+    faction: Faction.FreePeoples,
+    cost: 5,
+    attack: 5,
+    resources: 0,
+    fateGeneration: 2,
+    // Defeating Beren strikes a blow — but his legend endures.
+    effect: {
+      description: 'Deal 2 damage to the opposing Stronghold.',
+      reward: { type: 'dealDamage', amount: 2 },
+    },
+  },
+
+  {
+    id: 'fp-hurin',
+    name: 'Húrin of Dor-lómin',
+    type: CardType.Champion,
+    faction: Faction.FreePeoples,
+    cost: 4,
+    attack: 5,
+    resources: 0,
+    fateGeneration: 1,
+    effect: {
+      description: 'Gain +3 Attack.',
+      reward: { type: 'gainAttack', amount: 3 },
     },
   },
 
@@ -146,7 +263,38 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 4 (cost 7): legendary anchor ───────────────────────────────────
+  // ── Tier 4 (cost 6–7): legendary anchors ────────────────────────────────
+
+  {
+    id: 'fp-finrod',
+    name: 'Finrod Felagund',
+    type: CardType.Champion,
+    faction: Faction.FreePeoples,
+    cost: 6,
+    attack: 3,
+    resources: 2,
+    fateGeneration: 2,
+    effect: {
+      description: 'Draw 2 cards.',
+      reward: { type: 'drawCards', count: 2 },
+    },
+  },
+
+  {
+    id: 'fp-luthien',
+    name: 'Lúthien Tinúviel',
+    type: CardType.Champion,
+    faction: Faction.FreePeoples,
+    cost: 7,
+    attack: 2,
+    resources: 1,
+    fateGeneration: 3,
+    // Her song breaks Morgoth's enchantments — a massive fate swing.
+    effect: {
+      description: 'Shift the Fate marker 3 steps toward Light.',
+      reward: { type: 'adjustFate', amount: 3 },
+    },
+  },
 
   {
     id: 'fp-fingolfin',

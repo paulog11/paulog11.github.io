@@ -44,6 +44,7 @@ function attackStronghold(
   store: Store,
   attackerId: PlayerId,
   targetId: string,
+  cardId: string,
   attackAmount: number,
 ): CombatResult {
   const targetPlayerId = ([PlayerId.PlayerOne, PlayerId.PlayerTwo] as const).find(
@@ -60,6 +61,7 @@ function attackStronghold(
 
   const stronghold = store.strongholds[targetPlayerId]!
 
+  store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
   stronghold.currentHealth = Math.max(0, stronghold.currentHealth - attackAmount)
 
@@ -69,7 +71,6 @@ function attackStronghold(
 
   if (stronghold.currentHealth === 0) {
     events.push({ type: 'StrongholdDestroyed', strongholdId: targetId, faction: stronghold.faction })
-    // Each player currently has exactly one Stronghold; destroying it ends the game
     store.declareWinner(store.playerFactions[attackerId])
   }
 
@@ -80,6 +81,7 @@ function attackMarketCard(
   store: Store,
   attackerId: PlayerId,
   targetId: string,
+  cardId: string,
   attackAmount: number,
 ): CombatResult {
   const cardIndex = store.beleriandRow.findIndex((c) => c.id === targetId)
@@ -94,22 +96,26 @@ function attackMarketCard(
     return { success: false, reason: `'${card.name}' does not belong to the opposing faction` }
   }
 
-  if (attackAmount < card.cost) {
-    return {
-      success: false,
-      reason: `Need ${card.cost} attack to defeat '${card.name}', spending ${attackAmount}`,
-    }
+  // Accumulate damage this turn; a card is only defeated when total damage >= cost.
+  store.markAttackAssigned(attackerId, cardId)
+  store.players[attackerId].attack -= attackAmount
+  const totalDamage = store.applyMarketDamage(targetId, attackAmount)
+
+  if (totalDamage < card.cost) {
+    // Wounded but not defeated — card stays in row.
+    return { success: true, events: [{ type: 'MarketCardDefeated', card, rewardTriggered: false }] }
   }
 
-  store.players[attackerId].attack -= attackAmount
+  // Defeated — remove from row, trigger reward, refill.
   store.beleriandRow.splice(cardIndex, 1)
+  // Clear the damage entry since the card is gone.
+  delete store.gameState.marketDamage[targetId]
 
   const rewardTriggered = card.effect?.reward !== undefined
   if (card.effect?.reward) {
     applyReward(store, attackerId, card.effect.reward)
   }
 
-  // Refill the row from the deck
   if (store.beleriandDeck.length > 0) {
     store.beleriandRow.push(store.beleriandDeck.pop()!)
   }
@@ -120,14 +126,22 @@ function attackMarketCard(
 export function useCombatEngine() {
   const store = useGameStore()
 
+  // attackerId: the player attacking
+  // cardId: the specific in-play card whose attack is being assigned
+  // targetType / targetId: what is being attacked
   function executeAttack(
     attackerId: PlayerId,
+    cardId: string,
     targetType: CombatTargetType,
     targetId: string,
     attackAmount: number,
   ): CombatResult {
     if (attackAmount <= 0) {
       return { success: false, reason: 'Attack amount must be positive' }
+    }
+
+    if (store.players[attackerId].attackAssigned.has(cardId)) {
+      return { success: false, reason: 'This card\'s attack has already been assigned this turn' }
     }
 
     if (store.players[attackerId].attack < attackAmount) {
@@ -138,8 +152,8 @@ export function useCombatEngine() {
     }
 
     return targetType === 'Stronghold'
-      ? attackStronghold(store, attackerId, targetId, attackAmount)
-      : attackMarketCard(store, attackerId, targetId, attackAmount)
+      ? attackStronghold(store, attackerId, targetId, cardId, attackAmount)
+      : attackMarketCard(store, attackerId, targetId, cardId, attackAmount)
   }
 
   return { executeAttack }

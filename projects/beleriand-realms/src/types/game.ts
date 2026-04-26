@@ -81,6 +81,8 @@ export interface GameState {
   turnPhase: TurnPhase;
   activePlayer: PlayerId;
   winner: Faction | null;
+  // Damage dealt to market cards this turn (cardId → damage). Resets on end turn.
+  marketDamage: Record<string, number>;
 }
 
 export interface PlayerState {
@@ -90,4 +92,6 @@ export interface PlayerState {
   inPlay: Card[];
   resources: number;
   attack: number;
+  // IDs of in-play cards whose attack has already been assigned this turn.
+  attackAssigned: Set<string>;
 }
