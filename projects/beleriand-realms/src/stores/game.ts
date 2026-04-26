@@ -40,7 +40,8 @@ export const useGameStore = defineStore('game', () => {
     [PlayerId.PlayerTwo]: Faction.Morgoth,
   }
 
-  const strongholds = ref<Partial<Record<PlayerId, Stronghold>>>({})
+  // Each player has an array of 3 bases. All must be destroyed to lose.
+  const strongholds = ref<Partial<Record<PlayerId, Stronghold[]>>>({})
 
   const gameState = ref<GameState>({
     fateTrack: 0,
@@ -48,6 +49,9 @@ export const useGameStore = defineStore('game', () => {
     activePlayer: PlayerId.PlayerOne,
     winner: null,
     marketDamage: {},
+    basesDestroyed: { [PlayerId.PlayerOne]: 0, [PlayerId.PlayerTwo]: 0 },
+    activeStrongholdId: { [PlayerId.PlayerOne]: null, [PlayerId.PlayerTwo]: null },
+    pendingBaseChoice: null,
   })
 
   function drawCards(playerId: PlayerId, count: number): void {
@@ -96,6 +100,53 @@ export const useGameStore = defineStore('game', () => {
 
   function declareWinner(faction: Faction): void {
     gameState.value.winner = faction
+  }
+
+  // Find a stronghold by id and return [playerId, stronghold] or null.
+  function findStrongholdById(id: string): [PlayerId, Stronghold] | null {
+    for (const pid of [PlayerId.PlayerOne, PlayerId.PlayerTwo] as const) {
+      const bases = strongholds.value[pid]
+      if (!bases) continue
+      const base = bases.find(b => b.id === id)
+      if (base) return [pid, base]
+    }
+    return null
+  }
+
+  // Call after any HP change. Declares winner if all bases are destroyed;
+  // otherwise clears the active stronghold and sets pendingBaseChoice so the
+  // owning player must select a replacement before play continues.
+  function checkWinCondition(damagedPlayerId: PlayerId): void {
+    if (gameState.value.winner !== null) return
+    const bases = strongholds.value[damagedPlayerId]
+    if (!bases) return
+
+    const destroyed = bases.filter(b => b.currentHealth === 0).length
+    gameState.value.basesDestroyed[damagedPlayerId] = destroyed
+
+    if (destroyed >= bases.length) {
+      const winnerFaction = playerFactions[
+        damagedPlayerId === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+      ]
+      declareWinner(winnerFaction)
+      return
+    }
+
+    // Active base was just destroyed — clear it and prompt for a new choice.
+    const activeId = gameState.value.activeStrongholdId[damagedPlayerId]
+    const activeBase = bases.find(b => b.id === activeId)
+    if (activeBase && activeBase.currentHealth === 0) {
+      gameState.value.activeStrongholdId[damagedPlayerId] = null
+      gameState.value.pendingBaseChoice = damagedPlayerId
+    }
+  }
+
+  // Set the active stronghold for a player (called when they choose a replacement).
+  function setActiveStronghold(playerId: PlayerId, strongholdId: string): void {
+    gameState.value.activeStrongholdId[playerId] = strongholdId
+    if (gameState.value.pendingBaseChoice === playerId) {
+      gameState.value.pendingBaseChoice = null
+    }
   }
 
   function purchaseCard(buyerId: PlayerId, cardId: string): boolean {
@@ -156,6 +207,9 @@ export const useGameStore = defineStore('game', () => {
     adjustFate,
     purchaseCard,
     declareWinner,
+    findStrongholdById,
+    checkWinCondition,
+    setActiveStronghold,
     endTurn,
   }
 })

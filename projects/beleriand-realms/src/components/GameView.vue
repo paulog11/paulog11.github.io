@@ -22,8 +22,8 @@ const activePlayer = computed(() => store.players[activeId.value])
 const enemyId = computed(() =>
   activeId.value === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
 )
-const enemyStronghold = computed(() => store.strongholds[enemyId.value])
-const ownStronghold = computed(() => store.strongholds[activeId.value])
+const enemyBases = computed(() => store.strongholds[enemyId.value] ?? [])
+const ownBases = computed(() => store.strongholds[activeId.value] ?? [])
 
 
 const showHelp = ref(false)
@@ -42,10 +42,10 @@ function cancelSelection(): void {
   selectedAttacker.value = null
 }
 
-function handleStrongholdTarget(): void {
+function handleStrongholdTarget(strongholdId: string): void {
   const attacker = selectedAttacker.value
-  if (!attacker || !enemyStronghold.value) return
-  executeAttack(activeId.value, attacker.id, 'Stronghold', enemyStronghold.value.id, attacker.attack)
+  if (!attacker) return
+  executeAttack(activeId.value, attacker.id, 'Stronghold', strongholdId, attacker.attack)
   selectedAttacker.value = null
 }
 
@@ -59,6 +59,19 @@ function handleMarketAttack(marketCard: Card): void {
 const hasUnassignedAttack = computed(() =>
   activePlayer.value.inPlay.some(c => c.attack > 0 && !activePlayer.value.attackAssigned.has(c.id))
 )
+
+// Base-choice modal — the surviving bases the pending player can pick from.
+const pendingChoiceBases = computed(() => {
+  const pid = store.gameState.pendingBaseChoice
+  if (!pid) return []
+  return (store.strongholds[pid] ?? []).filter(b => b.currentHealth > 0)
+})
+
+function choosePendingBase(strongholdId: string): void {
+  const pid = store.gameState.pendingBaseChoice
+  if (!pid) return
+  store.setActiveStronghold(pid, strongholdId)
+}
 
 // ── Seed initial game state ──────────────────────────────────────────────
 function card(
@@ -75,16 +88,43 @@ function card(
 }
 
 onMounted(() => {
-  store.strongholds[PlayerId.PlayerOne] = {
-    id: 'gondolin', name: 'Gondolin', faction: Faction.FreePeoples,
-    maxHealth: 30, currentHealth: 30,
-    innateAbility: 'Once per turn, when you play a Champion, draw 1 card.',
-  }
-  store.strongholds[PlayerId.PlayerTwo] = {
-    id: 'angband', name: 'Angband', faction: Faction.Morgoth,
-    maxHealth: 30, currentHealth: 24,
-    innateAbility: 'At the start of each Shadow turn, move the Fate marker 1 step toward Shadow.',
-  }
+  store.strongholds[PlayerId.PlayerOne] = [
+    {
+      id: 'gondolin', name: 'Gondolin', faction: Faction.FreePeoples,
+      maxHealth: 20, currentHealth: 20,
+      innateAbility: 'Once per turn, when you play a Champion, draw 1 card.',
+    },
+    {
+      id: 'menegroth', name: 'Menegroth', faction: Faction.FreePeoples,
+      maxHealth: 18, currentHealth: 18,
+      innateAbility: 'Whenever an ally is acquired from the Beleriand Row, gain 1 Resource.',
+    },
+    {
+      id: 'nargothrond', name: 'Nargothrond', faction: Faction.FreePeoples,
+      maxHealth: 15, currentHealth: 15,
+      innateAbility: 'Once per turn, you may discard 1 card to draw 1 card.',
+    },
+  ]
+  store.strongholds[PlayerId.PlayerTwo] = [
+    {
+      id: 'angband', name: 'Angband', faction: Faction.Morgoth,
+      maxHealth: 20, currentHealth: 20,
+      innateAbility: 'At the start of each Shadow turn, move the Fate marker 1 step toward Shadow.',
+    },
+    {
+      id: 'utumno', name: 'Utumno', faction: Faction.Morgoth,
+      maxHealth: 18, currentHealth: 18,
+      innateAbility: 'Whenever a Morgoth card is defeated in the Beleriand Row, gain 2 Attack.',
+    },
+    {
+      id: 'thangorodrim', name: 'Thangorodrim', faction: Faction.Morgoth,
+      maxHealth: 15, currentHealth: 15,
+      innateAbility: 'Orc and Troll cards cost 1 less Resource to acquire.',
+    },
+  ]
+  // First base in each list starts as the active stronghold.
+  store.setActiveStronghold(PlayerId.PlayerOne, 'gondolin')
+  store.setActiveStronghold(PlayerId.PlayerTwo, 'angband')
 
   store.players[PlayerId.PlayerOne].hand.push(
     card('fp-h1', 'Elven Archer',    Faction.FreePeoples, 2, 2, 1),
@@ -168,12 +208,14 @@ function handleEndTurn(): void {
     >
       <div class="flex items-center gap-5">
 
-        <!-- Enemy stronghold — becomes a clickable target when an attacker is selected -->
-        <div id="enemy-stronghold">
+        <!-- Enemy bases — only the active one is targetable -->
+        <div id="enemy-stronghold" class="flex gap-3">
           <StrongholdCard
-            v-if="enemyStronghold"
-            :stronghold="enemyStronghold"
-            :is-target="selectedAttacker !== null"
+            v-for="base in enemyBases"
+            :key="base.id"
+            :stronghold="base"
+            :is-active="base.id === store.gameState.activeStrongholdId[enemyId]"
+            :is-target="selectedAttacker !== null && base.id === store.gameState.activeStrongholdId[enemyId]"
             @target="handleStrongholdTarget"
           />
         </div>
@@ -303,8 +345,13 @@ function handleEndTurn(): void {
       <div class="flex items-start gap-5">
 
         <div class="flex flex-col gap-3 flex-shrink-0">
-          <div id="player-stronghold">
-            <StrongholdCard v-if="ownStronghold" :stronghold="ownStronghold" />
+          <div id="player-stronghold" class="flex gap-3">
+            <StrongholdCard
+              v-for="base in ownBases"
+              :key="base.id"
+              :stronghold="base"
+              :is-active="base.id === store.gameState.activeStrongholdId[activeId]"
+            />
           </div>
 
           <div id="player-pool" class="flex gap-4 text-sm">
@@ -363,6 +410,42 @@ function handleEndTurn(): void {
 
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         BASE CHOICE MODAL — shown when a stronghold is destroyed
+    ════════════════════════════════════════════════════════════════════ -->
+    <Transition name="fade">
+      <div
+        v-if="store.gameState.pendingBaseChoice !== null"
+        class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      >
+        <div
+          class="rounded-2xl border-2 p-8 shadow-2xl w-auto max-w-2xl text-center"
+          :class="store.gameState.pendingBaseChoice === PlayerId.PlayerOne
+            ? 'bg-free-peoples-bg border-free-peoples'
+            : 'bg-morgoth-bg border-morgoth'"
+        >
+          <h2
+            class="font-display text-xl font-bold mb-1"
+            :class="store.gameState.pendingBaseChoice === PlayerId.PlayerOne
+              ? 'text-free-peoples'
+              : 'text-morgoth-light'"
+          >
+            Stronghold Destroyed
+          </h2>
+          <p class="text-muted text-sm mb-6">Choose your next active stronghold.</p>
+          <div class="flex gap-4 justify-center">
+            <StrongholdCard
+              v-for="base in pendingChoiceBases"
+              :key="base.id"
+              :stronghold="base"
+              :is-target="true"
+              @target="choosePendingBase"
+            />
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- ═══════════════════════════════════════════════════════════════════
          GAME OVER MODAL

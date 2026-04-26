@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { type Stronghold, Faction } from '../types/game'
 
-const props = defineProps<{ stronghold: Stronghold; isTarget?: boolean }>()
+const props = defineProps<{ stronghold: Stronghold; isActive?: boolean; isTarget?: boolean }>()
 const emit = defineEmits<{ target: [id: string] }>()
 
 const healthPct = computed(() =>
@@ -34,6 +34,7 @@ const factionStyle = computed(() => {
     class="relative rounded-xl border-2 bg-card-bg p-3 w-64 transition-all duration-200 select-none"
     :class="[
       factionStyle.border,
+      isActive && !isTarget ? 'ring-2 ring-offset-1 ring-offset-parchment ring-free-peoples/60' : '',
       isTarget ? 'ring-2 ring-offset-1 ring-offset-parchment ring-red-500 cursor-pointer' : 'cursor-default',
       isDestroyed ? 'opacity-50 grayscale' : '',
     ]"
@@ -50,7 +51,10 @@ const factionStyle = computed(() => {
         <h3 class="font-display font-bold text-sm leading-tight" :class="factionStyle.heading">
           {{ stronghold.name }}
         </h3>
-        <p class="text-muted text-[10px] uppercase tracking-wider">Stronghold</p>
+        <p class="text-muted text-[10px] uppercase tracking-wider">
+          Stronghold
+          <span v-if="isActive && !isDestroyed" class="ml-1 text-free-peoples font-bold">· Active</span>
+        </p>
       </div>
       <div class="text-right">
         <span class="font-bold text-sm text-ink">{{ stronghold.currentHealth }}</span>

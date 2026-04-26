@@ -83,6 +83,12 @@ export interface GameState {
   winner: Faction | null;
   // Damage dealt to market cards this turn (cardId → damage). Resets on end turn.
   marketDamage: Record<string, number>;
+  // Bases destroyed per player this game (derived from strongholds array, cached here for display).
+  basesDestroyed: Record<PlayerId, number>;
+  // The currently active (targetable) stronghold id per player.
+  activeStrongholdId: Record<PlayerId, string | null>;
+  // Set to a PlayerId when that player must choose a new active stronghold.
+  pendingBaseChoice: PlayerId | null;
 }
 
 export interface PlayerState {

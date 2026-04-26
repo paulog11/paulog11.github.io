@@ -25,15 +25,14 @@ function applyReward(store: Store, beneficiary: PlayerId, reward: EffectReward):
       store.adjustFate(reward.amount)
       break
     case 'dealDamage': {
-      // Direct damage hits the opposing stronghold (not routed through executeAttack to avoid recursion)
+      // Direct damage hits the first living opposing base (not routed through executeAttack to avoid recursion).
       const opposingId =
         beneficiary === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
-      const stronghold = store.strongholds[opposingId]
-      if (stronghold) {
-        stronghold.currentHealth = Math.max(0, stronghold.currentHealth - reward.amount)
-        if (stronghold.currentHealth === 0) {
-          store.declareWinner(store.playerFactions[beneficiary])
-        }
+      const bases = store.strongholds[opposingId]
+      const target = bases?.find(b => b.currentHealth > 0)
+      if (target) {
+        target.currentHealth = Math.max(0, target.currentHealth - reward.amount)
+        store.checkWinCondition(opposingId)
       }
       break
     }
@@ -47,19 +46,24 @@ function attackStronghold(
   cardId: string,
   attackAmount: number,
 ): CombatResult {
-  const targetPlayerId = ([PlayerId.PlayerOne, PlayerId.PlayerTwo] as const).find(
-    (pid) => store.strongholds[pid]?.id === targetId,
-  )
-
-  if (targetPlayerId === undefined) {
+  const found = store.findStrongholdById(targetId)
+  if (!found) {
     return { success: false, reason: `Stronghold '${targetId}' not found` }
   }
+  const [targetPlayerId, stronghold] = found
 
   if (targetPlayerId === attackerId) {
     return { success: false, reason: 'Cannot attack your own stronghold' }
   }
 
-  const stronghold = store.strongholds[targetPlayerId]!
+  if (stronghold.currentHealth === 0) {
+    return { success: false, reason: `'${stronghold.name}' is already destroyed` }
+  }
+
+  const activeId = store.gameState.activeStrongholdId[targetPlayerId]
+  if (activeId !== targetId) {
+    return { success: false, reason: `'${stronghold.name}' is not the active stronghold` }
+  }
 
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
@@ -71,8 +75,9 @@ function attackStronghold(
 
   if (stronghold.currentHealth === 0) {
     events.push({ type: 'StrongholdDestroyed', strongholdId: targetId, faction: stronghold.faction })
-    store.declareWinner(store.playerFactions[attackerId])
   }
+
+  store.checkWinCondition(targetPlayerId)
 
   return { success: true, events }
 }
