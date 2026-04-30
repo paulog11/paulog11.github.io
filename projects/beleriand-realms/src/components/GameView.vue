@@ -114,21 +114,41 @@ onMounted(() => {
       maxHealth: 15, currentHealth: 15,
       innateAbility: 'Once per turn, you may discard 1 card to draw 1 card.',
     },
+    {
+      id: 'barad-eithel', name: 'Barad Eithel', faction: Faction.FreePeoples,
+      maxHealth: 12, currentHealth: 12,
+      innateAbility: 'Whenever this stronghold takes damage, gain 1 Attack.',
+    },
+    {
+      id: 'pass-of-aglon', name: 'Pass of Aglon', faction: Faction.FreePeoples,
+      maxHealth: 10, currentHealth: 10,
+      innateAbility: 'Whenever an enemy attacks this stronghold, deal 1 damage back to the opposing stronghold.',
+    },
+    {
+      id: 'vinyamar', name: 'Vinyamar', faction: Faction.FreePeoples,
+      maxHealth: 8, currentHealth: 8,
+      innateAbility: 'At the start of your turn, draw 1 card and shift the Fate marker 1 step toward Light.',
+    },
+    {
+      id: 'himring', name: 'Himring', faction: Faction.FreePeoples,
+      maxHealth: 6, currentHealth: 6,
+      innateAbility: 'This stronghold cannot be destroyed while the Fate marker is on the Light side.',
+    },
   ]
   store.strongholds[PlayerId.PlayerTwo] = [
     {
       id: 'angband', name: 'Angband', faction: Faction.Morgoth,
-      maxHealth: 20, currentHealth: 20,
+      maxHealth: 30, currentHealth: 30,
       innateAbility: 'At the start of each Shadow turn, move the Fate marker 1 step toward Shadow.',
     },
     {
       id: 'utumno', name: 'Utumno', faction: Faction.Morgoth,
-      maxHealth: 18, currentHealth: 18,
+      maxHealth: 26, currentHealth: 26,
       innateAbility: 'Whenever a Morgoth card is defeated in the Beleriand Row, gain 2 Attack.',
     },
     {
       id: 'thangorodrim', name: 'Thangorodrim', faction: Faction.Morgoth,
-      maxHealth: 15, currentHealth: 15,
+      maxHealth: 22, currentHealth: 22,
       innateAbility: 'Orc and Troll cards cost 1 less Resource to acquire.',
     },
   ]

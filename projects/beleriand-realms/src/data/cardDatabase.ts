@@ -16,12 +16,16 @@
 // Morgoth (market):
 //   Tier 1 — Orc Soldier, Orc Raider, Iron Fetter, Warg Rider, Orc Captain
 //   Tier 2 — Cave-Troll, Dark Sorcerer, Werewolf of Angband, Thrall of Morgoth
-//   Tier 3 — Gothmog, Thuringwethil, Draugluin, Ungoliant,
-//             Iron Crown of Morgoth, Glaurung
+//   Tier 3 — Gothmog, Thuringwethil, Draugluin, Iron Crown of Morgoth, Glaurung
 //   Tier 4 — Sauron the Necromancer, Morgoth's Dark Will, Ancalagon the Black
 //   Tier 5 — Balrog of Morgoth
 //
-// Neutral (market): Ancient Stone, Wandering Ranger
+// Neutral (market):
+//   Tier 1 — Ancient Stone
+//   Tier 2 — Wandering Ranger, Ulfang the Black, Mîm the Petty-dwarf
+//   Tier 3 — Eöl the Dark Elf, Maeglin the Traitor, Dwarves of Nogrod
+//   Tier 4 — Ossë of the Seas
+//   Tier 5 — Ungoliant
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { type Card, CardType, Faction } from '../types/game'
@@ -390,7 +394,7 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  MORGOTH  (20 cards)
+  //  MORGOTH  (19 cards)
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── Tier 1 (cost 1–2): early aggression ─────────────────────────────────
@@ -579,20 +583,6 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  {
-    id: 'mg-ungoliant',
-    name: 'Ungoliant',
-    type: CardType.GreatBeast,
-    faction: Faction.Morgoth,
-    cost: 5,
-    attack: 3,
-    resources: 1,
-    fateGeneration: -2,
-    effect: {
-      description: 'Gain +3 Attack.',
-      reward: { type: 'gainAttack', amount: 3 },
-    },
-  },
 
   {
     id: 'mg-iron-crown',
@@ -694,10 +684,24 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  NEUTRAL  (2 cards)
+  //  NEUTRAL  (9 cards)
   //  Cannot be attacked (combat engine rejects Neutral targets).
   //  These are acquire-only; effects fire when played from hand.
+  //  Self-interested actors: serve neither Morgoth nor the Free Peoples.
   // ══════════════════════════════════════════════════════════════════════════
+
+  // ── Tier 1 (cost 1–2): opportunists ─────────────────────────────────────
+
+  {
+    id: 'nt-ancient-stone',
+    name: 'Ancient Stone',
+    type: CardType.Artifact,
+    faction: Faction.Neutral,
+    cost: 1,
+    attack: 0,
+    resources: 2,
+    fateGeneration: 0,
+  },
 
   {
     id: 'nt-wandering-ranger',
@@ -714,14 +718,131 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
+  // ── Tier 2 (cost 2–3): self-serving powers ──────────────────────────────
+
   {
-    id: 'nt-ancient-stone',
-    name: 'Ancient Stone',
-    type: CardType.Artifact,
+    id: 'nt-ulfang',
+    name: 'Ulfang the Black',
+    type: CardType.Character,
     faction: Faction.Neutral,
-    cost: 1,
+    cost: 2,
+    attack: 2,
+    resources: 1,
+    fateGeneration: 0,
+    // The Easterling lord who sold his allegiance to the highest bidder —
+    // his betrayal at the Nirnaeth struck a blow against whichever side trusted him.
+    effect: {
+      description: 'Deal 1 damage to the opposing Stronghold.',
+      reward: { type: 'dealDamage', amount: 1 },
+    },
+  },
+
+  {
+    id: 'nt-mim',
+    name: 'Mîm the Petty-dwarf',
+    type: CardType.Character,
+    faction: Faction.Neutral,
+    cost: 2,
     attack: 0,
+    resources: 3,
+    fateGeneration: 0,
+    // Bitter and secretive, Mîm hoarded his halls and sold Turin's location
+    // to Morgoth — his aid comes with a shadow on the world.
+    effect: {
+      description: 'Shift the Fate marker 1 step toward Shadow.',
+      reward: { type: 'adjustFate', amount: -1 },
+    },
+  },
+
+  {
+    id: 'nt-eol',
+    name: 'Eöl the Dark Elf',
+    type: CardType.Character,
+    faction: Faction.Neutral,
+    cost: 3,
+    attack: 2,
+    resources: 1,
+    fateGeneration: 0,
+    // Forger of Anglachel and Anguirel — the dark blades of Nan Elmoth.
+    // His craft arm whoever acquires him, regardless of allegiance.
+    effect: {
+      description: 'Draw 1 card.',
+      reward: { type: 'drawCards', count: 1 },
+    },
+  },
+
+  // ── Tier 3 (cost 4–5): dangerous neutrals ───────────────────────────────
+
+  {
+    id: 'nt-maeglin',
+    name: 'Maeglin the Traitor',
+    type: CardType.Champion,
+    faction: Faction.Neutral,
+    cost: 4,
+    attack: 3,
+    resources: 1,
+    fateGeneration: 0,
+    // Maeglin revealed Gondolin's location under torture — his treachery
+    // dealt a wound to the Free Peoples that no sword could match.
+    effect: {
+      description: 'Deal 2 damage to the opposing Stronghold.',
+      reward: { type: 'dealDamage', amount: 2 },
+    },
+  },
+
+  {
+    id: 'nt-dwarves-nogrod',
+    name: 'Dwarves of Nogrod',
+    type: CardType.Character,
+    faction: Faction.Neutral,
+    cost: 4,
+    attack: 4,
     resources: 2,
     fateGeneration: 0,
+    // The Dwarves sacked Menegroth for the Nauglamír — they fought for plunder
+    // alone, and their axes are available to whoever can pay.
+    effect: {
+      description: 'Gain +2 Attack.',
+      reward: { type: 'gainAttack', amount: 2 },
+    },
+  },
+
+  // ── Tier 4 (cost 5–6): ancient forces ───────────────────────────────────
+
+  {
+    id: 'nt-osse',
+    name: 'Ossë of the Seas',
+    type: CardType.Champion,
+    faction: Faction.Neutral,
+    cost: 5,
+    attack: 4,
+    resources: 2,
+    fateGeneration: 0,
+    // A Maia who once answered to Morgoth before Ulmo recalled him. His loyalties
+    // remain his own — he lends his tempests to whoever commands the shore.
+    effect: {
+      description: 'Gain +3 Attack.',
+      reward: { type: 'gainAttack', amount: 3 },
+    },
+  },
+
+  // ── Tier 5 (cost 6): primordial terror ──────────────────────────────────
+
+  {
+    id: 'nt-ungoliant',
+    name: 'Ungoliant',
+    type: CardType.GreatBeast,
+    faction: Faction.Neutral,
+    cost: 6,
+    attack: 4,
+    resources: 2,
+    fateGeneration: 0,
+    // She devoured the light of the Two Trees for herself alone, then turned
+    // on Morgoth when he would not give her more. She serves no one.
+    // Whoever acquires her watches darkness spread across the fate track.
+    effect: {
+      description: 'Shift the Fate marker 3 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -3 },
+    },
   },
 ]
