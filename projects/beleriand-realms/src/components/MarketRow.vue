@@ -97,16 +97,11 @@ function handleCardClick(card: Card): void {
           :class="{
             'opacity-40': !isAffordable(card) && !isTargeted(card),
             'ring-2 ring-morgoth-light ring-offset-1 ring-offset-parchment rounded-xl': isTargeted(card),
-            'rotate-180': card.faction === Faction.FreePeoples,
           }"
         >
           <PlayingCard :card="card" @click="handleCardClick(card)" />
 
-          <!-- Health bar and badge rendered un-rotated so they stay readable from below -->
-          <div
-            class="flex flex-col items-center gap-1 w-full"
-            :class="{ 'rotate-180': card.faction === Faction.FreePeoples }"
-          >
+          <div class="flex flex-col items-center gap-1 w-full">
             <!-- Health bar for attackable faction cards -->
             <div v-if="isAttackable(card)" class="w-full px-1">
               <div class="h-1.5 rounded-full bg-card-border overflow-hidden">

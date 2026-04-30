@@ -1,3 +1,29 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD ROSTER
+//
+// Free Peoples (starter): Noldor Craftsman, Elven Archer, Dúnedain Scout
+// Free Peoples (market):
+//   Tier 1 — Lembas Bread, Dúnedain Scout
+//   Tier 2 — Elven Archer, Gondolin Warrior, Noldor Craftsman,
+//             Elf-Warrior of Doriath, Phial of Light, Ranger of the North,
+//             Mablung the Hunter, Nauglamír
+//   Tier 3 — White Ships of Círdan, Tuor of Gondolin, Glorfindel of Gondolin,
+//             Beren One-Hand, Húrin of Dor-lómin, Círdan the Shipwright,
+//             Eagles of Manwë
+//   Tier 4 — Finrod Felagund, Lúthien Tinúviel, Fingolfin
+//
+// Morgoth (starter): Orc Thrall, Orc Soldier, Morgoth's Spy
+// Morgoth (market):
+//   Tier 1 — Orc Soldier, Orc Raider, Iron Fetter, Warg Rider, Orc Captain
+//   Tier 2 — Cave-Troll, Dark Sorcerer, Werewolf of Angband, Thrall of Morgoth
+//   Tier 3 — Gothmog, Thuringwethil, Draugluin, Ungoliant,
+//             Iron Crown of Morgoth, Glaurung
+//   Tier 4 — Sauron the Necromancer, Morgoth's Dark Will, Ancalagon the Black
+//   Tier 5 — Balrog of Morgoth
+//
+// Neutral (market): Ancient Stone, Wandering Ranger
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { type Card, CardType, Faction } from '../types/game'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,7 +390,7 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  MORGOTH  (8 cards)
+  //  MORGOTH  (20 cards)
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── Tier 1 (cost 1–2): early aggression ─────────────────────────────────
@@ -381,6 +407,37 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
+    id: 'mg-orc-raider',
+    name: 'Orc Raider',
+    type: CardType.Character,
+    faction: Faction.Morgoth,
+    cost: 1,
+    attack: 1,
+    resources: 1,
+    fateGeneration: -1,
+    effect: {
+      description: 'Gain 1 Resource.',
+      reward: { type: 'gainResources', amount: 1 },
+    },
+  },
+
+  {
+    id: 'mg-iron-fetter',
+    name: 'Iron Fetter',
+    type: CardType.Artifact,
+    faction: Faction.Morgoth,
+    cost: 1,
+    attack: 0,
+    resources: 2,
+    fateGeneration: -1,
+    // Angband's forges churn out chains — a resource engine with a shadow cost.
+    effect: {
+      description: 'Shift the Fate marker 1 step toward Shadow.',
+      reward: { type: 'adjustFate', amount: -1 },
+    },
+  },
+
+  {
     id: 'mg-warg-rider',
     name: 'Warg Rider',
     type: CardType.Character,
@@ -392,6 +449,21 @@ export const CARD_DATABASE: readonly Card[] = [
     effect: {
       description: 'Gain 1 Resource.',
       reward: { type: 'gainResources', amount: 1 },
+    },
+  },
+
+  {
+    id: 'mg-orc-captain',
+    name: 'Orc Captain',
+    type: CardType.Character,
+    faction: Faction.Morgoth,
+    cost: 2,
+    attack: 3,
+    resources: 0,
+    fateGeneration: -1,
+    effect: {
+      description: 'Gain +1 Attack.',
+      reward: { type: 'gainAttack', amount: 1 },
     },
   },
 
@@ -425,6 +497,36 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
+  {
+    id: 'mg-werewolf',
+    name: 'Werewolf of Angband',
+    type: CardType.GreatBeast,
+    faction: Faction.Morgoth,
+    cost: 3,
+    attack: 3,
+    resources: 0,
+    fateGeneration: -2,
+    effect: {
+      description: 'Gain +2 Attack.',
+      reward: { type: 'gainAttack', amount: 2 },
+    },
+  },
+
+  {
+    id: 'mg-thrall',
+    name: 'Thrall of Morgoth',
+    type: CardType.Character,
+    faction: Faction.Morgoth,
+    cost: 3,
+    attack: 0,
+    resources: 3,
+    fateGeneration: -1,
+    effect: {
+      description: 'Shift the Fate marker 2 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -2 },
+    },
+  },
+
   // ── Tier 3 (cost 4–6): elite threats ────────────────────────────────────
 
   {
@@ -446,6 +548,38 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
+    id: 'mg-thuringwethil',
+    name: 'Thuringwethil',
+    type: CardType.Champion,
+    faction: Faction.Morgoth,
+    cost: 4,
+    attack: 2,
+    resources: 2,
+    fateGeneration: -2,
+    // The vampire messenger of Sauron — her presence deepens the shadow.
+    effect: {
+      description: 'Shift the Fate marker 3 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -3 },
+    },
+  },
+
+  {
+    id: 'mg-draugluin',
+    name: 'Draugluin',
+    type: CardType.GreatBeast,
+    faction: Faction.Morgoth,
+    cost: 4,
+    attack: 5,
+    resources: 0,
+    fateGeneration: -2,
+    // Sire of Werewolves — his defeat is a victory but comes at a brutal cost.
+    effect: {
+      description: 'Gain +3 Attack.',
+      reward: { type: 'gainAttack', amount: 3 },
+    },
+  },
+
+  {
     id: 'mg-ungoliant',
     name: 'Ungoliant',
     type: CardType.GreatBeast,
@@ -457,6 +591,22 @@ export const CARD_DATABASE: readonly Card[] = [
     effect: {
       description: 'Gain +3 Attack.',
       reward: { type: 'gainAttack', amount: 3 },
+    },
+  },
+
+  {
+    id: 'mg-iron-crown',
+    name: 'Iron Crown of Morgoth',
+    type: CardType.Artifact,
+    faction: Faction.Morgoth,
+    cost: 5,
+    attack: 0,
+    resources: 3,
+    fateGeneration: -2,
+    // The Silmarils were set within — its presence warps fate toward Shadow.
+    effect: {
+      description: 'Shift the Fate marker 3 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -3 },
     },
   },
 
@@ -476,7 +626,56 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 4 (cost 8): ultimate threat ────────────────────────────────────
+  // ── Tier 4 (cost 7–8): legendary anchors ────────────────────────────────
+
+  {
+    id: 'mg-sauron',
+    name: 'Sauron the Necromancer',
+    type: CardType.Champion,
+    faction: Faction.Morgoth,
+    cost: 6,
+    attack: 3,
+    resources: 2,
+    fateGeneration: -2,
+    // Sauron in his tower at Tol-in-Gaurhoth — his mere presence poisons hope.
+    effect: {
+      description: 'Shift the Fate marker 4 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -4 },
+    },
+  },
+
+  {
+    id: 'mg-morgoth-will',
+    name: "Morgoth's Dark Will",
+    type: CardType.Artifact,
+    faction: Faction.Morgoth,
+    cost: 7,
+    attack: 0,
+    resources: 4,
+    fateGeneration: -3,
+    effect: {
+      description: 'Shift the Fate marker 3 steps toward Shadow.',
+      reward: { type: 'adjustFate', amount: -3 },
+    },
+  },
+
+  {
+    id: 'mg-ancalagon',
+    name: 'Ancalagon the Black',
+    type: CardType.GreatBeast,
+    faction: Faction.Morgoth,
+    cost: 7,
+    attack: 6,
+    resources: 0,
+    fateGeneration: -3,
+    // Greatest of winged dragons — his ruin on defeat crushes Gondolin's walls.
+    effect: {
+      description: 'Deal 4 damage to the opposing Stronghold.',
+      reward: { type: 'dealDamage', amount: 4 },
+    },
+  },
+
+  // ── Tier 5 (cost 8): ultimate threat ────────────────────────────────────
 
   {
     id: 'mg-balrog',
