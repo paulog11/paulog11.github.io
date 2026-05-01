@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useGameStore } from '../stores/game'
 import { useCombatEngine } from '../composables/useCombatEngine'
 import StrongholdCard from './Stronghold.vue'
+import StrongholdStack from './StrongholdStack.vue'
 import PlayingCard from './PlayingCard.vue'
 import FateTrack from './FateTrack.vue'
 import MarketRow from './MarketRow.vue'
@@ -29,6 +30,23 @@ const ownBases = computed(() => store.strongholds[activeId.value] ?? [])
 
 const showHelp = ref(false)
 const { onCardPlayed, onTurnEnded } = useTutorial()
+
+// ── Pre-game stronghold selection ────────────────────────────────────────────
+// Each player picks their starting stronghold before play begins.
+const startingSelectionDone = ref(false)
+const fpStartChoice = ref<string | null>(null)
+const mgStartChoice = ref<string | null>(null)
+
+// All FP / Morgoth strongholds (populated after onMounted seeds them).
+const fpAllBases = computed(() => store.strongholds[PlayerId.PlayerOne] ?? [])
+const mgAllBases = computed(() => store.strongholds[PlayerId.PlayerTwo] ?? [])
+
+function confirmStartingChoices(): void {
+  if (!fpStartChoice.value || !mgStartChoice.value) return
+  store.setActiveStronghold(PlayerId.PlayerOne, fpStartChoice.value)
+  store.setActiveStronghold(PlayerId.PlayerTwo, mgStartChoice.value)
+  startingSelectionDone.value = true
+}
 
 // ── Attack assignment state ───────────────────────────────────────────────
 const selectedAttacker = ref<Card | null>(null)
@@ -152,8 +170,9 @@ onMounted(() => {
       innateAbility: 'Orc and Troll cards cost 1 less Resource to acquire.',
     },
   ]
-  store.setActiveStronghold(PlayerId.PlayerOne, 'gondolin')
-  store.setActiveStronghold(PlayerId.PlayerTwo, 'angband')
+  // Default starting choices — players can change these in the pre-game modal.
+  fpStartChoice.value = 'gondolin'
+  mgStartChoice.value = 'angband'
 
   // Build shuffled 10-card starter decks and deal opening hand of 5.
   const fpDeck = makeStarterDeck(FREE_PEOPLES_STARTER, 'fp')
@@ -223,14 +242,13 @@ function handleEndTurn(): void {
     >
       <div class="flex items-center gap-5">
 
-        <!-- Enemy bases — only the active one is targetable -->
-        <div id="enemy-stronghold" class="flex gap-3">
-          <StrongholdCard
-            v-for="base in enemyBases"
-            :key="base.id"
-            :stronghold="base"
-            :is-active="base.id === store.gameState.activeStrongholdId[enemyId]"
-            :is-target="selectedAttacker !== null && base.id === store.gameState.activeStrongholdId[enemyId]"
+        <!-- Enemy bases — stacked pile, only active card shown on top -->
+        <div id="enemy-stronghold">
+          <StrongholdStack
+            :bases="enemyBases"
+            :active-stronghold-id="store.gameState.activeStrongholdId[enemyId]"
+            :is-enemy="true"
+            :selecting-attacker="selectedAttacker !== null"
             @target="handleStrongholdTarget"
           />
         </div>
@@ -360,12 +378,11 @@ function handleEndTurn(): void {
       <div class="flex items-start gap-5">
 
         <div class="flex flex-col gap-3 flex-shrink-0">
-          <div id="player-stronghold" class="flex gap-3">
-            <StrongholdCard
-              v-for="base in ownBases"
-              :key="base.id"
-              :stronghold="base"
-              :is-active="base.id === store.gameState.activeStrongholdId[activeId]"
+          <div id="player-stronghold">
+            <StrongholdStack
+              :bases="ownBases"
+              :active-stronghold-id="store.gameState.activeStrongholdId[activeId]"
+              :is-enemy="false"
             />
           </div>
 
@@ -425,6 +442,117 @@ function handleEndTurn(): void {
 
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PRE-GAME MODAL — each player chooses their starting stronghold
+    ════════════════════════════════════════════════════════════════════ -->
+    <Transition name="fade">
+      <div
+        v-if="!startingSelectionDone"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      >
+        <div class="rounded-2xl border-2 border-card-border bg-card-bg p-8 shadow-2xl w-auto max-w-5xl mx-4">
+          <h2 class="font-display text-2xl font-bold text-ink text-center mb-1">
+            Choose Your Starting Stronghold
+          </h2>
+          <p class="text-muted text-sm text-center mb-8">
+            Each side selects which stronghold to begin at. The rest form your reserve pile.
+          </p>
+
+          <div class="flex flex-col lg:flex-row gap-10 justify-center">
+
+            <!-- Free Peoples selection -->
+            <div class="flex flex-col gap-4 items-center">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-3 h-3 rounded-full bg-free-peoples inline-block" />
+                <h3 class="font-display font-bold text-free-peoples text-sm uppercase tracking-wider">
+                  Free Peoples
+                </h3>
+              </div>
+              <div class="flex flex-wrap gap-3 justify-center">
+                <button
+                  v-for="base in fpAllBases"
+                  :key="base.id"
+                  class="rounded-xl border-2 bg-card-bg p-3 text-left transition-all duration-150 hover:brightness-110"
+                  :class="fpStartChoice === base.id
+                    ? 'border-free-peoples ring-2 ring-free-peoples/60 ring-offset-1 ring-offset-card-bg'
+                    : 'border-card-border opacity-70 hover:opacity-100'"
+                  style="width: 180px;"
+                  @click="fpStartChoice = base.id"
+                >
+                  <div class="flex items-start justify-between mb-1.5">
+                    <span class="font-display font-bold text-sm text-free-peoples leading-tight">{{ base.name }}</span>
+                    <span class="text-ink text-xs font-bold ml-1 tabular-nums">{{ base.maxHealth }} HP</span>
+                  </div>
+                  <p class="text-muted text-[10px] italic leading-snug">{{ base.innateAbility }}</p>
+                  <div
+                    v-if="fpStartChoice === base.id"
+                    class="mt-2 text-[10px] font-bold text-free-peoples uppercase tracking-wider"
+                  >
+                    ✓ Selected
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="hidden lg:flex items-center">
+              <div class="w-px h-full bg-card-border" />
+            </div>
+            <div class="lg:hidden border-t border-card-border" />
+
+            <!-- Morgoth selection -->
+            <div class="flex flex-col gap-4 items-center">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-3 h-3 rounded-full bg-morgoth inline-block" />
+                <h3 class="font-display font-bold text-morgoth-light text-sm uppercase tracking-wider">
+                  Morgoth
+                </h3>
+              </div>
+              <div class="flex flex-wrap gap-3 justify-center">
+                <button
+                  v-for="base in mgAllBases"
+                  :key="base.id"
+                  class="rounded-xl border-2 bg-card-bg p-3 text-left transition-all duration-150 hover:brightness-110"
+                  :class="mgStartChoice === base.id
+                    ? 'border-morgoth ring-2 ring-morgoth/60 ring-offset-1 ring-offset-card-bg'
+                    : 'border-card-border opacity-70 hover:opacity-100'"
+                  style="width: 180px;"
+                  @click="mgStartChoice = base.id"
+                >
+                  <div class="flex items-start justify-between mb-1.5">
+                    <span class="font-display font-bold text-sm text-morgoth-light leading-tight">{{ base.name }}</span>
+                    <span class="text-ink text-xs font-bold ml-1 tabular-nums">{{ base.maxHealth }} HP</span>
+                  </div>
+                  <p class="text-muted text-[10px] italic leading-snug">{{ base.innateAbility }}</p>
+                  <div
+                    v-if="mgStartChoice === base.id"
+                    class="mt-2 text-[10px] font-bold text-morgoth-light uppercase tracking-wider"
+                  >
+                    ✓ Selected
+                  </div>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Confirm button -->
+          <div class="flex justify-center mt-8">
+            <button
+              class="px-8 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wide transition-colors"
+              :class="fpStartChoice && mgStartChoice
+                ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
+                : 'bg-card-border text-muted cursor-not-allowed'"
+              :disabled="!fpStartChoice || !mgStartChoice"
+              @click="confirmStartingChoices"
+            >
+              Begin Game
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- ═══════════════════════════════════════════════════════════════════
          BASE CHOICE MODAL — shown when a stronghold is destroyed
