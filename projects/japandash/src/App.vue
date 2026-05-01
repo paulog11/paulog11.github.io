@@ -50,6 +50,22 @@
         <p class="mt-1.5 text-[0.7rem] text-usuzumi">
           Get your API token from WaniKani → Settings → API Tokens
         </p>
+        <div class="mt-4">
+          <label class="block font-mono text-[0.65rem] tracking-[0.1em] uppercase text-usuzumi mb-1.5">
+            Anthropic API Key
+          </label>
+          <div class="flex gap-2">
+            <input
+              v-model="anthropicKey"
+              type="password"
+              placeholder="sk-ant-..."
+              class="flex-1 px-3 py-2 text-sm rounded-md border border-koshi bg-white/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-2 focus:ring-ai/30 focus:border-ai/50"
+            />
+          </div>
+          <p class="mt-1.5 text-[0.7rem] text-usuzumi">
+            Used by the Conversation widget — get yours at console.anthropic.com
+          </p>
+        </div>
       </div>
     </div>
 
@@ -81,6 +97,7 @@ import ShadowingWidget from './components/widgets/ShadowingWidget.vue'
 import OnomatopoeiaWidget from './components/widgets/OnomatopoeiaWidget.vue'
 import GrammarWidget from './components/widgets/GrammarWidget.vue'
 import ReadingWidget from './components/widgets/ReadingWidget.vue'
+import ConversationWidget from './components/widgets/ConversationWidget.vue'
 
 const { widgetOrder } = useWidgetLayout()
 
@@ -92,14 +109,18 @@ const widgetComponents = {
   onomatopoeia: OnomatopoeiaWidget,
   grammar: GrammarWidget,
   reading: ReadingWidget,
+  conversation: ConversationWidget,
 }
 
 const showSettings = ref(false)
 const storedKey = useLocalStorage('japandash:wanikani-key', '')
 const wanikaniKey = ref(storedKey.value)
+const storedAnthropicKey = useLocalStorage('japandash:anthropic-key', '')
+const anthropicKey = ref(storedAnthropicKey.value)
 
 function saveSettings() {
   storedKey.value = wanikaniKey.value
+  storedAnthropicKey.value = anthropicKey.value
   showSettings.value = false
 }
 </script>

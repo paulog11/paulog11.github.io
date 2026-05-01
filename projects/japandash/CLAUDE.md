@@ -72,5 +72,30 @@ Channels: Speak Japanese Naturally, Japanese with Shun, Ken-san Okaeri Japanese,
 - Reading passages: add to `src/data/reading-passages.js` with vocabulary and comprehension questions
 - Shadowing videos: add verified YouTube video IDs to channels in `src/data/shadowing-channels.js`
 
+## Conversation Widget (ConversationWidget.vue)
+Interactive Japanese conversation practice powered by the Anthropic API (Claude Haiku 4.5).
+
+**Architecture:**
+- `src/services/claude-api.js` — thin `fetch` wrapper around `POST /v1/messages`. Sends the system prompt with `cache_control: { type: 'ephemeral' }` for prompt caching (saves ~80% system-prompt token cost after first turn). No SDK dependency.
+- `src/composables/useConversation.js` — owns scenario/level state and conversation history. Exposes `send(userText)`, `clearHistory()`. History persisted to localStorage keyed by scenario ID.
+- Model: `claude-haiku-4-5-20251001`
+- `anthropic-dangerous-direct-browser-access: true` header enables direct browser calls (acceptable for personal use).
+
+**Scenarios:** Free Chat · Café Order · Train Station · Self-Introduction · Hobby Talk
+
+**Response format (JSON):**
+```json
+{ "ja": "...", "en": "...", "furigana": [{"word":"漢字","reading":"かんじ"}], "correction": "..." }
+```
+Claude always returns this JSON. If parsing fails, raw text is shown as `ja`.
+
+**UI features:** Scenario dropdown, JLPT level pills (N5–N1), furigana toggle (show/hover/hide), translation toggle, 🔊 TTS on each assistant message, 🎤 mic input (fills box, doesn't auto-send), correction callout (amber) when Claude notes a grammar mistake, auto-scroll to latest message.
+
+**Furigana rendering:** `renderFurigana(text, furiganaList)` injects `<ruby>` tags — same approach as ReadingWidget, using Claude's `furigana` array instead of a vocab lookup.
+
+**TTS:** `SpeechSynthesisUtterance({ lang: 'ja-JP', rate: 0.9 })` — same pattern as VocabWidget.
+
+**Mic input:** `SpeechRecognition` with `lang: 'ja-JP'` fills the text box; user reviews then presses Enter/送る.
+
 ## localStorage Keys
-All prefixed with `japandash:` — wanikani-key, wanikani-vocab-cache, jisho-recent, shadowing-completed, grammar-studied
+All prefixed with `japandash:` — wanikani-key, wanikani-vocab-cache-v2, jisho-recent, shadowing-completed, grammar-studied, anthropic-key, conv-scenario, conv-level, conv-history
