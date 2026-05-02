@@ -60,6 +60,7 @@ export const useGameStore = defineStore('game', () => {
     basesDestroyed: { [PlayerId.PlayerOne]: 0, [PlayerId.PlayerTwo]: 0 },
     activeStrongholdId: { [PlayerId.PlayerOne]: null, [PlayerId.PlayerTwo]: null },
     pendingBaseChoice: null,
+    pendingTrash: null,
   })
 
   function drawCards(playerId: PlayerId, count: number): void {
@@ -131,6 +132,9 @@ export const useGameStore = defineStore('game', () => {
         }
         break
       }
+      case 'trash':
+        gameState.value.pendingTrash = playerId
+        break
     }
   }
 
@@ -177,6 +181,22 @@ export const useGameStore = defineStore('game', () => {
     if (gameState.value.pendingBaseChoice === playerId) {
       gameState.value.pendingBaseChoice = null
     }
+  }
+
+  // Permanently remove a card from hand, inPlay, or discard. Returns true if found.
+  function trashCard(playerId: PlayerId, cardId: string): boolean {
+    const player = players.value[playerId]
+    for (const zone of [player.hand, player.inPlay, player.discard] as Card[][]) {
+      const idx = zone.findIndex(c => c.id === cardId)
+      if (idx !== -1) {
+        zone.splice(idx, 1)
+        if (gameState.value.pendingTrash === playerId) {
+          gameState.value.pendingTrash = null
+        }
+        return true
+      }
+    }
+    return false
   }
 
   // Deploy a Vanguard card from hand to the field. Returns the new instance.
@@ -287,6 +307,7 @@ export const useGameStore = defineStore('game', () => {
     setActiveStronghold,
     deployVanguard,
     damageVanguard,
+    trashCard,
     endTurn,
   }
 })

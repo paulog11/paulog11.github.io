@@ -28,6 +28,7 @@ export type EffectReward =
   | { type: 'drawCards'; count: number }
   | { type: 'adjustFate'; amount: number }
   | { type: 'dealDamage'; amount: number }
+  | { type: 'trash' }
 
 export interface CardEffect {
   description: string;
@@ -90,6 +91,8 @@ export interface GameState {
   activeStrongholdId: Record<PlayerId, string | null>;
   // Set to a PlayerId when that player must choose a new active stronghold.
   pendingBaseChoice: PlayerId | null;
+  // Set to a PlayerId when that player must trash a card from hand/inPlay/discard.
+  pendingTrash: PlayerId | null;
 }
 
 export interface PlayerState {

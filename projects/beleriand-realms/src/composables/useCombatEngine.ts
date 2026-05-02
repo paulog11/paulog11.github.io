@@ -25,6 +25,9 @@ function applyReward(store: Store, beneficiary: PlayerId, reward: EffectReward):
     case 'adjustFate':
       store.adjustFate(reward.amount)
       break
+    case 'trash':
+      store.gameState.pendingTrash = beneficiary
+      break
     case 'dealDamage': {
       // Direct damage hits the first living enemy vanguard if any; otherwise the active stronghold.
       const opposingId =

@@ -10,7 +10,7 @@
 // Free Peoples (starter): Noldor Craftsman, Elven Archer, Dúnedain Scout
 // Free Peoples (market):
 //   Cost 1 — Elf-scout of Doriath
-//   Cost 2 — Gondolin Warrior, Elf-Warrior of Doriath
+//   Cost 2 — Gondolin Warrior, Elf-Warrior of Doriath, Loremaster of Eregion (trash)
 //   Cost 3 — Ranger of the North, Mablung the Hunter, Galadriel of the Noldor (Hero)
 //   Cost 4 — Mariner of the Falas, Tuor of Gondolin (Hero), Húrin of Dor-lómin (Hero)
 //   Cost 5 — Glorfindel of Gondolin (Hero), Beren One-Hand (Hero),
@@ -23,7 +23,7 @@
 // Morgoth (market):
 //   Cost 1 — Orc Raider, Orc Slavemaster
 //   Cost 2 — Warg Rider, Orc Captain
-//   Cost 3 — Cave-Troll, Dark Sorcerer, Werewolf of Angband (Vanguard, HP 4), Thrall of Morgoth
+//   Cost 3 — Cave-Troll, Dark Sorcerer, Werewolf of Angband (Vanguard, HP 4), Thrall of Morgoth, Iron-mask Inquisitor (trash)
 //   Cost 4 — Gothmog (Vanguard, HP 6), Thuringwethil (Hero), Draugluin (Vanguard, HP 5)
 //   Cost 5 — Carcharoth (Vanguard, HP 6)
 //   Cost 6 — Glaurung (Vanguard, HP 8), Sauron the Necromancer (Hero)
@@ -32,7 +32,7 @@
 //
 // Neutral (market):
 //   Cost 1 — Petty-dwarf Outcast
-//   Cost 2 — Wandering Ranger, Ulfang the Black, Mîm the Petty-dwarf
+//   Cost 2 — Wandering Ranger, Ulfang the Black, Mîm the Petty-dwarf, Wandering Exile (trash)
 //   Cost 3 — Master-smith of Nogrod, Eöl the Dark Elf
 //   Cost 4 — Maeglin the Traitor (Hero), Dwarves of Nogrod
 //   Cost 5 — Ossë of the Seas (Hero)
@@ -160,6 +160,21 @@ export const CARD_DATABASE: readonly Card[] = [
     effect: {
       description: 'Draw 1 card.',
       reward: { type: 'drawCards', count: 1 },
+    },
+  },
+
+  {
+    id: 'fp-loremaster-eregion',
+    name: 'Loremaster of Eregion',
+    category: CardCategory.Hero,
+    faction: Faction.FreePeoples,
+    cost: 2,
+    attack: 0,
+    resources: 2,
+    fateGeneration: 1,
+    effect: {
+      description: 'Trash a card from your hand, played cards, or discard pile.',
+      reward: { type: 'trash' },
     },
   },
 
@@ -517,6 +532,21 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
+  {
+    id: 'mg-iron-mask-inquisitor',
+    name: 'Iron-mask Inquisitor',
+    category: CardCategory.Troop,
+    faction: Faction.Morgoth,
+    cost: 3,
+    attack: 1,
+    resources: 2,
+    fateGeneration: -1,
+    effect: {
+      description: 'Trash a card from your hand, played cards, or discard pile.',
+      reward: { type: 'trash' },
+    },
+  },
+
   // ── Cost 4 ────────────────────────────────────────────────────────────────
 
   {
@@ -735,6 +765,21 @@ export const CARD_DATABASE: readonly Card[] = [
     effect: {
       description: 'Shift the Fate marker 1 step toward Shadow.',
       reward: { type: 'adjustFate', amount: -1 },
+    },
+  },
+
+  {
+    id: 'nt-wandering-exile',
+    name: 'Wandering Exile',
+    category: CardCategory.Troop,
+    faction: Faction.Neutral,
+    cost: 2,
+    attack: 1,
+    resources: 1,
+    fateGeneration: 0,
+    effect: {
+      description: 'Trash a card from your hand, played cards, or discard pile.',
+      reward: { type: 'trash' },
     },
   },
 

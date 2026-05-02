@@ -118,6 +118,25 @@ const hasUnassignedAttack = computed(() => {
 // Convenience: is any attacker currently selected?
 const isSelectingAttacker = computed(() => selectedAttackerId.value !== null)
 
+// Trash modal — all trashable cards for the pending player.
+const trashPlayerId = computed(() => store.gameState.pendingTrash)
+const trashableSections = computed(() => {
+  const pid = trashPlayerId.value
+  if (!pid) return null
+  const p = store.players[pid]
+  return {
+    hand: p.hand,
+    inPlay: p.inPlay,
+    discard: p.discard,
+  }
+})
+
+function resolveTrash(cardId: string): void {
+  const pid = trashPlayerId.value
+  if (!pid) return
+  store.trashCard(pid, cardId)
+}
+
 // Base-choice modal — the surviving bases the pending player can pick from.
 const pendingChoiceBases = computed(() => {
   const pid = store.gameState.pendingBaseChoice
@@ -655,6 +674,100 @@ function handleEndTurn(): void {
               @click="confirmStartingChoices"
             >
               Begin Game
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         TRASH MODAL — choose a card to permanently remove from the game
+    ════════════════════════════════════════════════════════════════════ -->
+    <Transition name="fade">
+      <div
+        v-if="trashPlayerId !== null && trashableSections !== null"
+        class="fixed inset-0 z-40 flex items-center justify-center bg-black/75 backdrop-blur-sm"
+      >
+        <div class="rounded-2xl border-2 border-card-border bg-card-bg p-6 shadow-2xl w-auto max-w-4xl mx-4 flex flex-col gap-4 max-h-[85vh]">
+          <div class="flex items-center justify-between flex-shrink-0">
+            <div>
+              <h2 class="font-display text-lg font-bold text-ink">Trash a Card</h2>
+              <p class="text-muted text-xs mt-0.5">Choose one card to permanently remove from the game.</p>
+            </div>
+            <span
+              class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border"
+              :class="trashPlayerId === PlayerId.PlayerOne
+                ? 'text-free-peoples border-free-peoples/40 bg-free-peoples/10'
+                : 'text-morgoth-light border-morgoth/40 bg-morgoth/10'"
+            >
+              {{ trashPlayerId === PlayerId.PlayerOne ? 'Free Peoples' : 'Morgoth' }}
+            </span>
+          </div>
+
+          <div class="overflow-y-auto flex flex-col gap-5">
+            <!-- Hand -->
+            <div v-if="trashableSections.hand.length > 0" class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Hand</span>
+              <div class="flex gap-2 flex-wrap">
+                <div
+                  v-for="c in trashableSections.hand"
+                  :key="c.id"
+                  class="cursor-pointer ring-2 ring-transparent hover:ring-red-500 rounded-xl transition-all duration-150 hover:scale-105"
+                  title="Click to trash"
+                  @click="resolveTrash(c.id)"
+                >
+                  <PlayingCard :card="c" @click="() => {}" />
+                </div>
+              </div>
+            </div>
+
+            <!-- In Play -->
+            <div v-if="trashableSections.inPlay.length > 0" class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">In Play</span>
+              <div class="flex gap-2 flex-wrap">
+                <div
+                  v-for="c in trashableSections.inPlay"
+                  :key="c.id"
+                  class="cursor-pointer ring-2 ring-transparent hover:ring-red-500 rounded-xl transition-all duration-150 hover:scale-105"
+                  title="Click to trash"
+                  @click="resolveTrash(c.id)"
+                >
+                  <PlayingCard :card="c" @click="() => {}" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Discard -->
+            <div v-if="trashableSections.discard.length > 0" class="flex flex-col gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Discard Pile</span>
+              <div class="flex gap-2 flex-wrap">
+                <div
+                  v-for="c in trashableSections.discard"
+                  :key="c.id"
+                  class="cursor-pointer ring-2 ring-transparent hover:ring-red-500 rounded-xl transition-all duration-150 hover:scale-105"
+                  title="Click to trash"
+                  @click="resolveTrash(c.id)"
+                >
+                  <PlayingCard :card="c" @click="() => {}" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Nothing to trash -->
+            <div
+              v-if="!trashableSections.hand.length && !trashableSections.inPlay.length && !trashableSections.discard.length"
+              class="text-center text-muted text-sm py-6"
+            >
+              No cards available to trash.
+            </div>
+          </div>
+
+          <div class="flex justify-end flex-shrink-0 border-t border-card-border pt-3">
+            <button
+              class="text-xs text-muted hover:text-ink transition-colors underline"
+              @click="store.gameState.pendingTrash = null"
+            >
+              Skip (trash nothing)
             </button>
           </div>
         </div>
