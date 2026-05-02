@@ -10,7 +10,7 @@ import MarketRow from './MarketRow.vue'
 import HelpModal from './HelpModal.vue'
 import TutorialDrawer from './TutorialDrawer.vue'
 import { useTutorial } from '../composables/useTutorial'
-import { Faction, PlayerId, type Card } from '../types/game'
+import { CardCategory, Faction, PlayerId, type Card, type VanguardInstance } from '../types/game'
 import { CARD_DATABASE, FREE_PEOPLES_STARTER, MORGOTH_STARTER } from '../data/cardDatabase'
 
 const store = useGameStore()
@@ -49,35 +49,74 @@ function confirmStartingChoices(): void {
 }
 
 // ── Attack assignment state ───────────────────────────────────────────────
-const selectedAttacker = ref<Card | null>(null)
+// selectedAttackerId is the id of the in-play card OR vanguard instanceId being used to attack.
+const selectedAttackerId = ref<string | null>(null)
+const selectedAttackerAttack = ref<number>(0)
 
-function selectAttacker(c: Card): void {
+// Vanguard instances for each side
+const enemyVanguards = computed(() => store.players[enemyId.value].vanguards)
+const ownVanguards = computed(() => store.players[activeId.value].vanguards)
+
+function selectInPlayAttacker(c: Card): void {
   if (activePlayer.value.attackAssigned.has(c.id)) return
   if (c.attack === 0) return
-  selectedAttacker.value = selectedAttacker.value?.id === c.id ? null : c
+  if (selectedAttackerId.value === c.id) {
+    selectedAttackerId.value = null
+    selectedAttackerAttack.value = 0
+  } else {
+    selectedAttackerId.value = c.id
+    selectedAttackerAttack.value = c.attack
+  }
+}
+
+function selectVanguardAttacker(v: VanguardInstance): void {
+  if (activePlayer.value.attackAssigned.has(v.instanceId)) return
+  if (v.card.attack === 0) return
+  if (selectedAttackerId.value === v.instanceId) {
+    selectedAttackerId.value = null
+    selectedAttackerAttack.value = 0
+  } else {
+    selectedAttackerId.value = v.instanceId
+    selectedAttackerAttack.value = v.card.attack
+  }
 }
 
 function cancelSelection(): void {
-  selectedAttacker.value = null
+  selectedAttackerId.value = null
+  selectedAttackerAttack.value = 0
 }
 
 function handleStrongholdTarget(strongholdId: string): void {
-  const attacker = selectedAttacker.value
-  if (!attacker) return
-  executeAttack(activeId.value, attacker.id, 'Stronghold', strongholdId, attacker.attack)
-  selectedAttacker.value = null
+  if (!selectedAttackerId.value) return
+  executeAttack(activeId.value, selectedAttackerId.value, 'Stronghold', strongholdId, selectedAttackerAttack.value)
+  selectedAttackerId.value = null
+  selectedAttackerAttack.value = 0
+}
+
+function handleVanguardTarget(instanceId: string): void {
+  if (!selectedAttackerId.value) return
+  executeAttack(activeId.value, selectedAttackerId.value, 'Vanguard', instanceId, selectedAttackerAttack.value)
+  selectedAttackerId.value = null
+  selectedAttackerAttack.value = 0
 }
 
 function handleMarketAttack(marketCard: Card): void {
-  const attacker = selectedAttacker.value
-  if (!attacker) return
-  executeAttack(activeId.value, attacker.id, 'MarketCard', marketCard.id, attacker.attack)
-  selectedAttacker.value = null
+  if (!selectedAttackerId.value) return
+  executeAttack(activeId.value, selectedAttackerId.value, 'MarketCard', marketCard.id, selectedAttackerAttack.value)
+  selectedAttackerId.value = null
+  selectedAttackerAttack.value = 0
 }
 
-const hasUnassignedAttack = computed(() =>
-  activePlayer.value.inPlay.some(c => c.attack > 0 && !activePlayer.value.attackAssigned.has(c.id))
-)
+// True if there's any unspent attack available (in-play cards or vanguards)
+const hasUnassignedAttack = computed(() => {
+  const p = activePlayer.value
+  const inPlayHas = p.inPlay.some(c => c.attack > 0 && !p.attackAssigned.has(c.id))
+  const vanguardHas = p.vanguards.some(v => v.card.attack > 0 && !p.attackAssigned.has(v.instanceId))
+  return inPlayHas || vanguardHas
+})
+
+// Convenience: is any attacker currently selected?
+const isSelectingAttacker = computed(() => selectedAttackerId.value !== null)
 
 // Base-choice modal — the surviving bases the pending player can pick from.
 const pendingChoiceBases = computed(() => {
@@ -129,44 +168,44 @@ onMounted(() => {
     },
     {
       id: 'nargothrond', name: 'Nargothrond', faction: Faction.FreePeoples,
-      maxHealth: 15, currentHealth: 15,
+      maxHealth: 16, currentHealth: 16,
       innateAbility: 'Once per turn, you may discard 1 card to draw 1 card.',
     },
     {
       id: 'barad-eithel', name: 'Barad Eithel', faction: Faction.FreePeoples,
-      maxHealth: 12, currentHealth: 12,
+      maxHealth: 14, currentHealth: 14,
       innateAbility: 'Whenever this stronghold takes damage, gain 1 Attack.',
     },
     {
       id: 'pass-of-aglon', name: 'Pass of Aglon', faction: Faction.FreePeoples,
-      maxHealth: 10, currentHealth: 10,
+      maxHealth: 14, currentHealth: 14,
       innateAbility: 'Whenever an enemy attacks this stronghold, deal 1 damage back to the opposing stronghold.',
     },
     {
       id: 'vinyamar', name: 'Vinyamar', faction: Faction.FreePeoples,
-      maxHealth: 8, currentHealth: 8,
+      maxHealth: 14, currentHealth: 14,
       innateAbility: 'At the start of your turn, draw 1 card and shift the Fate marker 1 step toward Light.',
     },
     {
       id: 'himring', name: 'Himring', faction: Faction.FreePeoples,
-      maxHealth: 6, currentHealth: 6,
+      maxHealth: 14, currentHealth: 14,
       innateAbility: 'This stronghold cannot be destroyed while the Fate marker is on the Light side.',
     },
   ]
   store.strongholds[PlayerId.PlayerTwo] = [
     {
       id: 'angband', name: 'Angband', faction: Faction.Morgoth,
-      maxHealth: 30, currentHealth: 30,
+      maxHealth: 40, currentHealth: 40,
       innateAbility: 'At the start of each Shadow turn, move the Fate marker 1 step toward Shadow.',
     },
     {
       id: 'utumno', name: 'Utumno', faction: Faction.Morgoth,
-      maxHealth: 26, currentHealth: 26,
+      maxHealth: 35, currentHealth: 35,
       innateAbility: 'Whenever a Morgoth card is defeated in the Beleriand Row, gain 2 Attack.',
     },
     {
       id: 'thangorodrim', name: 'Thangorodrim', faction: Faction.Morgoth,
-      maxHealth: 22, currentHealth: 22,
+      maxHealth: 28, currentHealth: 28,
       innateAbility: 'Orc and Troll cards cost 1 less Resource to acquire.',
     },
   ]
@@ -200,9 +239,13 @@ function playCard(c: Card): void {
   const idx = player.hand.findIndex(h => h.id === c.id)
   if (idx === -1) return
   player.hand.splice(idx, 1)
-  player.inPlay.push(c)
   store.gainResources(activeId.value, c.resources)
   store.gainAttack(activeId.value, c.attack)
+  if (c.category === CardCategory.Vanguard) {
+    store.deployVanguard(activeId.value, c)
+  } else {
+    player.inPlay.push(c)
+  }
   onCardPlayed()
 }
 
@@ -213,16 +256,20 @@ function playAllCards(): void {
   const cards = [...player.hand]
   player.hand.splice(0, player.hand.length)
   for (const c of cards) {
-    player.inPlay.push(c)
     store.gainResources(activeId.value, c.resources)
     store.gainAttack(activeId.value, c.attack)
+    if (c.category === CardCategory.Vanguard) {
+      store.deployVanguard(activeId.value, c)
+    } else {
+      player.inPlay.push(c)
+    }
   }
   onCardPlayed()
 }
 
 // ── End turn ─────────────────────────────────────────────────────────────
 function handleEndTurn(): void {
-  selectedAttacker.value = null
+  cancelSelection()
   store.endTurn()
   onTurnEnded()
 }
@@ -248,9 +295,34 @@ function handleEndTurn(): void {
             :bases="enemyBases"
             :active-stronghold-id="store.gameState.activeStrongholdId[enemyId]"
             :is-enemy="true"
-            :selecting-attacker="selectedAttacker !== null"
+            :selecting-attacker="isSelectingAttacker"
             @target="handleStrongholdTarget"
           />
+        </div>
+
+        <!-- Enemy vanguards — clickable targets when attacker is selected -->
+        <div v-if="enemyVanguards.length > 0" class="flex flex-col gap-1">
+          <span class="text-[9px] font-bold uppercase tracking-widest text-morgoth/60">Vanguards</span>
+          <div class="flex gap-2">
+            <div
+              v-for="v in enemyVanguards"
+              :key="v.instanceId"
+              class="relative rounded-xl border-2 overflow-hidden transition-all duration-150 flex-shrink-0"
+              :class="[
+                enemyId === PlayerId.PlayerTwo ? 'border-morgoth' : 'border-free-peoples',
+                isSelectingAttacker ? 'ring-2 ring-red-500 cursor-pointer hover:ring-offset-1' : 'cursor-default',
+              ]"
+              style="width: 120px; height: 180px;"
+              @click="isSelectingAttacker && handleVanguardTarget(v.instanceId)"
+            >
+              <div style="transform: scale(0.75); transform-origin: top left; width: 160px; height: 240px; pointer-events: none;">
+                <PlayingCard :card="v.card" :vanguard-hp="v.currentHp" @click="() => {}" />
+              </div>
+              <div v-if="isSelectingAttacker" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center z-10">
+                <span class="text-white text-[10px] font-bold">⚔</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Enemy pool counters (read-only) -->
@@ -315,11 +387,11 @@ function handleEndTurn(): void {
       <div id="in-play-zone" v-if="activePlayer.inPlay.length > 0" class="flex flex-col gap-1.5">
         <div class="flex items-center gap-3">
           <span class="text-[10px] font-bold uppercase tracking-widest text-free-peoples/70">In Play</span>
-          <span v-if="hasUnassignedAttack && !selectedAttacker" class="text-[10px] text-morgoth-light animate-pulse">
+          <span v-if="hasUnassignedAttack && !isSelectingAttacker" class="text-[10px] text-morgoth-light animate-pulse">
             ⚔ Click a card to assign its attack
           </span>
-          <span v-if="selectedAttacker" class="text-[10px] text-morgoth-light font-bold">
-            ⚔ {{ selectedAttacker.attack }} — now click a target above
+          <span v-if="isSelectingAttacker" class="text-[10px] text-morgoth-light font-bold">
+            ⚔ {{ selectedAttackerAttack }} — now click a target above
             <button class="ml-2 text-muted underline" @click="cancelSelection">cancel</button>
           </span>
         </div>
@@ -334,11 +406,11 @@ function handleEndTurn(): void {
                 class="overflow-hidden rounded-xl transition-all duration-150"
                 :class="{
                   'opacity-40': activePlayer.attackAssigned.has(c.id),
-                  'ring-2 ring-morgoth cursor-pointer hover:ring-morgoth-light': c.attack > 0 && !activePlayer.attackAssigned.has(c.id) && selectedAttacker?.id !== c.id,
-                  'ring-2 ring-offset-2 ring-offset-parchment ring-morgoth-light scale-105': selectedAttacker?.id === c.id,
+                  'ring-2 ring-morgoth cursor-pointer hover:ring-morgoth-light': c.attack > 0 && !activePlayer.attackAssigned.has(c.id) && selectedAttackerId !== c.id,
+                  'ring-2 ring-offset-2 ring-offset-parchment ring-morgoth-light scale-105': selectedAttackerId === c.id,
                 }"
                 style="width: 120px; height: 180px;"
-                @click="c.attack > 0 && selectAttacker(c)"
+                @click="c.attack > 0 && selectInPlayAttacker(c)"
               >
                 <div style="transform: scale(0.75); transform-origin: top left; width: 160px; height: 240px;">
                   <PlayingCard :card="c" @click="() => {}" />
@@ -360,7 +432,7 @@ function handleEndTurn(): void {
 
       <MarketRow
         id="beleriand-row"
-        :selecting-attacker="selectedAttacker"
+        :selecting-attacker="isSelectingAttacker ? { id: selectedAttackerId!, attack: selectedAttackerAttack } : null"
         @attack="handleMarketAttack"
       />
 
@@ -384,6 +456,39 @@ function handleEndTurn(): void {
               :active-stronghold-id="store.gameState.activeStrongholdId[activeId]"
               :is-enemy="false"
             />
+          </div>
+
+          <!-- Own vanguards -->
+          <div v-if="ownVanguards.length > 0" class="flex flex-col gap-1">
+            <span class="text-[9px] font-bold uppercase tracking-widest text-muted">Vanguards</span>
+            <div class="flex gap-1.5">
+              <div
+                v-for="v in ownVanguards"
+                :key="v.instanceId"
+                class="relative rounded-xl border-2 overflow-hidden transition-all duration-150 flex-shrink-0"
+                :class="[
+                  activeId === PlayerId.PlayerOne ? 'border-free-peoples' : 'border-morgoth',
+                  v.card.attack > 0 && !activePlayer.attackAssigned.has(v.instanceId) ? 'cursor-pointer' : 'cursor-default',
+                  selectedAttackerId === v.instanceId ? 'ring-2 ring-offset-2 ring-offset-parchment ring-morgoth-light scale-105' : '',
+                  v.card.attack > 0 && !activePlayer.attackAssigned.has(v.instanceId) && selectedAttackerId !== v.instanceId ? 'ring-2 ring-morgoth hover:ring-morgoth-light' : '',
+                  activePlayer.attackAssigned.has(v.instanceId) ? 'opacity-40' : '',
+                ]"
+                style="width: 90px; height: 135px;"
+                @click="v.card.attack > 0 && selectVanguardAttacker(v)"
+              >
+                <div style="transform: scale(0.5625); transform-origin: top left; width: 160px; height: 240px; pointer-events: none;">
+                  <PlayingCard :card="v.card" :vanguard-hp="v.currentHp" @click="() => {}" />
+                </div>
+                <div
+                  class="absolute bottom-0 left-0 right-0 text-center text-[9px] font-bold py-0.5"
+                  :class="activePlayer.attackAssigned.has(v.instanceId)
+                    ? 'bg-card-border/50 text-muted/50'
+                    : 'bg-morgoth/20 text-morgoth-light'"
+                >
+                  {{ activePlayer.attackAssigned.has(v.instanceId) ? '⚔ spent' : `⚔ ${v.card.attack}` }}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="player-pool" class="flex gap-4 text-sm">

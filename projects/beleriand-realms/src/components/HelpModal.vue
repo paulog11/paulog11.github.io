@@ -78,25 +78,32 @@ function openTutorial(): void {
           </div>
         </section>
 
-        <!-- ── Card Types ──────────────────────────────────────────────── -->
+        <!-- ── Card Categories ────────────────────────────────────────── -->
         <section>
-          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">Card Types</h3>
-          <div class="grid grid-cols-2 gap-2">
+          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">Card Categories</h3>
+          <div class="space-y-2">
             <div class="bg-parchment border border-card-border rounded-xl p-3">
-              <p class="text-ink text-sm font-semibold">Character</p>
-              <p class="text-muted text-xs mt-1 leading-relaxed">Warriors and scouts. Usually provide a balanced mix of Attack and Resources.</p>
+              <p class="text-ink text-sm font-semibold">Troop</p>
+              <p class="text-muted text-xs mt-1 leading-relaxed">Common soldiers and warriors. Played from hand each turn; go to discard at turn's end. Provide Attack and Resources.</p>
             </div>
             <div class="bg-parchment border border-card-border rounded-xl p-3">
-              <p class="text-ink text-sm font-semibold">Champion</p>
-              <p class="text-muted text-xs mt-1 leading-relaxed">High-cost heroes with powerful abilities. Often swing the outcome of a game.</p>
+              <p class="text-ink text-sm font-semibold">Hero</p>
+              <p class="text-muted text-xs mt-1 leading-relaxed">Named champions with powerful abilities. Unique — one copy in the deck. Like Troops, they are played from hand and discarded at turn's end.</p>
             </div>
-            <div class="bg-parchment border border-card-border rounded-xl p-3">
-              <p class="text-ink text-sm font-semibold">Artifact</p>
-              <p class="text-muted text-xs mt-1 leading-relaxed">Ancient relics and tools. Typically generate Resources or shift the Fate Track.</p>
-            </div>
-            <div class="bg-parchment border border-card-border rounded-xl p-3">
-              <p class="text-ink text-sm font-semibold">Great Beast</p>
-              <p class="text-muted text-xs mt-1 leading-relaxed">Morgoth's monstrous servants — Balrogs, dragons, fell creatures. High Attack and devastating effects.</p>
+            <div class="bg-parchment border border-card-border rounded-xl p-3 border-l-4"
+              :class="'border-l-morgoth'">
+              <div class="flex items-center gap-2 mb-1">
+                <p class="text-ink text-sm font-semibold">Vanguard</p>
+                <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-morgoth/10 text-morgoth-light border border-morgoth/30">Persists</span>
+              </div>
+              <p class="text-muted text-xs leading-relaxed">
+                Powerful field units with <span class="text-ink font-semibold">HP</span>. Deploying one from hand places it on the field where it <strong>stays across turns</strong> until its HP is reduced to zero.
+              </p>
+              <ul class="text-muted text-xs mt-1.5 space-y-0.5 leading-relaxed list-disc list-inside">
+                <li>Contributes its ⚔ Attack at the start of each of your turns</li>
+                <li>Blocks the enemy Stronghold — opponents must defeat all your Vanguards first</li>
+                <li>Cannot be attacked in the Beleriand Row — acquire with Resources to deploy</li>
+              </ul>
             </div>
           </div>
         </section>

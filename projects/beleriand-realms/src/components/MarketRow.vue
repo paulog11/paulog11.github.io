@@ -6,8 +6,8 @@ import PlayingCard from './PlayingCard.vue'
 import { type Card, Faction } from '../types/game'
 
 const props = defineProps<{
-  // The in-play card whose attack is being assigned, or null if none selected.
-  selectingAttacker: Card | null
+  // The attacker whose attack is being assigned, or null if none selected.
+  selectingAttacker: { id: string; attack: number } | null
 }>()
 
 const emit = defineEmits<{ attack: [card: Card] }>()

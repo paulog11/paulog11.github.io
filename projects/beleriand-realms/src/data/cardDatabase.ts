@@ -1,68 +1,75 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CARD ROSTER
 //
+// Card categories:
+//   Troop   — common units; played from hand, discarded at end of turn
+//   Hero    — unique named characters; one copy in the market deck
+//   Vanguard — powerful named characters with HP; persist on field until killed,
+//              contribute attack each turn, block the active stronghold
+//
 // Free Peoples (starter): Noldor Craftsman, Elven Archer, Dúnedain Scout
 // Free Peoples (market):
-//   Tier 1 — Lembas Bread, Dúnedain Scout
-//   Tier 2 — Elven Archer, Gondolin Warrior, Noldor Craftsman,
-//             Elf-Warrior of Doriath, Phial of Light, Ranger of the North,
-//             Mablung the Hunter, Nauglamír
-//   Tier 3 — White Ships of Círdan, Tuor of Gondolin, Glorfindel of Gondolin,
-//             Beren One-Hand, Húrin of Dor-lómin, Círdan the Shipwright,
-//             Eagles of Manwë
-//   Tier 4 — Finrod Felagund, Lúthien Tinúviel, Fingolfin
+//   Cost 1 — Elf-scout of Doriath
+//   Cost 2 — Gondolin Warrior, Elf-Warrior of Doriath
+//   Cost 3 — Ranger of the North, Mablung the Hunter, Galadriel of the Noldor (Hero)
+//   Cost 4 — Mariner of the Falas, Tuor of Gondolin (Hero), Húrin of Dor-lómin (Hero)
+//   Cost 5 — Glorfindel of Gondolin (Hero), Beren One-Hand (Hero),
+//             Círdan the Shipwright (Hero), Eagles of Manwë (Hero)
+//   Cost 6 — Finrod Felagund (Hero)
+//   Cost 7 — Lúthien Tinúviel (Hero), Fingolfin (Vanguard, HP 6)
+//   Cost 8 — Túrin Turambar (Vanguard, HP 7)
 //
 // Morgoth (starter): Orc Thrall, Orc Soldier, Morgoth's Spy
 // Morgoth (market):
-//   Tier 1 — Orc Soldier, Orc Raider, Iron Fetter, Warg Rider, Orc Captain
-//   Tier 2 — Cave-Troll, Dark Sorcerer, Werewolf of Angband, Thrall of Morgoth
-//   Tier 3 — Gothmog, Thuringwethil, Draugluin, Iron Crown of Morgoth, Glaurung
-//   Tier 4 — Sauron the Necromancer, Morgoth's Dark Will, Ancalagon the Black
-//   Tier 5 — Balrog of Morgoth
+//   Cost 1 — Orc Raider, Orc Slavemaster
+//   Cost 2 — Warg Rider, Orc Captain
+//   Cost 3 — Cave-Troll, Dark Sorcerer, Werewolf of Angband (Vanguard, HP 4), Thrall of Morgoth
+//   Cost 4 — Gothmog (Vanguard, HP 6), Thuringwethil (Hero), Draugluin (Vanguard, HP 5)
+//   Cost 5 — Carcharoth (Vanguard, HP 6)
+//   Cost 6 — Glaurung (Vanguard, HP 8), Sauron the Necromancer (Hero)
+//   Cost 7 — Sauron's Lieutenant (Hero), Ancalagon the Black (Vanguard, HP 10)
+//   Cost 8 — Balrog of Morgoth (Vanguard, HP 8)
 //
 // Neutral (market):
-//   Tier 1 — Ancient Stone
-//   Tier 2 — Wandering Ranger, Ulfang the Black, Mîm the Petty-dwarf
-//   Tier 3 — Eöl the Dark Elf, Maeglin the Traitor, Dwarves of Nogrod
-//   Tier 4 — Ossë of the Seas
-//   Tier 5 — Ungoliant
+//   Cost 1 — Petty-dwarf Outcast
+//   Cost 2 — Wandering Ranger, Ulfang the Black, Mîm the Petty-dwarf
+//   Cost 3 — Master-smith of Nogrod, Eöl the Dark Elf
+//   Cost 4 — Maeglin the Traitor (Hero), Dwarves of Nogrod
+//   Cost 5 — Ossë of the Seas (Hero)
+//   Cost 6 — Ungoliant (Vanguard, HP 6)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { type Card, CardType, Faction } from '../types/game'
+import { type Card, CardCategory, Faction } from '../types/game'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EffectReward context notes:
 //   When a card is defeated from the Beleriand Row, applyReward fires with
-//   the attacker as the beneficiary.  dealDamage always hits the *opposing*
-//   stronghold of that beneficiary, so:
-//     • dealDamage on a Morgoth card   → Free Peoples defeats it → Angband hit
-//     • dealDamage on a Free Peoples card → Morgoth defeats it → Gondolin hit
-//   adjustFate is absolute: positive shifts toward Light (+10), negative
-//   toward Shadow (-10), regardless of who triggered it.
+//   the attacker as the beneficiary. dealDamage hits the opposing side's first
+//   living vanguard if any exist, otherwise the active stronghold.
+//   adjustFate: positive = toward Light, negative = toward Shadow.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STARTER CARDS — cost 0, go into personal decks at game start, never shuffled
-// into the Beleriand deck. Exported separately so GameView can build decks.
+// STARTER CARDS — cost 0, personal decks only, never in the Beleriand market.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const FREE_PEOPLES_STARTER: readonly Card[] = [
   // 7× resource card
   {
     id: 'fp-s-craftsman', name: 'Noldor Craftsman',
-    type: CardType.Character, faction: Faction.FreePeoples,
+    category: CardCategory.Troop, faction: Faction.FreePeoples,
     cost: 0, attack: 0, resources: 1, fateGeneration: 0,
   },
   // 2× attack card
   {
     id: 'fp-s-archer', name: 'Elven Archer',
-    type: CardType.Character, faction: Faction.FreePeoples,
+    category: CardCategory.Troop, faction: Faction.FreePeoples,
     cost: 0, attack: 1, resources: 0, fateGeneration: 0,
   },
   // 1× fate card
   {
     id: 'fp-s-scout', name: 'Dúnedain Scout',
-    type: CardType.Character, faction: Faction.FreePeoples,
+    category: CardCategory.Troop, faction: Faction.FreePeoples,
     cost: 0, attack: 0, resources: 0, fateGeneration: 1,
     effect: { description: 'Shift the Fate marker 1 step toward Light.', reward: { type: 'adjustFate', amount: 1 } },
   },
@@ -72,19 +79,19 @@ export const MORGOTH_STARTER: readonly Card[] = [
   // 7× resource card
   {
     id: 'mg-s-thrall', name: 'Orc Thrall',
-    type: CardType.Character, faction: Faction.Morgoth,
+    category: CardCategory.Troop, faction: Faction.Morgoth,
     cost: 0, attack: 0, resources: 1, fateGeneration: 0,
   },
   // 2× attack card
   {
     id: 'mg-s-soldier', name: 'Orc Soldier',
-    type: CardType.Character, faction: Faction.Morgoth,
+    category: CardCategory.Troop, faction: Faction.Morgoth,
     cost: 0, attack: 1, resources: 0, fateGeneration: 0,
   },
   // 1× fate card
   {
     id: 'mg-s-spy', name: "Morgoth's Spy",
-    type: CardType.Character, faction: Faction.Morgoth,
+    category: CardCategory.Troop, faction: Faction.Morgoth,
     cost: 0, attack: 0, resources: 0, fateGeneration: -1,
     effect: { description: 'Shift the Fate marker 1 step toward Shadow.', reward: { type: 'adjustFate', amount: -1 } },
   },
@@ -93,26 +100,15 @@ export const MORGOTH_STARTER: readonly Card[] = [
 export const CARD_DATABASE: readonly Card[] = [
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  FREE PEOPLES  (20 market cards)
+  //  FREE PEOPLES
   // ══════════════════════════════════════════════════════════════════════════
 
-  // ── Tier 1 (cost 1–2): cheap engine pieces ─────────────────────────────
+  // ── Cost 1 ────────────────────────────────────────────────────────────────
 
   {
-    id: 'fp-lembas-bread',
-    name: 'Lembas Bread',
-    type: CardType.Artifact,
-    faction: Faction.FreePeoples,
-    cost: 1,
-    attack: 0,
-    resources: 3,
-    fateGeneration: 1,
-  },
-
-  {
-    id: 'fp-dunedain-scout',
-    name: 'Dúnedain Scout',
-    type: CardType.Character,
+    id: 'fp-elf-scout-doriath',
+    name: 'Elf-scout of Doriath',
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 1,
     attack: 1,
@@ -124,21 +120,12 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  {
-    id: 'fp-elven-archer',
-    name: 'Elven Archer',
-    type: CardType.Character,
-    faction: Faction.FreePeoples,
-    cost: 2,
-    attack: 2,
-    resources: 1,
-    fateGeneration: 1,
-  },
+  // ── Cost 2 ────────────────────────────────────────────────────────────────
 
   {
     id: 'fp-gondolin-warrior',
     name: 'Gondolin Warrior',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 2,
     attack: 3,
@@ -146,23 +133,10 @@ export const CARD_DATABASE: readonly Card[] = [
     fateGeneration: 1,
   },
 
-  // ── Tier 2 (cost 2–3): solid mid-range ──────────────────────────────────
-
-  {
-    id: 'fp-noldor-craftsman',
-    name: 'Noldor Craftsman',
-    type: CardType.Character,
-    faction: Faction.FreePeoples,
-    cost: 2,
-    attack: 0,
-    resources: 3,
-    fateGeneration: 1,
-  },
-
   {
     id: 'fp-elf-warrior-doriath',
     name: 'Elf-Warrior of Doriath',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 2,
     attack: 2,
@@ -174,25 +148,12 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  {
-    id: 'fp-phial-of-light',
-    name: 'Phial of Light',
-    type: CardType.Artifact,
-    faction: Faction.FreePeoples,
-    cost: 3,
-    attack: 0,
-    resources: 2,
-    fateGeneration: 2,
-    effect: {
-      description: 'Shift the Fate marker 2 steps toward Light.',
-      reward: { type: 'adjustFate', amount: 2 },
-    },
-  },
+  // ── Cost 3 ────────────────────────────────────────────────────────────────
 
   {
     id: 'fp-ranger-of-the-north',
     name: 'Ranger of the North',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 3,
     attack: 3,
@@ -207,7 +168,7 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'fp-mablung',
     name: 'Mablung the Hunter',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 3,
     attack: 3,
@@ -220,30 +181,30 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
-    id: 'fp-nauglamir',
-    name: 'Nauglamír',
-    type: CardType.Artifact,
+    id: 'fp-galadriel',
+    name: 'Galadriel of the Noldor',
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 3,
     attack: 0,
     resources: 2,
-    fateGeneration: 2,
+    fateGeneration: 3,
     effect: {
-      description: 'Shift the Fate marker 2 steps toward Light.',
-      reward: { type: 'adjustFate', amount: 2 },
+      description: 'Shift the Fate marker 3 steps toward Light.',
+      reward: { type: 'adjustFate', amount: 3 },
     },
   },
 
-  // ── Tier 3 (cost 4–5): high-impact plays ────────────────────────────────
+  // ── Cost 4 ────────────────────────────────────────────────────────────────
 
   {
-    id: 'fp-white-ships',
-    name: 'White Ships of Círdan',
-    type: CardType.Artifact,
+    id: 'fp-mariner-of-the-falas',
+    name: 'Mariner of the Falas',
+    category: CardCategory.Troop,
     faction: Faction.FreePeoples,
     cost: 4,
-    attack: 0,
-    resources: 4,
+    attack: 2,
+    resources: 3,
     fateGeneration: 1,
     effect: {
       description: 'Gain 2 Resources.',
@@ -254,7 +215,7 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'fp-tuor',
     name: 'Tuor of Gondolin',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 4,
     attack: 4,
@@ -267,9 +228,26 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
+    id: 'fp-hurin',
+    name: 'Húrin of Dor-lómin',
+    category: CardCategory.Hero,
+    faction: Faction.FreePeoples,
+    cost: 4,
+    attack: 5,
+    resources: 0,
+    fateGeneration: 1,
+    effect: {
+      description: 'Gain +3 Attack.',
+      reward: { type: 'gainAttack', amount: 3 },
+    },
+  },
+
+  // ── Cost 5 ────────────────────────────────────────────────────────────────
+
+  {
     id: 'fp-glorfindel',
     name: 'Glorfindel of Gondolin',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 5,
     attack: 5,
@@ -284,13 +262,12 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'fp-beren',
     name: 'Beren One-Hand',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 5,
     attack: 5,
     resources: 0,
     fateGeneration: 2,
-    // Defeating Beren strikes a blow — but his legend endures.
     effect: {
       description: 'Deal 2 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 2 },
@@ -298,24 +275,9 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
-    id: 'fp-hurin',
-    name: 'Húrin of Dor-lómin',
-    type: CardType.Champion,
-    faction: Faction.FreePeoples,
-    cost: 4,
-    attack: 5,
-    resources: 0,
-    fateGeneration: 1,
-    effect: {
-      description: 'Gain +3 Attack.',
-      reward: { type: 'gainAttack', amount: 3 },
-    },
-  },
-
-  {
     id: 'fp-cirdan',
     name: 'Círdan the Shipwright',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 5,
     attack: 2,
@@ -330,7 +292,7 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'fp-eagles-of-manwe',
     name: 'Eagles of Manwë',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 5,
     attack: 4,
@@ -342,12 +304,12 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 4 (cost 6–7): legendary anchors ────────────────────────────────
+  // ── Cost 6 ────────────────────────────────────────────────────────────────
 
   {
     id: 'fp-finrod',
     name: 'Finrod Felagund',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 6,
     attack: 3,
@@ -359,16 +321,17 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
+  // ── Cost 7 ────────────────────────────────────────────────────────────────
+
   {
     id: 'fp-luthien',
     name: 'Lúthien Tinúviel',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.FreePeoples,
     cost: 7,
     attack: 2,
     resources: 1,
     fateGeneration: 3,
-    // Her song breaks Morgoth's enchantments — a massive fate swing.
     effect: {
       description: 'Shift the Fate marker 3 steps toward Light.',
       reward: { type: 'adjustFate', amount: 3 },
@@ -378,42 +341,49 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'fp-fingolfin',
     name: 'Fingolfin',
-    type: CardType.Champion,
+    category: CardCategory.Vanguard,
     faction: Faction.FreePeoples,
     cost: 7,
     attack: 6,
     resources: 1,
     fateGeneration: 3,
-    // When Morgoth defeats Fingolfin from the row: beneficiary = PlayerTwo,
-    // dealDamage hits PlayerOne (Gondolin) — his death wounds the Free Peoples.
-    // When played from hand by Free Peoples: deals 3 to Angband.
+    hp: 6,
+    // When Morgoth defeats Fingolfin from the row: dealDamage hits Gondolin.
     effect: {
       description: 'Deal 3 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 3 },
     },
   },
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  MORGOTH  (19 cards)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  // ── Tier 1 (cost 1–2): early aggression ─────────────────────────────────
+  // ── Cost 8 ────────────────────────────────────────────────────────────────
 
   {
-    id: 'mg-orc-soldier',
-    name: 'Orc Soldier',
-    type: CardType.Character,
-    faction: Faction.Morgoth,
-    cost: 1,
-    attack: 2,
+    id: 'fp-turin',
+    name: 'Túrin Turambar',
+    category: CardCategory.Vanguard,
+    faction: Faction.FreePeoples,
+    cost: 8,
+    attack: 7,
     resources: 0,
-    fateGeneration: -1,
+    fateGeneration: 2,
+    hp: 7,
+    // Wielder of Gurthang — his cursed legend strikes fear into Morgoth's hosts.
+    effect: {
+      description: 'Gain +4 Attack.',
+      reward: { type: 'gainAttack', amount: 4 },
+    },
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  MORGOTH
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── Cost 1 ────────────────────────────────────────────────────────────────
 
   {
     id: 'mg-orc-raider',
     name: 'Orc Raider',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 1,
     attack: 1,
@@ -426,25 +396,26 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   {
-    id: 'mg-iron-fetter',
-    name: 'Iron Fetter',
-    type: CardType.Artifact,
+    id: 'mg-orc-slavemaster',
+    name: 'Orc Slavemaster',
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 1,
     attack: 0,
     resources: 2,
     fateGeneration: -1,
-    // Angband's forges churn out chains — a resource engine with a shadow cost.
     effect: {
       description: 'Shift the Fate marker 1 step toward Shadow.',
       reward: { type: 'adjustFate', amount: -1 },
     },
   },
 
+  // ── Cost 2 ────────────────────────────────────────────────────────────────
+
   {
     id: 'mg-warg-rider',
     name: 'Warg Rider',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 2,
     attack: 2,
@@ -459,7 +430,7 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-orc-captain',
     name: 'Orc Captain',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 2,
     attack: 3,
@@ -471,12 +442,12 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 2 (cost 3): pressure and disruption ────────────────────────────
+  // ── Cost 3 ────────────────────────────────────────────────────────────────
 
   {
     id: 'mg-cave-troll',
     name: 'Cave-Troll',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 3,
     attack: 4,
@@ -487,14 +458,13 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-dark-sorcerer',
     name: 'Dark Sorcerer',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 3,
     attack: 1,
     resources: 2,
     fateGeneration: -1,
-    // Trap card: only Free Peoples can attack this card, and the reward fires
-    // against the attacker — defeating it shifts fate toward Shadow.
+    // Trap card: Free Peoples who defeat this shift fate toward Shadow.
     effect: {
       description: 'Shift the Fate marker 2 steps toward Shadow.',
       reward: { type: 'adjustFate', amount: -2 },
@@ -504,12 +474,13 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-werewolf',
     name: 'Werewolf of Angband',
-    type: CardType.GreatBeast,
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 3,
     attack: 3,
     resources: 0,
     fateGeneration: -2,
+    hp: 4,
     effect: {
       description: 'Gain +2 Attack.',
       reward: { type: 'gainAttack', amount: 2 },
@@ -519,7 +490,7 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-thrall',
     name: 'Thrall of Morgoth',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Morgoth,
     cost: 3,
     attack: 0,
@@ -531,20 +502,19 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 3 (cost 4–6): elite threats ────────────────────────────────────
+  // ── Cost 4 ────────────────────────────────────────────────────────────────
 
   {
     id: 'mg-gothmog',
     name: 'Gothmog',
-    type: CardType.Champion,
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 4,
     attack: 4,
     resources: 0,
     fateGeneration: -2,
-    // When FP defeats Gothmog from row: beneficiary = PlayerOne,
-    // dealDamage hits PlayerTwo (Angband) — a blow to Morgoth worth chasing.
-    // When played from hand by Morgoth: deals 2 to Gondolin.
+    hp: 6,
+    // When FP defeats Gothmog from row: dealDamage hits Angband.
     effect: {
       description: 'Deal 2 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 2 },
@@ -554,13 +524,12 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-thuringwethil',
     name: 'Thuringwethil',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.Morgoth,
     cost: 4,
     attack: 2,
     resources: 2,
     fateGeneration: -2,
-    // The vampire messenger of Sauron — her presence deepens the shadow.
     effect: {
       description: 'Shift the Fate marker 3 steps toward Shadow.',
       reward: { type: 'adjustFate', amount: -3 },
@@ -570,78 +539,82 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-draugluin',
     name: 'Draugluin',
-    type: CardType.GreatBeast,
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 4,
     attack: 5,
     resources: 0,
     fateGeneration: -2,
-    // Sire of Werewolves — his defeat is a victory but comes at a brutal cost.
+    hp: 5,
     effect: {
       description: 'Gain +3 Attack.',
       reward: { type: 'gainAttack', amount: 3 },
     },
   },
 
+  // ── Cost 5 ────────────────────────────────────────────────────────────────
 
   {
-    id: 'mg-iron-crown',
-    name: 'Iron Crown of Morgoth',
-    type: CardType.Artifact,
+    id: 'mg-carcharoth',
+    name: 'Carcharoth',
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 5,
-    attack: 0,
-    resources: 3,
-    fateGeneration: -2,
-    // The Silmarils were set within — its presence warps fate toward Shadow.
-    effect: {
-      description: 'Shift the Fate marker 3 steps toward Shadow.',
-      reward: { type: 'adjustFate', amount: -3 },
-    },
-  },
-
-  {
-    id: 'mg-glaurung',
-    name: 'Glaurung',
-    type: CardType.GreatBeast,
-    faction: Faction.Morgoth,
-    cost: 6,
-    attack: 5,
+    attack: 4,
     resources: 0,
     fateGeneration: -2,
-    // The Father of Dragons falling shakes Angband's foundations.
+    hp: 6,
+    // The Red Maw — his defeat strikes a great blow against Angband.
     effect: {
       description: 'Deal 3 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 3 },
     },
   },
 
-  // ── Tier 4 (cost 7–8): legendary anchors ────────────────────────────────
+  // ── Cost 6 ────────────────────────────────────────────────────────────────
+
+  {
+    id: 'mg-glaurung',
+    name: 'Glaurung',
+    category: CardCategory.Vanguard,
+    faction: Faction.Morgoth,
+    cost: 6,
+    attack: 5,
+    resources: 0,
+    fateGeneration: -2,
+    hp: 8,
+    // Father of Dragons — his defeat shakes Angband's foundations.
+    effect: {
+      description: 'Deal 3 damage to the opposing Stronghold.',
+      reward: { type: 'dealDamage', amount: 3 },
+    },
+  },
 
   {
     id: 'mg-sauron',
     name: 'Sauron the Necromancer',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.Morgoth,
     cost: 6,
     attack: 3,
     resources: 2,
     fateGeneration: -2,
-    // Sauron in his tower at Tol-in-Gaurhoth — his mere presence poisons hope.
     effect: {
       description: 'Shift the Fate marker 4 steps toward Shadow.',
       reward: { type: 'adjustFate', amount: -4 },
     },
   },
 
+  // ── Cost 7 ────────────────────────────────────────────────────────────────
+
   {
-    id: 'mg-morgoth-will',
-    name: "Morgoth's Dark Will",
-    type: CardType.Artifact,
+    id: 'mg-saurons-lieutenant',
+    name: "Sauron's Lieutenant",
+    category: CardCategory.Hero,
     faction: Faction.Morgoth,
     cost: 7,
-    attack: 0,
-    resources: 4,
+    attack: 4,
+    resources: 3,
     fateGeneration: -3,
     effect: {
       description: 'Shift the Fate marker 3 steps toward Shadow.',
@@ -652,31 +625,32 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'mg-ancalagon',
     name: 'Ancalagon the Black',
-    type: CardType.GreatBeast,
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 7,
     attack: 6,
     resources: 0,
     fateGeneration: -3,
-    // Greatest of winged dragons — his ruin on defeat crushes Gondolin's walls.
+    hp: 10,
+    // Greatest of winged dragons — defeating him shatters Thangorodrim itself.
     effect: {
       description: 'Deal 4 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 4 },
     },
   },
 
-  // ── Tier 5 (cost 8): ultimate threat ────────────────────────────────────
+  // ── Cost 8 ────────────────────────────────────────────────────────────────
 
   {
     id: 'mg-balrog',
     name: 'Balrog of Morgoth',
-    type: CardType.GreatBeast,
+    category: CardCategory.Vanguard,
     faction: Faction.Morgoth,
     cost: 8,
     attack: 6,
     resources: 0,
     fateGeneration: -3,
-    // Defeating the Balrog at great cost partially replenishes the attacker.
+    hp: 8,
     effect: {
       description: 'Gain +4 Attack.',
       reward: { type: 'gainAttack', amount: 4 },
@@ -684,18 +658,17 @@ export const CARD_DATABASE: readonly Card[] = [
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  NEUTRAL  (9 cards)
-  //  Cannot be attacked (combat engine rejects Neutral targets).
-  //  These are acquire-only; effects fire when played from hand.
-  //  Self-interested actors: serve neither Morgoth nor the Free Peoples.
+  //  NEUTRAL
+  //  Cannot be attacked from the Beleriand Row — acquire only.
+  //  Vanguard Neutral cards protect the owner's stronghold when deployed.
   // ══════════════════════════════════════════════════════════════════════════
 
-  // ── Tier 1 (cost 1–2): opportunists ─────────────────────────────────────
+  // ── Cost 1 ────────────────────────────────────────────────────────────────
 
   {
-    id: 'nt-ancient-stone',
-    name: 'Ancient Stone',
-    type: CardType.Artifact,
+    id: 'nt-petty-dwarf-outcast',
+    name: 'Petty-dwarf Outcast',
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 1,
     attack: 0,
@@ -703,10 +676,12 @@ export const CARD_DATABASE: readonly Card[] = [
     fateGeneration: 0,
   },
 
+  // ── Cost 2 ────────────────────────────────────────────────────────────────
+
   {
     id: 'nt-wandering-ranger',
     name: 'Wandering Ranger',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 2,
     attack: 1,
@@ -718,19 +693,15 @@ export const CARD_DATABASE: readonly Card[] = [
     },
   },
 
-  // ── Tier 2 (cost 2–3): self-serving powers ──────────────────────────────
-
   {
     id: 'nt-ulfang',
     name: 'Ulfang the Black',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 2,
     attack: 2,
     resources: 1,
     fateGeneration: 0,
-    // The Easterling lord who sold his allegiance to the highest bidder —
-    // his betrayal at the Nirnaeth struck a blow against whichever side trusted him.
     effect: {
       description: 'Deal 1 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 1 },
@@ -740,50 +711,61 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'nt-mim',
     name: 'Mîm the Petty-dwarf',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 2,
     attack: 0,
     resources: 3,
     fateGeneration: 0,
-    // Bitter and secretive, Mîm hoarded his halls and sold Turin's location
-    // to Morgoth — his aid comes with a shadow on the world.
     effect: {
       description: 'Shift the Fate marker 1 step toward Shadow.',
       reward: { type: 'adjustFate', amount: -1 },
     },
   },
 
+  // ── Cost 3 ────────────────────────────────────────────────────────────────
+
+  {
+    id: 'nt-master-smith-nogrod',
+    name: 'Master-smith of Nogrod',
+    category: CardCategory.Troop,
+    faction: Faction.Neutral,
+    cost: 3,
+    attack: 2,
+    resources: 2,
+    fateGeneration: 0,
+    effect: {
+      description: 'Gain 2 Resources.',
+      reward: { type: 'gainResources', amount: 2 },
+    },
+  },
+
   {
     id: 'nt-eol',
     name: 'Eöl the Dark Elf',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 3,
     attack: 2,
     resources: 1,
     fateGeneration: 0,
-    // Forger of Anglachel and Anguirel — the dark blades of Nan Elmoth.
-    // His craft arm whoever acquires him, regardless of allegiance.
     effect: {
       description: 'Draw 1 card.',
       reward: { type: 'drawCards', count: 1 },
     },
   },
 
-  // ── Tier 3 (cost 4–5): dangerous neutrals ───────────────────────────────
+  // ── Cost 4 ────────────────────────────────────────────────────────────────
 
   {
     id: 'nt-maeglin',
     name: 'Maeglin the Traitor',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.Neutral,
     cost: 4,
     attack: 3,
     resources: 1,
     fateGeneration: 0,
-    // Maeglin revealed Gondolin's location under torture — his treachery
-    // dealt a wound to the Free Peoples that no sword could match.
     effect: {
       description: 'Deal 2 damage to the opposing Stronghold.',
       reward: { type: 'dealDamage', amount: 2 },
@@ -793,53 +775,48 @@ export const CARD_DATABASE: readonly Card[] = [
   {
     id: 'nt-dwarves-nogrod',
     name: 'Dwarves of Nogrod',
-    type: CardType.Character,
+    category: CardCategory.Troop,
     faction: Faction.Neutral,
     cost: 4,
     attack: 4,
     resources: 2,
     fateGeneration: 0,
-    // The Dwarves sacked Menegroth for the Nauglamír — they fought for plunder
-    // alone, and their axes are available to whoever can pay.
     effect: {
       description: 'Gain +2 Attack.',
       reward: { type: 'gainAttack', amount: 2 },
     },
   },
 
-  // ── Tier 4 (cost 5–6): ancient forces ───────────────────────────────────
+  // ── Cost 5 ────────────────────────────────────────────────────────────────
 
   {
     id: 'nt-osse',
     name: 'Ossë of the Seas',
-    type: CardType.Champion,
+    category: CardCategory.Hero,
     faction: Faction.Neutral,
     cost: 5,
     attack: 4,
     resources: 2,
     fateGeneration: 0,
-    // A Maia who once answered to Morgoth before Ulmo recalled him. His loyalties
-    // remain his own — he lends his tempests to whoever commands the shore.
     effect: {
       description: 'Gain +3 Attack.',
       reward: { type: 'gainAttack', amount: 3 },
     },
   },
 
-  // ── Tier 5 (cost 6): primordial terror ──────────────────────────────────
+  // ── Cost 6 ────────────────────────────────────────────────────────────────
 
   {
     id: 'nt-ungoliant',
     name: 'Ungoliant',
-    type: CardType.GreatBeast,
+    category: CardCategory.Vanguard,
     faction: Faction.Neutral,
     cost: 6,
     attack: 4,
     resources: 2,
     fateGeneration: 0,
-    // She devoured the light of the Two Trees for herself alone, then turned
-    // on Morgoth when he would not give her more. She serves no one.
-    // Whoever acquires her watches darkness spread across the fate track.
+    hp: 6,
+    // She serves no one — whoever acquires her watches darkness spread.
     effect: {
       description: 'Shift the Fate marker 3 steps toward Shadow.',
       reward: { type: 'adjustFate', amount: -3 },

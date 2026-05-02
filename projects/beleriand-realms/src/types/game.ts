@@ -4,11 +4,10 @@ export enum Faction {
   Neutral = 'Neutral',
 }
 
-export enum CardType {
-  Character = 'Character',
-  Artifact = 'Artifact',
-  Champion = 'Champion',
-  GreatBeast = 'GreatBeast',
+export enum CardCategory {
+  Troop = 'Troop',
+  Hero = 'Hero',
+  Vanguard = 'Vanguard',
 }
 
 export enum TurnPhase {
@@ -35,12 +34,14 @@ export interface CardEffect {
   reward?: EffectReward;
 }
 
-export type CombatTargetType = 'Stronghold' | 'MarketCard'
+export type CombatTargetType = 'Stronghold' | 'MarketCard' | 'Vanguard'
 
 export type CombatEvent =
   | { type: 'StrongholdDamaged'; strongholdId: string; remainingHealth: number }
   | { type: 'StrongholdDestroyed'; strongholdId: string; faction: Faction }
   | { type: 'MarketCardDefeated'; card: Card; rewardTriggered: boolean }
+  | { type: 'VanguardDamaged'; instanceId: string; remainingHp: number }
+  | { type: 'VanguardDestroyed'; instanceId: string; cardName: string }
 
 export type CombatResult =
   | { success: true; events: CombatEvent[] }
@@ -49,22 +50,22 @@ export type CombatResult =
 export interface Card {
   id: string;
   name: string;
-  type: CardType;
+  category: CardCategory;
   faction: Faction;
   cost: number;
   attack: number;
   resources: number;
   fateGeneration: number;
+  // For Vanguard cards only: maximum HP when deployed as a field unit.
+  hp?: number;
   effect?: CardEffect;
 }
 
-export interface Stronghold {
-  id: string;
-  name: string;
-  faction: Faction;
-  maxHealth: number;
-  currentHealth: number;
-  innateAbility: string;
+// A Vanguard card deployed to the field — persists across turns until HP reaches 0.
+export interface VanguardInstance {
+  card: Card;
+  instanceId: string;
+  currentHp: number;
 }
 
 // Invariant: -10 <= fateTrack <= 10
@@ -83,7 +84,7 @@ export interface GameState {
   winner: Faction | null;
   // Damage dealt to market cards this turn (cardId → damage). Resets on end turn.
   marketDamage: Record<string, number>;
-  // Bases destroyed per player this game (derived from strongholds array, cached here for display).
+  // Bases destroyed per player this game.
   basesDestroyed: Record<PlayerId, number>;
   // The currently active (targetable) stronghold id per player.
   activeStrongholdId: Record<PlayerId, string | null>;
@@ -95,9 +96,19 @@ export interface PlayerState {
   deck: Card[];
   hand: Card[];
   discard: Card[];
-  inPlay: Card[];
+  inPlay: Card[];                // Troops & Heroes played this turn; cleared at end of turn
+  vanguards: VanguardInstance[]; // Deployed Vanguards; persist until killed
   resources: number;
   attack: number;
-  // IDs of in-play cards whose attack has already been assigned this turn.
+  // IDs of in-play cards (or vanguard instanceIds) whose attack has been assigned this turn.
   attackAssigned: Set<string>;
+}
+
+export interface Stronghold {
+  id: string;
+  name: string;
+  faction: Faction;
+  maxHealth: number;
+  currentHealth: number;
+  innateAbility: string;
 }

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { type Card, Faction } from '../types/game'
 
-const props = defineProps<{ card: Card; faceDown?: boolean }>()
+const props = defineProps<{ card: Card; faceDown?: boolean; vanguardHp?: number }>()
 const emit = defineEmits<{ click: [card: Card] }>()
 
 const factionMeta = computed(() => {
@@ -44,7 +44,7 @@ const factionMeta = computed(() => {
       <!-- Card name + type -->
       <div class="px-2 mt-1">
         <p class="text-ink text-sm font-bold leading-tight font-display line-clamp-2">{{ card.name }}</p>
-        <p class="text-muted text-[10px] uppercase tracking-wide mt-0.5">{{ card.type }}</p>
+        <p class="text-muted text-[10px] uppercase tracking-wide mt-0.5">{{ card.category }}</p>
       </div>
 
       <!-- Divider -->
@@ -60,6 +60,18 @@ const factionMeta = computed(() => {
 
       <!-- Divider -->
       <div class="mx-2 mb-1 border-t border-card-border" />
+
+      <!-- HP bar (deployed vanguards only) -->
+      <div v-if="vanguardHp !== undefined && card.hp" class="px-2 pb-1">
+        <div class="h-1.5 rounded-full bg-card-border overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-300"
+            :class="vanguardHp / card.hp > 0.5 ? 'bg-green-500' : vanguardHp / card.hp > 0.25 ? 'bg-yellow-400' : 'bg-red-500'"
+            :style="{ width: `${(vanguardHp / card.hp) * 100}%` }"
+          />
+        </div>
+        <div class="text-[9px] text-center text-muted/60 mt-0.5 tabular-nums">{{ vanguardHp }}/{{ card.hp }} hp</div>
+      </div>
 
       <!-- Bottom row: attack + resources + fate -->
       <div class="flex items-center justify-between px-2 pb-2 text-[11px] font-bold">

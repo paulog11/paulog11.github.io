@@ -4,6 +4,7 @@ import {
   type CombatResult,
   type CombatTargetType,
   type EffectReward,
+  CardCategory,
   Faction,
   PlayerId,
 } from '../types/game'
@@ -25,14 +26,19 @@ function applyReward(store: Store, beneficiary: PlayerId, reward: EffectReward):
       store.adjustFate(reward.amount)
       break
     case 'dealDamage': {
-      // Direct damage hits the first living opposing base (not routed through executeAttack to avoid recursion).
+      // Direct damage hits the first living enemy vanguard if any; otherwise the active stronghold.
       const opposingId =
         beneficiary === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
-      const bases = store.strongholds[opposingId]
-      const target = bases?.find(b => b.currentHealth > 0)
-      if (target) {
-        target.currentHealth = Math.max(0, target.currentHealth - reward.amount)
-        store.checkWinCondition(opposingId)
+      const enemyVanguards = store.players[opposingId].vanguards
+      if (enemyVanguards.length > 0) {
+        store.damageVanguard(opposingId, enemyVanguards[0].instanceId, reward.amount)
+      } else {
+        const bases = store.strongholds[opposingId]
+        const target = bases?.find(b => b.currentHealth > 0)
+        if (target) {
+          target.currentHealth = Math.max(0, target.currentHealth - reward.amount)
+          store.checkWinCondition(opposingId)
+        }
       }
       break
     }
@@ -65,6 +71,12 @@ function attackStronghold(
     return { success: false, reason: `'${stronghold.name}' is not the active stronghold` }
   }
 
+  // Cannot attack stronghold while enemy has living vanguards.
+  const enemyVanguards = store.players[targetPlayerId].vanguards
+  if (enemyVanguards.some(v => v.currentHp > 0)) {
+    return { success: false, reason: 'Must defeat all enemy vanguards before attacking the stronghold' }
+  }
+
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
   stronghold.currentHealth = Math.max(0, stronghold.currentHealth - attackAmount)
@@ -78,6 +90,51 @@ function attackStronghold(
   }
 
   store.checkWinCondition(targetPlayerId)
+
+  return { success: true, events }
+}
+
+function attackVanguard(
+  store: Store,
+  attackerId: PlayerId,
+  instanceId: string,
+  cardId: string,
+  attackAmount: number,
+): CombatResult {
+  const targetPlayerId = (
+    [PlayerId.PlayerOne, PlayerId.PlayerTwo] as const
+  ).find(pid =>
+    store.players[pid].vanguards.some(v => v.instanceId === instanceId),
+  )
+
+  if (!targetPlayerId) {
+    return { success: false, reason: `Vanguard instance '${instanceId}' not found` }
+  }
+
+  if (targetPlayerId === attackerId) {
+    return { success: false, reason: 'Cannot attack your own vanguard' }
+  }
+
+  const vanguard = store.players[targetPlayerId].vanguards.find(v => v.instanceId === instanceId)
+  if (!vanguard || vanguard.currentHp === 0) {
+    return { success: false, reason: `Vanguard '${instanceId}' is already destroyed` }
+  }
+
+  const cardName = vanguard.card.name
+  store.markAttackAssigned(attackerId, cardId)
+  store.players[attackerId].attack -= attackAmount
+  store.damageVanguard(targetPlayerId, instanceId, attackAmount)
+
+  // Check if it's still alive after damage (damageVanguard removes it if HP = 0).
+  const stillAlive = store.players[targetPlayerId].vanguards.some(v => v.instanceId === instanceId)
+
+  const events: CombatEvent[] = [
+    { type: 'VanguardDamaged', instanceId, remainingHp: stillAlive ? vanguard.currentHp : 0 },
+  ]
+
+  if (!stillAlive) {
+    events.push({ type: 'VanguardDestroyed', instanceId, cardName })
+  }
 
   return { success: true, events }
 }
@@ -101,19 +158,23 @@ function attackMarketCard(
     return { success: false, reason: `'${card.name}' does not belong to the opposing faction` }
   }
 
-  // Accumulate damage this turn; a card is only defeated when total damage >= cost.
+  // Vanguard cards in the market cannot be attacked — they must be acquired with resources.
+  if (card.category === CardCategory.Vanguard) {
+    return {
+      success: false,
+      reason: `'${card.name}' is a Vanguard — acquire it with resources instead`,
+    }
+  }
+
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
   const totalDamage = store.applyMarketDamage(targetId, attackAmount)
 
   if (totalDamage < card.cost) {
-    // Wounded but not defeated — card stays in row.
     return { success: true, events: [{ type: 'MarketCardDefeated', card, rewardTriggered: false }] }
   }
 
-  // Defeated — remove from row, trigger reward, refill.
   store.beleriandRow.splice(cardIndex, 1)
-  // Clear the damage entry since the card is gone.
   delete store.gameState.marketDamage[targetId]
 
   const rewardTriggered = card.effect?.reward !== undefined
@@ -131,9 +192,6 @@ function attackMarketCard(
 export function useCombatEngine() {
   const store = useGameStore()
 
-  // attackerId: the player attacking
-  // cardId: the specific in-play card whose attack is being assigned
-  // targetType / targetId: what is being attacked
   function executeAttack(
     attackerId: PlayerId,
     cardId: string,
@@ -146,7 +204,7 @@ export function useCombatEngine() {
     }
 
     if (store.players[attackerId].attackAssigned.has(cardId)) {
-      return { success: false, reason: 'This card\'s attack has already been assigned this turn' }
+      return { success: false, reason: "This card's attack has already been assigned this turn" }
     }
 
     if (store.players[attackerId].attack < attackAmount) {
@@ -156,9 +214,13 @@ export function useCombatEngine() {
       }
     }
 
-    return targetType === 'Stronghold'
-      ? attackStronghold(store, attackerId, targetId, cardId, attackAmount)
-      : attackMarketCard(store, attackerId, targetId, cardId, attackAmount)
+    if (targetType === 'Stronghold') {
+      return attackStronghold(store, attackerId, targetId, cardId, attackAmount)
+    }
+    if (targetType === 'Vanguard') {
+      return attackVanguard(store, attackerId, targetId, cardId, attackAmount)
+    }
+    return attackMarketCard(store, attackerId, targetId, cardId, attackAmount)
   }
 
   return { executeAttack }

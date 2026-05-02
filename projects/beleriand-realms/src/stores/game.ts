@@ -5,12 +5,15 @@ import {
   type GameState,
   type PlayerState,
   type Stronghold,
+  type VanguardInstance,
   Faction,
   PlayerId,
   TurnPhase,
   FATE_TRACK_MIN,
   FATE_TRACK_MAX,
 } from '../types/game'
+
+let vanguardInstanceCounter = 0
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
@@ -22,7 +25,10 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function makePlayerState(): PlayerState {
-  return { deck: [], hand: [], discard: [], inPlay: [], resources: 0, attack: 0, attackAssigned: new Set() }
+  return {
+    deck: [], hand: [], discard: [], inPlay: [], vanguards: [],
+    resources: 0, attack: 0, attackAssigned: new Set(),
+  }
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -40,7 +46,6 @@ export const useGameStore = defineStore('game', () => {
     [PlayerId.PlayerTwo]: Faction.Morgoth,
   }
 
-  // Each player has an array of 3 bases. All must be destroyed to lose.
   const strongholds = ref<Partial<Record<PlayerId, Stronghold[]>>>({})
 
   const gameState = ref<GameState>({
@@ -57,11 +62,9 @@ export const useGameStore = defineStore('game', () => {
   function drawCards(playerId: PlayerId, count: number): void {
     const player = players.value[playerId]
     let remaining = count
-
     while (remaining > 0) {
       if (player.deck.length === 0) {
         if (player.discard.length === 0) break
-        // Shuffle discard pile back into deck
         player.deck = shuffle(player.discard)
         player.discard = []
       }
@@ -78,12 +81,10 @@ export const useGameStore = defineStore('game', () => {
     players.value[playerId].attack += amount
   }
 
-  // Mark a specific in-play card's attack as spent toward a target.
   function markAttackAssigned(playerId: PlayerId, cardId: string): void {
     players.value[playerId].attackAssigned.add(cardId)
   }
 
-  // Accumulate damage on a market card for this turn. Returns new total.
   function applyMarketDamage(cardId: string, amount: number): number {
     const current = gameState.value.marketDamage[cardId] ?? 0
     const next = current + amount
@@ -102,7 +103,6 @@ export const useGameStore = defineStore('game', () => {
     gameState.value.winner = faction
   }
 
-  // Find a stronghold by id and return [playerId, stronghold] or null.
   function findStrongholdById(id: string): [PlayerId, Stronghold] | null {
     for (const pid of [PlayerId.PlayerOne, PlayerId.PlayerTwo] as const) {
       const bases = strongholds.value[pid]
@@ -113,9 +113,6 @@ export const useGameStore = defineStore('game', () => {
     return null
   }
 
-  // Call after any HP change. Declares winner if all bases are destroyed;
-  // otherwise clears the active stronghold and sets pendingBaseChoice so the
-  // owning player must select a replacement before play continues.
   function checkWinCondition(damagedPlayerId: PlayerId): void {
     if (gameState.value.winner !== null) return
     const bases = strongholds.value[damagedPlayerId]
@@ -132,7 +129,6 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
-    // Active base was just destroyed — clear it and prompt for a new choice.
     const activeId = gameState.value.activeStrongholdId[damagedPlayerId]
     const activeBase = bases.find(b => b.id === activeId)
     if (activeBase && activeBase.currentHealth === 0) {
@@ -141,12 +137,36 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  // Set the active stronghold for a player (called when they choose a replacement).
   function setActiveStronghold(playerId: PlayerId, strongholdId: string): void {
     gameState.value.activeStrongholdId[playerId] = strongholdId
     if (gameState.value.pendingBaseChoice === playerId) {
       gameState.value.pendingBaseChoice = null
     }
+  }
+
+  // Deploy a Vanguard card from hand to the field. Returns the new instance.
+  function deployVanguard(playerId: PlayerId, card: Card): VanguardInstance {
+    const instance: VanguardInstance = {
+      card,
+      instanceId: `vanguard-${++vanguardInstanceCounter}`,
+      currentHp: card.hp ?? 1,
+    }
+    players.value[playerId].vanguards.push(instance)
+    return instance
+  }
+
+  // Apply damage to a vanguard instance. Returns true if found. Removes it when HP reaches 0.
+  function damageVanguard(playerId: PlayerId, instanceId: string, amount: number): boolean {
+    const vanguards = players.value[playerId].vanguards
+    const idx = vanguards.findIndex(v => v.instanceId === instanceId)
+    if (idx === -1) return false
+    const v = vanguards[idx]
+    v.currentHp = Math.max(0, v.currentHp - amount)
+    if (v.currentHp === 0) {
+      vanguards.splice(idx, 1)
+      players.value[playerId].discard.push(v.card)
+    }
+    return true
   }
 
   function purchaseCard(buyerId: PlayerId, cardId: string): boolean {
@@ -155,7 +175,6 @@ export const useGameStore = defineStore('game', () => {
 
     const card = beleriandRow.value[cardIndex]
 
-    // Can only purchase same-faction or neutral cards; opposing-faction cards must be attacked
     if (card.faction !== Faction.Neutral && card.faction !== playerFactions[buyerId]) return false
 
     const player = players.value[buyerId]
@@ -163,7 +182,7 @@ export const useGameStore = defineStore('game', () => {
 
     player.resources -= card.cost
     beleriandRow.value.splice(cardIndex, 1)
-    player.discard.push(card)          // goes to discard, shuffled in when deck runs out
+    player.discard.push(card)
 
     if (beleriandDeck.value.length > 0) {
       beleriandRow.value.push(beleriandDeck.value.pop()!)
@@ -176,6 +195,7 @@ export const useGameStore = defineStore('game', () => {
     const activeId = gameState.value.activePlayer
     const player = players.value[activeId]
 
+    // Discard troops/heroes; vanguards persist on the field.
     player.discard.push(...player.inPlay, ...player.hand)
     player.inPlay = []
     player.hand = []
@@ -183,13 +203,20 @@ export const useGameStore = defineStore('game', () => {
     player.attack = 0
     player.attackAssigned = new Set()
 
-    // Market damage resets each turn — cards fully recover between turns.
     gameState.value.marketDamage = {}
 
     drawCards(activeId, 5)
 
-    gameState.value.activePlayer =
+    const newActiveId =
       activeId === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+    gameState.value.activePlayer = newActiveId
+
+    // Vanguards refresh their attack contribution at the start of the new player's turn.
+    const newPlayer = players.value[newActiveId]
+    const vanguardAttack = newPlayer.vanguards.reduce((sum, v) => sum + v.card.attack, 0)
+    if (vanguardAttack > 0) {
+      newPlayer.attack += vanguardAttack
+    }
   }
 
   return {
@@ -210,6 +237,8 @@ export const useGameStore = defineStore('game', () => {
     findStrongholdById,
     checkWinCondition,
     setActiveStronghold,
+    deployVanguard,
+    damageVanguard,
     endTurn,
   }
 })
