@@ -241,6 +241,7 @@ function playCard(c: Card): void {
   player.hand.splice(idx, 1)
   store.gainResources(activeId.value, c.resources)
   store.gainAttack(activeId.value, c.attack)
+  if (c.effect?.reward) store.applyCardEffect(activeId.value, c.effect.reward)
   if (c.category === CardCategory.Vanguard) {
     store.deployVanguard(activeId.value, c)
   } else {
@@ -258,6 +259,7 @@ function playAllCards(): void {
   for (const c of cards) {
     store.gainResources(activeId.value, c.resources)
     store.gainAttack(activeId.value, c.attack)
+    if (c.effect?.reward) store.applyCardEffect(activeId.value, c.effect.reward)
     if (c.category === CardCategory.Vanguard) {
       store.deployVanguard(activeId.value, c)
     } else {

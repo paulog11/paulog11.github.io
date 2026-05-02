@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   type Card,
+  type EffectReward,
   type GameState,
   type PlayerState,
   type Stronghold,
@@ -12,6 +13,7 @@ import {
   FATE_TRACK_MIN,
   FATE_TRACK_MAX,
 } from '../types/game'
+import { MERCENARY_BUILDERS, MERCENARY_BUILDERS_SUPPLY } from '../data/cardDatabase'
 
 let vanguardInstanceCounter = 0
 
@@ -39,6 +41,7 @@ export const useGameStore = defineStore('game', () => {
 
   const beleriandDeck = ref<Card[]>([])
   const beleriandRow = ref<Card[]>([])
+  const mercenarySupply = ref(MERCENARY_BUILDERS_SUPPLY)
 
   // Immutable faction assignment — asymmetrical game, each side has a fixed role
   const playerFactions: Record<PlayerId, Faction> = {
@@ -97,6 +100,38 @@ export const useGameStore = defineStore('game', () => {
       FATE_TRACK_MIN,
       Math.min(FATE_TRACK_MAX, gameState.value.fateTrack + amount),
     )
+  }
+
+  function applyCardEffect(playerId: PlayerId, reward: EffectReward): void {
+    switch (reward.type) {
+      case 'gainResources':
+        gainResources(playerId, reward.amount)
+        break
+      case 'gainAttack':
+        gainAttack(playerId, reward.amount)
+        break
+      case 'drawCards':
+        drawCards(playerId, reward.count)
+        break
+      case 'adjustFate':
+        adjustFate(reward.amount)
+        break
+      case 'dealDamage': {
+        const opposingId = playerId === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+        const enemyVanguards = players.value[opposingId].vanguards
+        if (enemyVanguards.length > 0) {
+          damageVanguard(opposingId, enemyVanguards[0].instanceId, reward.amount)
+        } else {
+          const bases = strongholds.value[opposingId]
+          const target = bases?.find(b => b.currentHealth > 0)
+          if (target) {
+            target.currentHealth = Math.max(0, target.currentHealth - reward.amount)
+            checkWinCondition(opposingId)
+          }
+        }
+        break
+      }
+    }
   }
 
   function declareWinner(faction: Faction): void {
@@ -169,6 +204,16 @@ export const useGameStore = defineStore('game', () => {
     return true
   }
 
+  function purchaseMercenary(buyerId: PlayerId): boolean {
+    if (mercenarySupply.value <= 0) return false
+    const player = players.value[buyerId]
+    if (player.resources < MERCENARY_BUILDERS.cost) return false
+    player.resources -= MERCENARY_BUILDERS.cost
+    mercenarySupply.value--
+    player.discard.push({ ...MERCENARY_BUILDERS })
+    return true
+  }
+
   function purchaseCard(buyerId: PlayerId, cardId: string): boolean {
     const cardIndex = beleriandRow.value.findIndex(c => c.id === cardId)
     if (cardIndex === -1) return false
@@ -223,6 +268,7 @@ export const useGameStore = defineStore('game', () => {
     players,
     beleriandDeck,
     beleriandRow,
+    mercenarySupply,
     gameState,
     playerFactions,
     strongholds,
@@ -233,6 +279,8 @@ export const useGameStore = defineStore('game', () => {
     applyMarketDamage,
     adjustFate,
     purchaseCard,
+    purchaseMercenary,
+    applyCardEffect,
     declareWinner,
     findStrongholdById,
     checkWinCondition,

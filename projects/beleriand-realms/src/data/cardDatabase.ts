@@ -97,6 +97,21 @@ export const MORGOTH_STARTER: readonly Card[] = [
   },
 ]
 
+// Always-available neutral supply card — 10 copies, never shuffled into CARD_DATABASE.
+export const MERCENARY_BUILDERS: Card = {
+  id: 'nt-mercenary-builders',
+  name: 'Mercenary Builders',
+  category: CardCategory.Troop,
+  faction: Faction.Neutral,
+  cost: 2,
+  attack: 0,
+  resources: 2,
+  fateGeneration: 0,
+  effect: { description: 'Gain 2 Resources.' },
+}
+
+export const MERCENARY_BUILDERS_SUPPLY = 10
+
 export const CARD_DATABASE: readonly Card[] = [
 
   // ══════════════════════════════════════════════════════════════════════════

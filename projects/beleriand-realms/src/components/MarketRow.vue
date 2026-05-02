@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import PlayingCard from './PlayingCard.vue'
 import { type Card, Faction } from '../types/game'
+import { MERCENARY_BUILDERS } from '../data/cardDatabase'
 
 const props = defineProps<{
   // The attacker whose attack is being assigned, or null if none selected.
@@ -13,7 +14,7 @@ const props = defineProps<{
 const emit = defineEmits<{ attack: [card: Card] }>()
 
 const store = useGameStore()
-const { beleriandRow, beleriandDeck, gameState, players } = storeToRefs(store)
+const { beleriandRow, beleriandDeck, gameState, players, mercenarySupply } = storeToRefs(store)
 
 const emptySlotCount = computed(() => Math.max(0, 6 - beleriandRow.value.length))
 
@@ -59,6 +60,16 @@ function isAffordable(card: Card): boolean {
 // Whether this card glows as a valid attack target right now.
 function isTargeted(card: Card): boolean {
   return props.selectingAttacker !== null && canAttackWith(card)
+}
+
+// ── Mercenary supply helpers ──────────────────────────────────────────────
+const canAffordMercenary = computed(() => activeResources.value >= MERCENARY_BUILDERS.cost)
+
+function handleMercenaryClick(): void {
+  if (props.selectingAttacker !== null) return
+  if (mercenarySupply.value > 0 && canAffordMercenary.value) {
+    store.purchaseMercenary(activeId.value)
+  }
 }
 
 // ── Click handler ─────────────────────────────────────────────────────────
@@ -137,6 +148,34 @@ function handleCardClick(card: Card): void {
                flex items-center justify-center"
       >
         <span class="text-muted/20 text-3xl">✦</span>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-px self-stretch bg-card-border/40 mx-1 flex-shrink-0" />
+
+      <!-- Mercenary Builders supply slot — always available, 10 copies -->
+      <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+        <div
+          class="transition-opacity duration-200"
+          :class="{
+            'opacity-40': mercenarySupply <= 0 || (!canAffordMercenary && selectingAttacker === null),
+            'cursor-pointer': mercenarySupply > 0 && canAffordMercenary && selectingAttacker === null,
+            'cursor-not-allowed': mercenarySupply <= 0,
+          }"
+          @click="handleMercenaryClick"
+        >
+          <PlayingCard :card="MERCENARY_BUILDERS" @click="() => {}" />
+        </div>
+        <div class="flex flex-col items-center gap-1 w-full">
+          <div
+            class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border select-none"
+            :class="mercenarySupply > 0
+              ? 'bg-neutral/10 text-neutral-light border-neutral/30'
+              : 'bg-card-border/30 text-muted/40 border-card-border/30'"
+          >
+            ◈ {{ MERCENARY_BUILDERS.cost }} · {{ mercenarySupply }} left
+          </div>
+        </div>
       </div>
 
     </div>
