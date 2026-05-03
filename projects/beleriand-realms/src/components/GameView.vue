@@ -178,7 +178,7 @@ onMounted(() => {
     {
       id: 'gondolin', name: 'Gondolin', faction: Faction.FreePeoples,
       maxHealth: 20, currentHealth: 20,
-      innateAbility: 'Once per turn, when you play a Champion, draw 1 card.',
+      innateAbility: 'Once per turn, when you play a Hero, draw 1 card.',
     },
     {
       id: 'menegroth', name: 'Menegroth', faction: Faction.FreePeoples,
@@ -252,6 +252,19 @@ function resetGame(): void {
   window.location.reload()
 }
 
+// ── Gondolin innate ability tracking ─────────────────────────────────────
+// Resets on end turn. Fires at most once per turn when a Hero is played while
+// Gondolin is the active stronghold.
+const gondolinAbilityUsed = ref(false)
+
+function triggerGondolinIfEligible(c: Card): void {
+  if (gondolinAbilityUsed.value) return
+  if (store.gameState.activeStrongholdId[activeId.value] !== 'gondolin') return
+  if (c.category !== CardCategory.Hero) return
+  gondolinAbilityUsed.value = true
+  store.drawCards(activeId.value, 1)
+}
+
 // ── Play a card from hand ────────────────────────────────────────────────
 function playCard(c: Card): void {
   const player = activePlayer.value
@@ -266,6 +279,7 @@ function playCard(c: Card): void {
   } else {
     player.inPlay.push(c)
   }
+  triggerGondolinIfEligible(c)
   onCardPlayed()
 }
 
@@ -284,6 +298,7 @@ function playAllCards(): void {
     } else {
       player.inPlay.push(c)
     }
+    triggerGondolinIfEligible(c)
   }
   onCardPlayed()
 }
@@ -291,6 +306,7 @@ function playAllCards(): void {
 // ── End turn ─────────────────────────────────────────────────────────────
 function handleEndTurn(): void {
   cancelSelection()
+  gondolinAbilityUsed.value = false
   store.endTurn()
   onTurnEnded()
 }
