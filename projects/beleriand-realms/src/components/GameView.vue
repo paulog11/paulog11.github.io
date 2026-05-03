@@ -10,6 +10,7 @@ import MarketRow from './MarketRow.vue'
 import HelpModal from './HelpModal.vue'
 import TutorialDrawer from './TutorialDrawer.vue'
 import { useTutorial } from '../composables/useTutorial'
+import { playSfx } from '../composables/useSfx'
 import { CardCategory, Faction, PlayerId, type Card, type VanguardInstance } from '../types/game'
 import { CARD_DATABASE, FREE_PEOPLES_STARTER, MORGOTH_STARTER } from '../data/cardDatabase'
 
@@ -270,6 +271,7 @@ function playCard(c: Card): void {
   const player = activePlayer.value
   const idx = player.hand.findIndex(h => h.id === c.id)
   if (idx === -1) return
+  playSfx('play')
   player.hand.splice(idx, 1)
   store.gainResources(activeId.value, c.resources)
   store.gainAttack(activeId.value, c.attack)

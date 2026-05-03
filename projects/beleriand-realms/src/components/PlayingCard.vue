@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { type Card, Faction } from '../types/game'
+import { playSfx } from '../composables/useSfx'
 
 const props = defineProps<{ card: Card; faceDown?: boolean; vanguardHp?: number }>()
 const emit = defineEmits<{ click: [card: Card] }>()
+
+function handleClick() {
+  playSfx('click')
+  emit('click', props.card)
+}
 
 const factionMeta = computed(() => {
   switch (props.card.faction) {
@@ -23,7 +29,7 @@ const factionMeta = computed(() => {
            transition-all duration-200 ease-out
            hover:scale-105 hover:shadow-2xl hover:-translate-y-1"
     :class="[factionMeta.border, factionMeta.glow]"
-    @click="emit('click', card)"
+    @click="handleClick"
   >
     <!-- face-down state -->
     <div v-if="faceDown" class="absolute inset-0 rounded-xl bg-card-border flex items-center justify-center">

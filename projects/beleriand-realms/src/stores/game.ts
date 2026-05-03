@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { playSfx } from '../composables/useSfx'
 import {
   type Card,
   type EffectReward,
@@ -66,15 +67,19 @@ export const useGameStore = defineStore('game', () => {
   function drawCards(playerId: PlayerId, count: number): void {
     const player = players.value[playerId]
     let remaining = count
+    let drew = false
     while (remaining > 0) {
       if (player.deck.length === 0) {
         if (player.discard.length === 0) break
+        playSfx('shuffle')
         player.deck = shuffle(player.discard)
         player.discard = []
       }
       player.hand.push(player.deck.pop()!)
+      drew = true
       remaining--
     }
+    if (drew) playSfx('draw')
   }
 
   function gainResources(playerId: PlayerId, amount: number): void {
@@ -253,6 +258,7 @@ export const useGameStore = defineStore('game', () => {
       beleriandRow.value.push(beleriandDeck.value.pop()!)
     }
 
+    playSfx('purchase')
     return true
   }
 

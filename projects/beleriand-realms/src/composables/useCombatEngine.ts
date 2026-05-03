@@ -1,4 +1,5 @@
 import { useGameStore } from '../stores/game'
+import { playSfx } from './useSfx'
 import {
   type CombatEvent,
   type CombatResult,
@@ -216,6 +217,8 @@ export function useCombatEngine() {
         reason: `Insufficient attack: player has ${store.players[attackerId].attack}, needs ${attackAmount}`,
       }
     }
+
+    playSfx('attack')
 
     if (targetType === 'Stronghold') {
       return attackStronghold(store, attackerId, targetId, cardId, attackAmount)
