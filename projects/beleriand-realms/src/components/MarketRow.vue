@@ -91,7 +91,7 @@ function handleCardClick(card: Card): void {
 
     <!-- Header -->
     <div class="flex items-center justify-between">
-      <h2 class="text-xs font-bold uppercase tracking-widest text-muted">Beleriand Row</h2>
+      <h2 class="text-xs font-inscription font-bold uppercase tracking-inscription text-muted">Beleriand Row</h2>
       <span class="text-[10px] text-muted/60">
         {{ beleriandRow.length }}/6 visible · {{ beleriandDeck.length }} in deck
       </span>

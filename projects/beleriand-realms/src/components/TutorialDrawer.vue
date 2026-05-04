@@ -15,7 +15,7 @@ const { isActive, step, stepNumber, totalSteps, isFirst, isLast, stop, next, pre
       <!-- Header -->
       <div class="flex items-center justify-between px-4 py-3 border-b border-card-border flex-shrink-0">
         <div class="flex items-center gap-2.5">
-          <span class="text-free-peoples text-[10px] font-bold uppercase tracking-widest">Tutorial</span>
+          <span class="text-free-peoples text-[10px] font-inscription font-bold uppercase tracking-inscription">Tutorial</span>
           <span class="text-muted/60 text-xs">{{ stepNumber }}/{{ totalSteps }}</span>
         </div>
         <button
@@ -49,7 +49,7 @@ const { isActive, step, stepNumber, totalSteps, isFirst, isLast, stop, next, pre
           v-if="step.actionPrompt"
           class="mt-5 rounded-xl border border-free-peoples/40 bg-free-peoples-bg px-3 py-3"
         >
-          <p class="text-[10px] font-bold uppercase tracking-widest text-free-peoples mb-1">Your turn</p>
+          <p class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-free-peoples mb-1">Your turn</p>
           <p class="text-free-peoples-light text-xs leading-relaxed">{{ step.actionPrompt }}</p>
         </div>
       </div>
@@ -57,7 +57,7 @@ const { isActive, step, stepNumber, totalSteps, isFirst, isLast, stop, next, pre
       <!-- Navigation -->
       <div class="px-4 pb-5 pt-3 border-t border-card-border flex-shrink-0 flex items-center gap-2">
         <button
-          class="flex-1 py-2 rounded-lg text-sm font-semibold transition-colors"
+          class="flex-1 py-2 rounded-lg text-sm font-inscription font-semibold transition-colors"
           :class="isFirst
             ? 'text-muted/30 cursor-not-allowed'
             : 'border border-card-border text-muted hover:border-muted hover:text-ink'"
@@ -69,7 +69,7 @@ const { isActive, step, stepNumber, totalSteps, isFirst, isLast, stop, next, pre
 
         <button
           v-if="!isLast"
-          class="flex-1 py-2 rounded-lg text-sm font-semibold
+          class="flex-1 py-2 rounded-lg text-sm font-inscription font-semibold
                  bg-free-peoples text-parchment hover:bg-free-peoples-dark transition-colors"
           @click="next"
         >
@@ -77,7 +77,7 @@ const { isActive, step, stepNumber, totalSteps, isFirst, isLast, stop, next, pre
         </button>
         <button
           v-else
-          class="flex-1 py-2 rounded-lg text-sm font-semibold
+          class="flex-1 py-2 rounded-lg text-sm font-inscription font-semibold
                  bg-free-peoples text-parchment hover:bg-free-peoples-dark transition-colors"
           @click="stop"
         >

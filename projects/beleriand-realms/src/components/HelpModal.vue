@@ -38,7 +38,7 @@ function openTutorial(): void {
 
         <!-- ── Card Symbols ─────────────────────────────────────────────── -->
         <section>
-          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">Card Symbols</h3>
+          <h3 class="text-free-peoples text-[10px] font-inscription font-bold uppercase tracking-inscription mb-3">Card Symbols</h3>
           <div class="space-y-3">
 
             <div class="flex items-start gap-3">
@@ -80,7 +80,7 @@ function openTutorial(): void {
 
         <!-- ── Card Categories ────────────────────────────────────────── -->
         <section>
-          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">Card Categories</h3>
+          <h3 class="text-free-peoples text-[10px] font-inscription font-bold uppercase tracking-inscription mb-3">Card Categories</h3>
           <div class="space-y-2">
             <div class="bg-parchment border border-card-border rounded-xl p-3">
               <p class="text-ink text-sm font-semibold">Troop</p>
@@ -110,7 +110,7 @@ function openTutorial(): void {
 
         <!-- ── Factions ────────────────────────────────────────────────── -->
         <section>
-          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">Factions</h3>
+          <h3 class="text-free-peoples text-[10px] font-inscription font-bold uppercase tracking-inscription mb-3">Factions</h3>
           <div class="space-y-2">
             <div class="flex items-start gap-3 bg-free-peoples-bg border border-free-peoples/30 rounded-xl p-3">
               <div class="w-3 h-3 rounded-full bg-free-peoples mt-0.5 flex-shrink-0"></div>
@@ -138,7 +138,7 @@ function openTutorial(): void {
 
         <!-- ── The Fate Track ──────────────────────────────────────────── -->
         <section>
-          <h3 class="text-free-peoples text-[10px] font-bold uppercase tracking-widest mb-3">The Fate Track</h3>
+          <h3 class="text-free-peoples text-[10px] font-inscription font-bold uppercase tracking-inscription mb-3">The Fate Track</h3>
           <p class="text-muted text-sm leading-relaxed">
             A slider from <span class="text-morgoth-light font-semibold">−10 (Shadow dominance)</span> to
             <span class="text-free-peoples font-semibold">+10 (Light dominance)</span>.
@@ -153,7 +153,7 @@ function openTutorial(): void {
       <!-- Footer -->
       <div class="flex items-center justify-between px-6 py-4 border-t border-card-border flex-shrink-0">
         <button
-          class="px-5 py-2 bg-free-peoples text-parchment rounded-lg text-sm font-semibold
+          class="px-5 py-2 bg-free-peoples text-parchment rounded-lg text-sm font-inscription font-semibold
                  hover:bg-free-peoples-dark transition-colors"
           @click="openTutorial"
         >

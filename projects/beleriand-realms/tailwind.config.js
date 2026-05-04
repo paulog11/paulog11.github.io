@@ -31,8 +31,23 @@ export default {
         muted:      '#9e8d6f',
       },
       fontFamily: {
-        display: ['Georgia', 'serif'],
-        body:    ['system-ui', 'sans-serif'],
+        display:     ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        body:        ['"EB Garamond"', 'Georgia', 'serif'],
+        inscription: ['"Cinzel"', 'Georgia', 'serif'],
+      },
+      letterSpacing: {
+        inscription: '0.18em',
+      },
+      boxShadow: {
+        'torch':        '0 0 22px -4px rgba(201, 162, 39, 0.35)',
+        'torch-crimson':'0 0 22px -4px rgba(155, 32, 32, 0.40)',
+        'plaque':       'inset 0 1px 0 rgba(245,228,153,0.08), 0 1px 2px rgba(0,0,0,0.6)',
+        'card-rest':    '0 1px 0 rgba(245,228,153,0.05), 0 6px 12px rgba(0,0,0,0.45)',
+      },
+      backgroundImage: {
+        'parchment-page': 'radial-gradient(ellipse at top, rgba(245,228,153,0.04), transparent 70%), linear-gradient(180deg, #221a0d 0%, #1a1209 100%)',
+        'banner-fp':      'linear-gradient(180deg, #2a200a 0%, #1f1805 100%)',
+        'banner-mg':      'linear-gradient(180deg, #2a0808 0%, #1f0505 100%)',
       },
     },
   },

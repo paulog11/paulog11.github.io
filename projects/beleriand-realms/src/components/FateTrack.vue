@@ -23,9 +23,9 @@ const ticks = [-10, -5, 0, 5, 10]
   <div class="flex flex-col items-center gap-2 w-full max-w-lg select-none">
 
     <!-- Labels -->
-    <div class="flex items-center justify-between w-full text-xs font-bold uppercase tracking-widest">
+    <div class="flex items-center justify-between w-full text-xs font-inscription font-bold uppercase tracking-inscription">
       <span class="text-morgoth-light">◀ Shadow</span>
-      <span class="font-display text-sm" :class="dominance.color">{{ dominance.label }}</span>
+      <span class="text-sm" :class="dominance.color">{{ dominance.label }}</span>
       <span class="text-free-peoples">Light ▶</span>
     </div>
 
@@ -65,7 +65,7 @@ const ticks = [-10, -5, 0, 5, 10]
     </div>
 
     <!-- Numeric readout -->
-    <p class="text-muted text-[10px] tracking-wider">
+    <p class="text-muted text-[10px] font-inscription tracking-inscription tabular-nums">
       Fate: <span class="font-bold" :class="dominance.color">{{ fateTrack > 0 ? '+' : '' }}{{ fateTrack }}</span>
       &nbsp;/&nbsp;{{ FATE_TRACK_MAX }}
     </p>

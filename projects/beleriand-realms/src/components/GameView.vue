@@ -341,7 +341,7 @@ function handleEndTurn(): void {
 
         <!-- Enemy vanguards — clickable targets when attacker is selected -->
         <div v-if="enemyVanguards.length > 0" class="flex flex-col gap-1">
-          <span class="text-[9px] font-bold uppercase tracking-widest text-morgoth/60">Vanguards</span>
+          <span class="text-[9px] font-inscription font-bold uppercase tracking-inscription text-morgoth/60">Vanguards</span>
           <div class="flex gap-2">
             <div
               v-for="v in enemyVanguards"
@@ -425,7 +425,7 @@ function handleEndTurn(): void {
       <!-- Active player's in-play zone -->
       <div id="in-play-zone" v-if="activePlayer.inPlay.length > 0" class="flex flex-col gap-1.5">
         <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-widest text-free-peoples/70">In Play</span>
+          <span class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-free-peoples/70">In Play</span>
           <span v-if="hasUnassignedAttack && !isSelectingAttacker" class="text-[10px] text-morgoth-light animate-pulse">
             ⚔ Click a card to assign its attack
           </span>
@@ -499,7 +499,7 @@ function handleEndTurn(): void {
 
           <!-- Own vanguards -->
           <div v-if="ownVanguards.length > 0" class="flex flex-col gap-1">
-            <span class="text-[9px] font-bold uppercase tracking-widest text-muted">Vanguards</span>
+            <span class="text-[9px] font-inscription font-bold uppercase tracking-inscription text-muted">Vanguards</span>
             <div class="flex gap-1.5">
               <div
                 v-for="v in ownVanguards"
@@ -546,7 +546,7 @@ function handleEndTurn(): void {
           <div class="flex gap-2">
             <button
               id="end-turn-btn"
-              class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-inscription font-bold uppercase tracking-inscription transition-colors"
               :class="activeId === PlayerId.PlayerOne
                 ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
                 : 'bg-morgoth text-parchment hover:bg-morgoth-dark'"
@@ -555,7 +555,7 @@ function handleEndTurn(): void {
               End Turn
             </button>
             <button
-              class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors"
+              class="px-3 py-1.5 rounded-lg text-xs font-inscription font-bold uppercase tracking-inscription transition-colors"
               :class="activePlayer.hand.length > 0
                 ? 'bg-card-border text-ink hover:bg-muted/30'
                 : 'bg-card-border/40 text-muted/40 cursor-not-allowed'"
@@ -569,7 +569,7 @@ function handleEndTurn(): void {
 
         <!-- Active player's hand -->
         <div id="player-hand" class="flex flex-col gap-1.5 flex-1 min-w-0">
-          <span class="text-[10px] font-bold uppercase tracking-widest text-muted">
+          <span class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-muted">
             Hand ({{ activePlayer.hand.length }}) — click to play
           </span>
           <div class="overflow-x-auto pb-1">
@@ -609,7 +609,7 @@ function handleEndTurn(): void {
             <div class="flex flex-col gap-4 items-center">
               <div class="flex items-center gap-2 mb-1">
                 <span class="w-3 h-3 rounded-full bg-free-peoples inline-block" />
-                <h3 class="font-display font-bold text-free-peoples text-sm uppercase tracking-wider">
+                <h3 class="font-inscription font-bold text-free-peoples text-sm uppercase tracking-inscription">
                   Free Peoples
                 </h3>
               </div>
@@ -631,7 +631,7 @@ function handleEndTurn(): void {
                   <p class="text-muted text-[10px] italic leading-snug">{{ base.innateAbility }}</p>
                   <div
                     v-if="fpStartChoice === base.id"
-                    class="mt-2 text-[10px] font-bold text-free-peoples uppercase tracking-wider"
+                    class="mt-2 text-[10px] font-inscription font-bold text-free-peoples uppercase tracking-inscription"
                   >
                     ✓ Selected
                   </div>
@@ -649,7 +649,7 @@ function handleEndTurn(): void {
             <div class="flex flex-col gap-4 items-center">
               <div class="flex items-center gap-2 mb-1">
                 <span class="w-3 h-3 rounded-full bg-morgoth inline-block" />
-                <h3 class="font-display font-bold text-morgoth-light text-sm uppercase tracking-wider">
+                <h3 class="font-inscription font-bold text-morgoth-light text-sm uppercase tracking-inscription">
                   Morgoth
                 </h3>
               </div>
@@ -671,7 +671,7 @@ function handleEndTurn(): void {
                   <p class="text-muted text-[10px] italic leading-snug">{{ base.innateAbility }}</p>
                   <div
                     v-if="mgStartChoice === base.id"
-                    class="mt-2 text-[10px] font-bold text-morgoth-light uppercase tracking-wider"
+                    class="mt-2 text-[10px] font-inscription font-bold text-morgoth-light uppercase tracking-inscription"
                   >
                     ✓ Selected
                   </div>
@@ -684,7 +684,7 @@ function handleEndTurn(): void {
           <!-- Confirm button -->
           <div class="flex justify-center mt-8">
             <button
-              class="px-8 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wide transition-colors"
+              class="px-8 py-2.5 rounded-lg text-sm font-inscription font-bold uppercase tracking-inscription transition-colors"
               :class="fpStartChoice && mgStartChoice
                 ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
                 : 'bg-card-border text-muted cursor-not-allowed'"
@@ -713,7 +713,7 @@ function handleEndTurn(): void {
               <p class="text-muted text-xs mt-0.5">Choose one card to permanently remove from the game.</p>
             </div>
             <span
-              class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border"
+              class="text-[10px] font-inscription font-bold uppercase tracking-inscription px-2 py-1 rounded border"
               :class="trashPlayerId === PlayerId.PlayerOne
                 ? 'text-free-peoples border-free-peoples/40 bg-free-peoples/10'
                 : 'text-morgoth-light border-morgoth/40 bg-morgoth/10'"
@@ -725,7 +725,7 @@ function handleEndTurn(): void {
           <div class="overflow-y-auto flex flex-col gap-5">
             <!-- Hand -->
             <div v-if="trashableSections.hand.length > 0" class="flex flex-col gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Hand</span>
+              <span class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-muted">Hand</span>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="c in trashableSections.hand"
@@ -741,7 +741,7 @@ function handleEndTurn(): void {
 
             <!-- In Play -->
             <div v-if="trashableSections.inPlay.length > 0" class="flex flex-col gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">In Play</span>
+              <span class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-muted">In Play</span>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="c in trashableSections.inPlay"
@@ -757,7 +757,7 @@ function handleEndTurn(): void {
 
             <!-- Discard -->
             <div v-if="trashableSections.discard.length > 0" class="flex flex-col gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Discard Pile</span>
+              <span class="text-[10px] font-inscription font-bold uppercase tracking-inscription text-muted">Discard Pile</span>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="c in trashableSections.discard"
@@ -847,7 +847,7 @@ function handleEndTurn(): void {
           </div>
 
           <h2
-            class="font-display text-2xl font-bold mb-2"
+            class="font-display text-2xl font-bold mb-2 leading-tight"
             :class="store.gameState.winner === Faction.FreePeoples
               ? 'text-free-peoples'
               : 'text-morgoth-light'"
@@ -864,7 +864,7 @@ function handleEndTurn(): void {
           </p>
 
           <button
-            class="w-full py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-colors"
+            class="w-full py-2.5 rounded-lg text-sm font-inscription font-semibold tracking-inscription transition-colors"
             :class="store.gameState.winner === Faction.FreePeoples
               ? 'bg-free-peoples text-parchment hover:bg-free-peoples-dark'
               : 'bg-morgoth text-ink hover:bg-morgoth-dark'"
