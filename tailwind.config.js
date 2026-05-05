@@ -22,12 +22,20 @@ export default {
       },
       animation: {
         'fade-up': 'fadeUp 0.5s ease forwards',
+        'caret-blink': 'caretBlink 1s steps(1) infinite',
       },
       keyframes: {
         fadeUp: {
           '0%':   { opacity: '0', transform: 'translateY(16px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        caretBlink: {
+          '0%, 50%':  { opacity: '1' },
+          '50.01%, 100%': { opacity: '0' },
+        },
+      },
+      backgroundImage: {
+        'ledger': 'repeating-linear-gradient(to bottom, transparent, transparent 31px, #EDE8DF 31px, #EDE8DF 32px)',
       },
     },
   },
