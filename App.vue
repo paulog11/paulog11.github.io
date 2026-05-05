@@ -32,7 +32,7 @@
           Paulo's Projects
         </h1>
         <p class="mt-3 font-mono text-[0.8rem] tracking-[0.12em] uppercase text-muted">
-          Software · Languages · Games
+          Japanese Language Learning · Games · Reading Companions · Interactive Maps · Simulations
         </p>
       </div>
 
@@ -114,8 +114,8 @@ const apps = ref([
     id: 'japanese-dashboard',
     title: 'Japanese Learning',
     subtitle: 'Dashboard',
-    description: 'Track your Japanese progress across kanji, grammar, and vocabulary in one place.',
-    tags: ['Language', 'Analytics'],
+    description: 'Useful tools for Japanese learning!',
+    tags: ['Language', 'Japanese'],
     icon: '日',
     url: './projects/japandash/dist/index.html',
     comingSoon: false,
@@ -125,7 +125,7 @@ const apps = ref([
     id: 'right-word-japanese',
     title: 'The Right Word',
     subtitle: 'Japanese',
-    description: 'Build precise vocabulary with context-driven word selection and spaced repetition.',
+    description: 'Quick help when talking with people in Japanese — find the right word for your situation. Includes Keigo.',
     tags: ['Language', 'Japanese'],
     icon: '語',
     url: './projects/right-word/dist/index.html',
@@ -169,7 +169,7 @@ const apps = ref([
     id: 'machi-koro',
     title: 'Machi Koro',
     subtitle: 'City Builder',
-    description: 'Build your city by rolling dice and buying establishments. First to complete all 4 landmarks wins!',
+    description: 'Port of the board game. Build your city by rolling dice and buying establishments.',
     tags: ['Game', 'Board Game'],
     icon: '🏙️',
     url: './projects/ported-games/machi-koro/dist/index.html',
