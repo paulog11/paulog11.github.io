@@ -47,29 +47,8 @@
           <span v-if="i < categories.length - 1" class="text-muted/50 font-mono text-[0.7rem]">·</span>
         </template>
         <span class="ml-auto font-mono text-[0.65rem] tracking-[0.14em] uppercase text-muted/70">
-          press <kbd class="px-1 border border-warm rounded-sm">/</kbd> to search ·
           <kbd class="px-1 border border-warm rounded-sm">j</kbd>/<kbd class="px-1 border border-warm rounded-sm">k</kbd> to navigate
         </span>
-      </div>
-
-      <!-- ── Search input (revealed on / press) ── -->
-      <div
-        v-show="searchOpen"
-        class="mt-4 flex items-center gap-2 border-b border-ink pb-1"
-      >
-        <span class="font-mono text-[0.75rem] text-accent">/</span>
-        <input
-          ref="searchInput"
-          v-model="searchQuery"
-          type="text"
-          placeholder="filter entries…"
-          class="flex-1 bg-transparent outline-none font-mono text-[0.85rem] text-ink placeholder:text-muted/60"
-          @keydown.esc="closeSearch"
-        />
-        <button
-          @click="closeSearch"
-          class="font-mono text-[0.65rem] tracking-[0.12em] uppercase text-muted hover:text-ink"
-        >esc</button>
       </div>
 
       <hr class="mt-8 mb-2 border-t border-warm" />
@@ -184,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 const portfolioUrl = ref('./projects/profile/')
 const updatedLabel = '2026-05'
@@ -199,9 +178,6 @@ const categories = [
 ]
 
 const selectedCategory = ref('all')
-const searchOpen = ref(false)
-const searchQuery = ref('')
-const searchInput = ref(null)
 const focusedIndex = ref(0)
 const entryRefs = ref([])
 
@@ -317,20 +293,11 @@ const apps = ref([
   },
 ])
 
-const filteredApps = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  return apps.value.filter(a => {
-    if (selectedCategory.value !== 'all' && a.category !== selectedCategory.value) return false
-    if (!q) return true
-    return (
-      a.title.toLowerCase().includes(q) ||
-      a.tagline.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.category.toLowerCase().includes(q) ||
-      a.tools.join(' ').toLowerCase().includes(q)
-    )
-  })
-})
+const filteredApps = computed(() =>
+  selectedCategory.value === 'all'
+    ? apps.value
+    : apps.value.filter(a => a.category === selectedCategory.value)
+)
 
 function statusLabel(status) {
   return status === 'coming-soon' ? 'coming soon' : status
@@ -348,30 +315,8 @@ function open(entry) {
   window.open(entry.url, '_blank', 'noopener')
 }
 
-async function openSearch() {
-  searchOpen.value = true
-  await nextTick()
-  searchInput.value?.focus()
-}
-
-function closeSearch() {
-  searchOpen.value = false
-  searchQuery.value = ''
-  searchInput.value?.blur()
-}
-
 function onKeydown(e) {
-  const isInputFocused =
-    document.activeElement?.tagName === 'INPUT' ||
-    document.activeElement?.tagName === 'TEXTAREA'
-
-  if (e.key === '/' && !isInputFocused) {
-    e.preventDefault()
-    openSearch()
-    return
-  }
-
-  if (isInputFocused) return
+  if (document.activeElement?.tagName === 'INPUT') return
 
   const max = filteredApps.value.length - 1
   if (max < 0) return
