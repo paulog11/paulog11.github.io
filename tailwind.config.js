@@ -16,7 +16,7 @@ export default {
         ink:     '#1C1917',
         parchment: '#F5F1EA',
         warm:    '#EDE8DF',
-        muted:   '#9C9590',
+        muted:   '#6B6560',
         accent:  '#C0622A',
         'accent-light': '#F0DDD0',
       },

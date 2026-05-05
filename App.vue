@@ -153,7 +153,7 @@
       <!-- ── Footer ── -->
       <footer class="mt-12 pt-6 border-t border-warm font-mono text-[0.68rem] tracking-[0.14em] uppercase text-muted/70">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <span>end of catalog · paulog.github.io</span>
+          <span>end of catalog · paulog11.github.io</span>
           <span>© {{ new Date().getFullYear() }} Paulo Gonzales</span>
         </div>
       </footer>
