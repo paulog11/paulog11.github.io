@@ -9,10 +9,15 @@ import FateTrack from './FateTrack.vue'
 import MarketRow from './MarketRow.vue'
 import HelpModal from './HelpModal.vue'
 import TutorialDrawer from './TutorialDrawer.vue'
+import HitFlash from './HitFlash.vue'
+import PurchaseFlightLayer from './PurchaseFlightLayer.vue'
 import { useTutorial } from '../composables/useTutorial'
 import { playSfx } from '../composables/useSfx'
+import { useAttackFx } from '../composables/useAttackFx'
 import { CardCategory, Faction, PlayerId, type Card, type VanguardInstance } from '../types/game'
 import { CARD_DATABASE, FREE_PEOPLES_STARTER, MORGOTH_STARTER } from '../data/cardDatabase'
+
+const { currentHit } = useAttackFx()
 
 const store = useGameStore()
 const { executeAttack } = useCombatEngine()
@@ -360,6 +365,10 @@ function handleEndTurn(): void {
               <div v-if="isSelectingAttacker" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center z-10">
                 <span class="text-white text-[10px] font-bold">⚔</span>
               </div>
+              <HitFlash
+                :active="currentHit?.targetId === v.instanceId"
+                :faction="currentHit?.faction ?? Faction.Neutral"
+              />
             </div>
           </div>
         </div>
@@ -526,6 +535,10 @@ function handleEndTurn(): void {
                 >
                   {{ activePlayer.attackAssigned.has(v.instanceId) ? '⚔ spent' : `⚔ ${v.card.attack}` }}
                 </div>
+                <HitFlash
+                  :active="currentHit?.targetId === v.instanceId"
+                  :faction="currentHit?.faction ?? Faction.Neutral"
+                />
               </div>
             </div>
           </div>
@@ -541,6 +554,17 @@ function handleEndTurn(): void {
               <span class="font-bold text-ink tabular-nums w-5 text-right">{{ activePlayer.resources }}</span>
               <span class="text-muted text-xs">resources</span>
             </div>
+          </div>
+
+          <!-- Discard pile widget — destination for purchased cards flight -->
+          <div id="player-discard-pile" class="flex flex-col items-center gap-1">
+            <div
+              class="w-10 h-14 rounded-lg border border-card-border/70 bg-card-bg shadow-md flex items-center justify-center"
+              :class="activePlayer.discard.length > 0 ? 'opacity-100' : 'opacity-30'"
+            >
+              <span class="text-muted/40 text-xs select-none">🌑</span>
+            </div>
+            <span class="text-[9px] text-muted/60 tabular-nums">{{ activePlayer.discard.length }} discard</span>
           </div>
 
           <div class="flex gap-2">
@@ -885,6 +909,9 @@ function handleEndTurn(): void {
 
     <!-- Tutorial drawer — always mounted so Transition works correctly -->
     <TutorialDrawer />
+
+    <!-- Purchase flight overlay — fixed, pointer-events-none, z-30 -->
+    <PurchaseFlightLayer />
 
   </div>
 </template>

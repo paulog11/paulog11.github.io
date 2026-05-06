@@ -38,3 +38,14 @@
     box-shadow: 0 0 0 8px rgba(201, 162, 39, 0);
   }
 }
+
+/* ─── Attack hit flash ────────────────────────────────────────────────────────
+   Applied inline via the `animation` style prop on HitFlash.vue's ⚔ glyph.
+   Must be non-scoped so the keyframe name is globally reachable.
+────────────────────────────────────────────────────────────────────────────── */
+@keyframes attack-flash {
+  0%   { opacity: 0; transform: scale(0.6); }
+  40%  { opacity: 1; transform: scale(1.1); }
+  70%  { opacity: 1; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(0.9); }
+}

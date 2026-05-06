@@ -3,8 +3,13 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import PlayingCard from './PlayingCard.vue'
+import HitFlash from './HitFlash.vue'
 import { type Card, Faction } from '../types/game'
 import { MERCENARY_BUILDERS } from '../data/cardDatabase'
+import { useAttackFx } from '../composables/useAttackFx'
+import { flyToDiscard } from '../composables/usePurchaseFx'
+
+const { currentHit } = useAttackFx()
 
 const props = defineProps<{
   // The attacker whose attack is being assigned, or null if none selected.
@@ -73,15 +78,19 @@ function handleMercenaryClick(): void {
 }
 
 // ── Click handler ─────────────────────────────────────────────────────────
-function handleCardClick(card: Card): void {
+function handleCardClick(card: Card, event: MouseEvent): void {
   if (props.selectingAttacker !== null) {
-    // Attack-assignment mode: only forward if this is a valid attack target.
     if (isAttackable(card)) emit('attack', card)
     return
   }
-  // Normal mode: purchase.
   if (isPurchasable(card) && canAffordPurchase(card)) {
-    store.purchaseCard(activeId.value, card.id)
+    const fromRect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const purchased = store.purchaseCard(activeId.value, card.id)
+    if (purchased) {
+      const pileEl = document.getElementById('player-discard-pile')
+      const toRect = pileEl?.getBoundingClientRect()
+      if (toRect) flyToDiscard(card, fromRect, toRect)
+    }
   }
 }
 </script>
@@ -104,13 +113,20 @@ function handleCardClick(card: Card): void {
         <div
           v-for="card in beleriandRow"
           :key="card.id"
-          class="flex flex-col items-center gap-1.5 flex-shrink-0 transition-opacity duration-200"
+          class="market-card-wrapper flex flex-col items-center gap-1.5 flex-shrink-0 transition-opacity duration-200"
           :class="{
             'opacity-40': !isAffordable(card) && !isTargeted(card),
             'ring-2 ring-morgoth-light ring-offset-1 ring-offset-parchment rounded-xl': isTargeted(card),
           }"
+          @click="(e: MouseEvent) => handleCardClick(card, e)"
         >
-          <PlayingCard :card="card" @click="handleCardClick(card)" />
+          <div class="relative">
+            <PlayingCard :card="card" @click="() => {}" />
+            <HitFlash
+              :active="currentHit?.targetId === card.id"
+              :faction="currentHit?.faction ?? Faction.Neutral"
+            />
+          </div>
 
           <div class="flex flex-col items-center gap-1 w-full">
             <!-- Health bar for attackable faction cards -->

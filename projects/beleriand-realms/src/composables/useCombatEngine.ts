@@ -1,5 +1,6 @@
 import { useGameStore } from '../stores/game'
 import { playSfx } from './useSfx'
+import { triggerHit } from './useAttackFx'
 import {
   type CombatEvent,
   type CombatResult,
@@ -33,13 +34,17 @@ function applyReward(store: Store, beneficiary: PlayerId, reward: EffectReward):
       // Direct damage hits the first living enemy vanguard if any; otherwise the active stronghold.
       const opposingId =
         beneficiary === PlayerId.PlayerOne ? PlayerId.PlayerTwo : PlayerId.PlayerOne
+      const attackerFaction = store.playerFactions[beneficiary]
       const enemyVanguards = store.players[opposingId].vanguards
       if (enemyVanguards.length > 0) {
-        store.damageVanguard(opposingId, enemyVanguards[0].instanceId, reward.amount)
+        const v = enemyVanguards[0]
+        triggerHit(v.instanceId, attackerFaction)
+        store.damageVanguard(opposingId, v.instanceId, reward.amount)
       } else {
         const bases = store.strongholds[opposingId]
         const target = bases?.find(b => b.currentHealth > 0)
         if (target) {
+          triggerHit(target.id, attackerFaction)
           target.currentHealth = Math.max(0, target.currentHealth - reward.amount)
           store.checkWinCondition(opposingId)
         }
@@ -84,6 +89,7 @@ function attackStronghold(
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
   stronghold.currentHealth = Math.max(0, stronghold.currentHealth - attackAmount)
+  triggerHit(targetId, store.playerFactions[attackerId])
 
   const events: CombatEvent[] = [
     { type: 'StrongholdDamaged', strongholdId: targetId, remainingHealth: stronghold.currentHealth },
@@ -127,6 +133,7 @@ function attackVanguard(
   const cardName = vanguard.card.name
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
+  triggerHit(instanceId, store.playerFactions[attackerId])
   store.damageVanguard(targetPlayerId, instanceId, attackAmount)
 
   // Check if it's still alive after damage (damageVanguard removes it if HP = 0).
@@ -172,6 +179,7 @@ function attackMarketCard(
 
   store.markAttackAssigned(attackerId, cardId)
   store.players[attackerId].attack -= attackAmount
+  triggerHit(targetId, store.playerFactions[attackerId])
   const totalDamage = store.applyMarketDamage(targetId, attackAmount)
 
   if (totalDamage < card.cost) {

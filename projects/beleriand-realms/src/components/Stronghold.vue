@@ -2,6 +2,10 @@
 import { computed } from 'vue'
 import { type Stronghold, Faction } from '../types/game'
 import { GONDOLIN_TOWER, ANGBAND_PEAKS, BANNER_FRAME } from '../assets/decorations'
+import { useAttackFx } from '../composables/useAttackFx'
+import HitFlash from './HitFlash.vue'
+
+const { currentHit } = useAttackFx()
 
 const props = defineProps<{ stronghold: Stronghold; isActive?: boolean; isTarget?: boolean }>()
 const emit = defineEmits<{ target: [id: string] }>()
@@ -105,5 +109,11 @@ const factionMotif = computed(() => {
     <div v-if="isTarget" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
       <span class="text-white text-[10px] font-bold">⚔</span>
     </div>
+
+    <!-- Attack hit flash -->
+    <HitFlash
+      :active="currentHit?.targetId === stronghold.id"
+      :faction="currentHit?.faction ?? Faction.Neutral"
+    />
   </div>
 </template>
