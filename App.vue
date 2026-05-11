@@ -8,7 +8,7 @@
           Catalog №01
         </div>
         <h1 class="mt-2 font-mono text-[0.95rem] sm:text-[1.05rem] tracking-[0.14em] uppercase text-ink">
-          Paulo Gonzales · A Catalog of Things Made
+          Paulo Gonzales
         </h1>
         <div class="mt-3 font-mono text-[0.7rem] tracking-[0.1em] uppercase text-muted">
           updated {{ updatedLabel }} · {{ apps.length }} entries · sorted newest first
@@ -19,7 +19,7 @@
           rel="noopener"
           class="mt-3 inline-flex items-center gap-1.5 font-mono text-[0.7rem] tracking-[0.1em] uppercase text-accent hover:text-ink transition-colors"
         >
-          <span class="underline underline-offset-4 decoration-accent/50">profile card</span>
+          <span class="underline underline-offset-4 decoration-accent/50">paulo's profile</span>
           <span>↗</span>
         </a>
       </header>

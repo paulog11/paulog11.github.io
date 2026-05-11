@@ -13,12 +13,12 @@ export default {
         mono: ['"DM Mono"', 'monospace'],
       },
       colors: {
-        ink:     '#1C1917',
-        parchment: '#F5F1EA',
-        warm:    '#EDE8DF',
-        muted:   '#6B6560',
-        accent:  '#C0622A',
-        'accent-light': '#F0DDD0',
+        ink:     '#0F1F3D',
+        parchment: '#F0F4FA',
+        warm:    '#DDE5F2',
+        muted:   '#4A5B7A',
+        accent:  '#7A96B8',
+        'accent-light': '#D8E4F0',
       },
       animation: {
         'fade-up': 'fadeUp 0.5s ease forwards',
@@ -35,7 +35,7 @@ export default {
         },
       },
       backgroundImage: {
-        'ledger': 'repeating-linear-gradient(to bottom, transparent, transparent 31px, #EDE8DF 31px, #EDE8DF 32px)',
+        'ledger': 'repeating-linear-gradient(to bottom, transparent, transparent 31px, #DDE5F2 31px, #DDE5F2 32px)',
       },
     },
   },
