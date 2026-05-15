@@ -5,7 +5,7 @@
     <header class="flex items-center justify-between px-6 py-4 border-b border-koshi">
       <div>
         <h1 class="font-display text-2xl font-semibold tracking-tight">
-          日本語ダッシュボード
+          ペラペラQuest
         </h1>
         <p class="font-mono text-[0.65rem] tracking-[0.12em] uppercase text-usuzumi mt-0.5">
           Japanese Learning Dashboard <span class="normal-case tracking-normal opacity-50">v{{ appVersion }}</span>
