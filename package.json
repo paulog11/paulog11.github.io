@@ -11,6 +11,9 @@
     "deploy": "cp index.source.html index.html && vite build && rm -f assets/index-*.js assets/index-*.css && cp dist/assets/* assets/ && cp dist/index.html index.html"
   },
   "dependencies": {
+    "@vueuse/core": "^14.3.0",
+    "@vueuse/motion": "^3.0.3",
+    "radix-vue": "^1.9.17",
     "vue": "^3.5.0"
   },
   "devDependencies": {

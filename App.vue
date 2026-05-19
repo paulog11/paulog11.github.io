@@ -1,171 +1,142 @@
 <template>
-  <div class="min-h-full bg-parchment font-body text-ink bg-ledger">
-    <div class="max-w-[760px] mx-auto px-6 sm:px-10 py-12 sm:py-16">
+  <CommandCenter :entry-count="filteredApps.length">
 
-      <!-- ── Header ── -->
-      <header class="animate-fade-up" style="animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards;">
-        <div class="font-mono text-[0.7rem] tracking-[0.18em] uppercase text-muted">
-          Catalog №01
+    <!-- ── LEFT SIDEBAR ── -->
+    <template #left>
+      <LeftSidebar
+        profile-url="./projects/profile/"
+        resume-url="./assets/resume.pdf"
+      />
+    </template>
+
+    <!-- ── CENTER MAIN PANEL ── -->
+    <div class="h-full flex flex-col font-tech overflow-hidden">
+
+      <!-- Panel header -->
+      <div class="flex items-start justify-between pb-3 border-b border-mecha-accent/15 shrink-0">
+        <div>
+          <div class="text-mecha-accent text-[0.58rem] tracking-[0.22em] mb-1">Projects</div>
+          <div class="text-mecha-text/35 text-[0.55rem] tracking-[0.14em]">
+            {{ filteredApps.length }} entries · newest first
+          </div>
         </div>
-        <h1 class="mt-2 font-mono text-[0.95rem] sm:text-[1.05rem] tracking-[0.14em] uppercase text-ink">
-          Paulo Gonzales
-        </h1>
-        <div class="mt-3 font-mono text-[0.7rem] tracking-[0.1em] uppercase text-muted">
-          updated {{ updatedLabel }} · {{ apps.length }} entries · sorted newest first
-        </div>
-        <a
-          :href="portfolioUrl"
-          target="_blank"
-          rel="noopener"
-          class="mt-3 inline-flex items-center gap-1.5 font-mono text-[0.7rem] tracking-[0.1em] uppercase text-accent hover:text-ink transition-colors"
-        >
-          <span class="underline underline-offset-4 decoration-accent/50">paulo's profile</span>
-          <span>↗</span>
-        </a>
-      </header>
+        <div class="text-mecha-text/20 text-[0.52rem] tracking-widest">{{ updatedLabel }}</div>
+      </div>
 
-      <hr class="my-8 border-t border-warm" />
-
-      <!-- ── Filter row ── -->
-      <div
-        class="flex flex-wrap items-baseline gap-x-4 gap-y-2 animate-fade-up"
-        style="animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards;"
-      >
-        <span class="font-mono text-[0.7rem] tracking-[0.14em] uppercase text-muted">filter</span>
-        <template v-for="(cat, i) in categories" :key="cat.id">
-          <button
-            @click="selectedCategory = cat.id"
-            :class="[
-              'font-mono text-[0.72rem] tracking-[0.12em] uppercase transition-colors',
-              selectedCategory === cat.id
-                ? 'text-accent underline underline-offset-4 decoration-accent'
-                : 'text-muted hover:text-ink'
-            ]"
-          >
-            {{ cat.label }}
-          </button>
-          <span v-if="i < categories.length - 1" class="text-muted/50 font-mono text-[0.7rem]">·</span>
-        </template>
-        <span class="ml-auto font-mono text-[0.65rem] tracking-[0.14em] uppercase text-muted/70">
-          <kbd class="px-1 border border-warm rounded-sm">j</kbd>/<kbd class="px-1 border border-warm rounded-sm">k</kbd> to navigate
+      <!-- Filter row -->
+      <div class="flex flex-wrap items-center gap-x-1 gap-y-1.5 py-3 border-b border-mecha-accent/10 shrink-0">
+        <span class="text-mecha-text/25 text-[0.55rem] tracking-[0.2em] mr-1">FILTER</span>
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          @click="setCategory(cat.id)"
+          :class="[
+            'px-2 py-0.5 text-[0.6rem] tracking-[0.14em] uppercase transition-colors duration-150',
+            selectedCategory === cat.id
+              ? 'text-mecha-accent border-b border-mecha-accent'
+              : 'text-mecha-text/35 hover:text-mecha-text/65'
+          ]"
+        >{{ cat.label }}</button>
+        <span class="ml-auto flex items-center gap-1 text-mecha-text/20 text-[0.5rem] tracking-widest">
+          <kbd class="px-1 py-px border border-mecha-accent/15">J</kbd>
+          <kbd class="px-1 py-px border border-mecha-accent/15">K</kbd>
+          <span class="ml-0.5">NAV</span>
         </span>
       </div>
 
-      <hr class="mt-8 mb-2 border-t border-warm" />
-
-      <!-- ── Entries ── -->
-      <ul class="divide-y divide-warm">
+      <!-- Entry list -->
+      <ul class="flex-1 overflow-y-auto divide-y divide-mecha-accent/8">
         <li
           v-for="(entry, i) in filteredApps"
           :key="entry.id"
-          :ref="el => entryRefs[i] = el"
-          @mouseenter="focusedIndex = i"
+          v-motion
+          :initial="{ opacity: 0, x: -10 }"
+          :enter="{ opacity: 1, x: 0, transition: { delay: i * 45, duration: 300 } }"
+          :ref="el => { if (el) entryRefs[i] = el }"
+          @mouseenter="onHover(entry, i)"
           @click="open(entry)"
-          @keydown.enter="open(entry)"
+          @keydown.enter.prevent="open(entry)"
           tabindex="0"
           :class="[
-            'group relative py-7 px-4 sm:px-6 -mx-4 sm:-mx-6 cursor-pointer outline-none transition-colors',
-            'hover:bg-warm/60 focus-visible:bg-warm/60',
-            focusedIndex === i ? 'entry-focused' : '',
-            entry.status === 'coming-soon' ? 'opacity-60 cursor-not-allowed' : ''
+            'group relative block py-5 cursor-pointer outline-none transition-colors duration-150',
+            'hover:bg-mecha-accent/5 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-mecha-accent/30',
+            focusedIndex === i ? 'bg-mecha-accent/[0.06]' : '',
+            entry.status === 'coming-soon' ? 'opacity-40 pointer-events-none' : '',
           ]"
-          :style="{
-            animationDelay: `${0.15 + i * 0.04}s`,
-            opacity: 0,
-            animationFillMode: 'forwards',
-          }"
-          class="animate-fade-up"
         >
-          <!-- Index + title row -->
-          <div class="flex items-baseline gap-4">
-            <span class="font-mono text-[0.85rem] text-accent shrink-0 tabular-nums">
+          <!-- Left accent bar -->
+          <span
+            :class="[
+              'absolute left-0 top-4 bottom-4 w-[2px] bg-mecha-accent transition-all duration-200',
+              focusedIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-50',
+            ]"
+          />
+
+          <!-- Index + title -->
+          <div class="flex items-baseline gap-3 px-4">
+            <span class="text-mecha-accent text-[0.68rem] tabular-nums shrink-0 tracking-wider">
               [{{ String(entry.indexNumber).padStart(3, '0') }}]
             </span>
-            <div class="flex-1 min-w-0">
-              <h2 class="font-display text-[1.4rem] leading-tight text-ink">
-                {{ entry.title }}
-              </h2>
-              <p class="mt-1 font-mono italic text-[0.78rem] text-muted">
-                {{ entry.tagline }}
-              </p>
-            </div>
+            <span class="text-mecha-text text-[0.9rem] tracking-[0.06em] truncate flex-1">
+              {{ entry.title }}
+            </span>
             <span
               v-if="entry.status !== 'coming-soon'"
-              class="font-mono text-[0.7rem] tracking-[0.12em] uppercase text-accent opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity shrink-0 self-center"
-              :class="focusedIndex === i ? 'opacity-100' : ''"
-            >
-              → open
-            </span>
-            <span
-              v-else
-              class="font-mono text-[0.65rem] tracking-[0.14em] uppercase text-muted shrink-0 self-center"
-            >
-              soon
-            </span>
+              :class="[
+                'text-mecha-accent text-[0.58rem] tracking-[0.18em] shrink-0 transition-opacity duration-150',
+                focusedIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+              ]"
+            >→ open</span>
+            <span v-else class="text-mecha-text/20 text-[0.55rem] tracking-widest shrink-0">QUEUED</span>
           </div>
 
-          <!-- Metadata grid -->
-          <div class="mt-4 ml-0 sm:ml-[3.25rem] grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 font-mono text-[0.72rem] text-muted">
-            <div>
-              <span class="text-muted/70">cat</span>
-              <span class="mx-1.5 text-muted/40">·</span>
-              <span class="text-ink">{{ entry.category }}</span>
-            </div>
-            <div>
-              <span class="text-muted/70">year</span>
-              <span class="mx-1.5 text-muted/40">·</span>
-              <span class="text-ink">{{ entry.year }}</span>
-            </div>
-            <div class="sm:col-span-2">
-              <span class="text-muted/70">tools</span>
-              <span class="mx-1.5 text-muted/40">·</span>
-              <span class="text-ink">{{ entry.tools.join(' · ') }}</span>
-            </div>
-            <div>
-              <span class="text-muted/70">status</span>
-              <span class="mx-1.5 text-muted/40">·</span>
-              <span :class="statusClass(entry.status)">{{ statusLabel(entry.status) }}</span>
-            </div>
+          <!-- Tagline -->
+          <div class="mt-1.5 px-4 pl-[4.6rem] text-mecha-text/40 text-[0.63rem] tracking-[0.06em]">
+            {{ entry.tagline }}
           </div>
 
-          <!-- Blurb -->
-          <p class="mt-4 ml-0 sm:ml-[3.25rem] text-[0.92rem] leading-relaxed text-ink/80 max-w-[58ch]">
-            {{ entry.description }}
-          </p>
-
-          <!-- URL line revealed on hover/focus -->
-          <div
-            class="mt-3 ml-0 sm:ml-[3.25rem] font-mono text-[0.68rem] text-muted/70 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
-            :class="focusedIndex === i ? 'opacity-100' : ''"
-          >
-            {{ entry.url }}
+          <!-- Metadata row -->
+          <div class="mt-2 px-4 pl-[4.6rem] flex flex-wrap gap-x-5 gap-y-0.5 text-[0.58rem] tracking-[0.1em]">
+            <span class="text-mecha-text/25">
+              category <span class="text-mecha-text/55 ml-1">{{ entry.category }}</span>
+            </span>
+            <span class="text-mecha-text/25">
+              year <span class="text-mecha-text/55 ml-1">{{ entry.year }}</span>
+            </span>
+            <span class="text-mecha-text/25">
+              tools <span class="text-mecha-text/50 ml-1">{{ entry.tools.join(', ') }}</span>
+            </span>
+            <span class="text-mecha-text/25">
+              status <span :class="statusClass(entry.status)" class="ml-1">{{ statusLabel(entry.status) }}</span>
+            </span>
           </div>
         </li>
       </ul>
 
       <p
         v-if="filteredApps.length === 0"
-        class="py-10 text-center font-mono text-[0.78rem] tracking-[0.1em] uppercase text-muted"
+        class="py-10 text-center text-mecha-text/25 text-[0.65rem] tracking-[0.14em]"
       >
-        no entries match
+        No projects match
       </p>
 
-      <!-- ── Footer ── -->
-      <footer class="mt-12 pt-6 border-t border-warm font-mono text-[0.68rem] tracking-[0.14em] uppercase text-muted/70">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <span>end of catalog · paulog11.github.io</span>
-          <span>© {{ new Date().getFullYear() }} Paulo Gonzales</span>
-        </div>
-      </footer>
-
     </div>
-  </div>
+
+    <!-- ── RIGHT TELEMETRY ── -->
+    <template #right>
+      <RightTelemetry :selected-project="activeProject" />
+    </template>
+
+  </CommandCenter>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useMagicKeys, useLocalStorage } from '@vueuse/core'
+import CommandCenter from './components/CommandCenter.vue'
+import LeftSidebar   from './components/LeftSidebar.vue'
+import RightTelemetry from './components/RightTelemetry.vue'
 
-const portfolioUrl = ref('./projects/profile/')
 const updatedLabel = '2026-05'
 
 const categories = [
@@ -177,11 +148,13 @@ const categories = [
   { id: 'reading',     label: 'reading' },
 ]
 
-const selectedCategory = ref('all')
-const focusedIndex = ref(0)
-const entryRefs = ref([])
+// Persisted across visits via VueUse
+const selectedCategory = useLocalStorage('mecha-filter-category', 'all')
 
-// Sorted newest-first. indexNumber stays fixed regardless of filter.
+const focusedIndex = ref(-1)
+const activeProject  = ref(null)
+const entryRefs      = ref([])
+
 const apps = ref([
   {
     id: 'algo-lab',
@@ -194,6 +167,7 @@ const apps = ref([
     tools: ['canvas', 'vanilla js'],
     status: 'live',
     url: './projects/algo-lab/dist/index.html',
+    github: '',
   },
   {
     id: 'flip7',
@@ -206,6 +180,7 @@ const apps = ref([
     tools: ['vue', 'vite', 'tailwind'],
     status: 'live',
     url: './projects/ported-games/flip7/dist/index.html',
+    github: '',
   },
   {
     id: 'machi-koro',
@@ -218,6 +193,7 @@ const apps = ref([
     tools: ['vue', 'vite', 'tailwind'],
     status: 'live',
     url: './projects/ported-games/machi-koro/dist/index.html',
+    github: '',
   },
   {
     id: 'venue-search',
@@ -230,6 +206,7 @@ const apps = ref([
     tools: ['vue', 'leaflet'],
     status: 'WIP',
     url: './projects/venue-search/dist/index.html',
+    github: '',
   },
   {
     id: 'reading-buddy',
@@ -242,6 +219,7 @@ const apps = ref([
     tools: ['vue', 'vite'],
     status: 'live',
     url: './projects/reading-buddy/dist/index.html',
+    github: '',
   },
   {
     id: 'japan-map',
@@ -254,6 +232,7 @@ const apps = ref([
     tools: ['leaflet', 'vue'],
     status: 'live',
     url: './projects/japan-map/dist/index.html',
+    github: '',
   },
   {
     id: 'right-word-japanese',
@@ -266,6 +245,7 @@ const apps = ref([
     tools: ['vue', 'vite'],
     status: 'WIP',
     url: './projects/right-word/dist/index.html',
+    github: '',
   },
   {
     id: 'japanese-dashboard',
@@ -278,6 +258,7 @@ const apps = ref([
     tools: ['vue', 'vite'],
     status: 'live',
     url: './projects/japandash/dist/index.html',
+    github: '',
   },
   {
     id: 'bible-hymn-kids',
@@ -290,6 +271,7 @@ const apps = ref([
     tools: ['html', 'css', 'js'],
     status: 'WIP',
     url: './projects/bible-hymn/hymn-app.html',
+    github: '',
   },
 ])
 
@@ -299,15 +281,17 @@ const filteredApps = computed(() =>
     : apps.value.filter(a => a.category === selectedCategory.value)
 )
 
-function statusLabel(status) {
-  return status === 'coming-soon' ? 'coming soon' : status
+// ── Interaction handlers ──
+function setCategory(id) {
+  selectedCategory.value = id
+  focusedIndex.value = -1
+  activeProject.value  = null
+  entryRefs.value = []
 }
 
-function statusClass(status) {
-  if (status === 'live')     return 'text-accent'
-  if (status === 'wip')      return 'text-ink'
-  if (status === 'archived') return 'text-muted'
-  return 'text-muted'
+function onHover(entry, i) {
+  focusedIndex.value  = i
+  activeProject.value = entry
 }
 
 function open(entry) {
@@ -315,26 +299,45 @@ function open(entry) {
   window.open(entry.url, '_blank', 'noopener')
 }
 
-function onKeydown(e) {
-  if (document.activeElement?.tagName === 'INPUT') return
-
-  const max = filteredApps.value.length - 1
-  if (max < 0) return
-
-  if (e.key === 'j' || e.key === 'ArrowDown') {
-    e.preventDefault()
-    focusedIndex.value = Math.min(focusedIndex.value + 1, max)
-    entryRefs.value[focusedIndex.value]?.focus()
-  } else if (e.key === 'k' || e.key === 'ArrowUp') {
-    e.preventDefault()
-    focusedIndex.value = Math.max(focusedIndex.value - 1, 0)
-    entryRefs.value[focusedIndex.value]?.focus()
-  } else if (e.key === 'Enter') {
-    const entry = filteredApps.value[focusedIndex.value]
-    if (entry) open(entry)
-  }
+function statusLabel(status) {
+  if (status === 'live')        return 'live'
+  if (status === 'WIP')         return 'in progress'
+  if (status === 'coming-soon') return 'planned'
+  return status
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+function statusClass(status) {
+  if (status === 'live') return 'text-mecha-accent'
+  if (status === 'WIP')  return 'text-mecha-text/55'
+  return 'text-mecha-text/30'
+}
+
+// ── Keyboard navigation via VueUse ──
+function navDown() {
+  const max = filteredApps.value.length - 1
+  if (max < 0) return
+  focusedIndex.value  = focusedIndex.value < max ? focusedIndex.value + 1 : 0
+  activeProject.value = filteredApps.value[focusedIndex.value]
+  entryRefs.value[focusedIndex.value]?.scrollIntoView({ block: 'nearest' })
+}
+
+function navUp() {
+  const max = filteredApps.value.length - 1
+  if (max < 0) return
+  focusedIndex.value  = focusedIndex.value > 0 ? focusedIndex.value - 1 : max
+  activeProject.value = filteredApps.value[focusedIndex.value]
+  entryRefs.value[focusedIndex.value]?.scrollIntoView({ block: 'nearest' })
+}
+
+const keys = useMagicKeys()
+
+watch(keys.j,         v => { if (v && document.activeElement?.tagName !== 'INPUT') navDown() })
+watch(keys.k,         v => { if (v && document.activeElement?.tagName !== 'INPUT') navUp()   })
+watch(keys.ArrowDown, v => { if (v) navDown() })
+watch(keys.ArrowUp,   v => { if (v) navUp()   })
+watch(keys.Enter,     v => {
+  if (!v || focusedIndex.value < 0) return
+  const entry = filteredApps.value[focusedIndex.value]
+  if (entry) open(entry)
+})
 </script>

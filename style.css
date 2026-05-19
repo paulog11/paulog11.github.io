@@ -3,15 +3,11 @@
 @tailwind utilities;
 
 html, body, #app {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
-  background-color: #F5F1EA;
+  background-color: #1A1D24;
   -webkit-font-smoothing: antialiased;
-}
-
-.entry-focused {
-  box-shadow: inset 2px 0 0 0 #C0622A;
-  background-color: #EDE8DF;
 }
