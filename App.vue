@@ -5,7 +5,8 @@
     <template #left>
       <LeftSidebar
         profile-url="./projects/profile/"
-        resume-url="./assets/resume.pdf"
+        resume-url="./assets/Paulo_Gonzales_Resume_SoftwareEngineer.pdf"
+        resume-filename="Paulo_Gonzales_Resume_SoftwareEngineer.pdf"
       />
     </template>
 
