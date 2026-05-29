@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import ConceptCard from './ConceptCard.vue'
 import HistoryCard from './HistoryCard.vue'
+import ApologeticsCard from './ApologeticsCard.vue'
 import { coverImages } from '../assets/coverImages.js'
 
 const props = defineProps({
@@ -53,8 +54,9 @@ const activeConcept = computed(() =>
 
     <!-- Single concept view -->
     <div v-else class="max-w-3xl mx-auto">
-      <ConceptCard v-if="book.cardType !== 'history'" :concept="activeConcept" />
-      <HistoryCard v-else :concept="activeConcept" />
+      <HistoryCard      v-if="book.cardType === 'history'"      :concept="activeConcept" />
+      <ApologeticsCard  v-else-if="book.cardType === 'apologetics'" :concept="activeConcept" />
+      <ConceptCard      v-else                                    :concept="activeConcept" />
     </div>
   </div>
 </template>

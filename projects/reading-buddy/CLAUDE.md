@@ -29,14 +29,17 @@ This avoids conditional composable calls — each sub-app calls its own composab
 - `src/components/CharacterCard.vue` / `CharacterGrid.vue` — character profiles
 - `src/components/BrothersTimeline.vue` — parallel timelines for Dmitri/Ivan/Alyosha
 
-### Concept books (The Japanese Mind, Japanese Culture)
+### Concept books (The Japanese Mind, Japanese Culture, etc.)
 - `src/data/japanese-mind.js` — 27 cultural concepts, each with 4-step content
 - `src/data/japanese-culture.js` — 8 religious/philosophical foundations (Shinto, Buddhism, Taoism, Zen, Confucianism, etc.)
+- `src/data/mere-christianity.js` — 33 chapters (one per chapter, Books I–IV), `cardType: 'apologetics'`
 - `src/composables/useConceptProgress.js` — exposes book data (no unlock gating)
 - `src/components/ConceptApp.vue` — layout shell for concept books (sidebar + main)
 - `src/components/ConceptTracker.vue` — sidebar list of all concepts
-- `src/components/ConceptPage.vue` — landing grid when no concept selected; single ConceptCard when one is active
-- `src/components/ConceptCard.vue` — renders one concept's 4 steps (summary, examples, cultural gap, trigger)
+- `src/components/ConceptPage.vue` — landing grid when no concept selected; dispatches to the correct card by `book.cardType`
+- `src/components/ConceptCard.vue` — default card: summary, examples, cultural gap (conditional), trigger, FM Japan 25 Comments
+- `src/components/HistoryCard.vue` — `cardType: 'history'` card: summary, key figures, key terms, historical significance
+- `src/components/ApologeticsCard.vue` — `cardType: 'apologetics'` card: summary, examples, the argument, objection & response, key quote
 
 ## Commands
 - `npm run dev` — local dev server
@@ -54,7 +57,13 @@ This avoids conditional composable calls — each sub-app calls its own composab
 
 Characters accumulate details as chapters unlock. Sequential unlock only — no skipping.
 
-### Concept books
+### Concept books (default — ConceptCard)
 `{ id, type: 'concepts', title, author, coverEmoji, description, concepts: [{ id, title, japanese, subtitle, steps: { summary: { content }, examples: { items: [] }, culturalGap: { applicable, content }, trigger: { content } } }] }`
+
+### Concept books — history cardType (HistoryCard)
+Set `cardType: 'history'` on the book object. Each concept uses: `steps: { summary: { content }, keyFigures: { items: [{ name, role }] }, keyTerms: { items: [{ term, reading, definition }] }, significance: { content } }`
+
+### Concept books — apologetics cardType (ApologeticsCard)
+Set `cardType: 'apologetics'` on the book object. Optionally set `typeLabel` to override the "Cultural Guide" label on the BookSelector (e.g. `typeLabel: 'Apologetics'`). The `japanese` field doubles as a generic short-label/locator slot (e.g. `'Bk I · 1'`). Each concept uses: `steps: { summary: { content }, examples: { items: [] }, argument: { content }, objection: { challenge, response }, quote: { content } }`
 
 All concepts are available immediately. One concept displays at a time — clicking a concept in the sidebar or landing grid opens it.

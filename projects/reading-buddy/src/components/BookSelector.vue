@@ -13,6 +13,10 @@ const typeLabels = {
   narrative: 'Novel',
   concepts: 'Cultural Guide',
 }
+
+function bookTypeLabel(book) {
+  return book.typeLabel || typeLabels[book.type] || book.type
+}
 </script>
 
 <template>
@@ -43,7 +47,7 @@ const typeLabels = {
         </h2>
         <p class="text-silver-500 text-xs mb-3">{{ book.author }}</p>
         <span class="inline-block text-[10px] font-mono uppercase tracking-wider text-silver-400 bg-forest-800 px-2 py-0.5 rounded">
-          {{ typeLabels[book.type] || book.type }}
+          {{ bookTypeLabel(book) }}
         </span>
         <p class="text-silver-400 text-sm mt-3 leading-relaxed">
           {{ book.description }}
