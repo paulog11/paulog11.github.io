@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useLocalStorage } from './useLocalStorage.js'
 import { sendMessage as apiSend } from '../services/claude-api.js'
+import { reviewApi } from '../services/apiClient.js'
 
 export const SCENARIOS = [
   { id: 'free-chat',    label: '🗣 Free Chat',        persona: 'Have a natural, friendly conversation in Japanese.' },
@@ -12,10 +13,14 @@ export const SCENARIOS = [
 
 export const LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1']
 
-function buildSystemPrompt(scenario, level) {
+function buildSystemPrompt(scenario, level, recentMistakes = []) {
+  const mistakeHint = recentMistakes.length > 0
+    ? `\nThe learner has recently been corrected on: ${recentMistakes.map(m => `"${m.correction}"`).join('; ')}. Where it fits naturally, gently create opportunities to practice these patterns again.`
+    : ''
+
   return `You are a Japanese conversation partner. ${scenario.persona}
 
-The user is studying Japanese at JLPT ${level} level. Use vocabulary and grammar appropriate for ${level}.
+The user is studying Japanese at JLPT ${level} level. Use vocabulary and grammar appropriate for ${level}.${mistakeHint}
 
 ALWAYS respond with valid JSON in exactly this format — no other text:
 {
@@ -36,6 +41,7 @@ export function useConversation() {
   const allHistory = useLocalStorage('japandash:conv-history', {})
   const loading   = ref(false)
   const error     = ref(null)
+  const recentMistakes = ref([])
 
   const hasKey = computed(() => !!apiKey.value)
 
@@ -44,6 +50,17 @@ export function useConversation() {
   )
 
   const activeHistory = computed(() => allHistory.value[scenarioId.value] ?? [])
+
+  async function loadRecentMistakes() {
+    try {
+      const data = await reviewApi.recent(5)
+      recentMistakes.value = data.mistakes
+    } catch {
+      // Non-critical — fail silently, prompt adaptation is best-effort
+    }
+  }
+
+  loadRecentMistakes()
 
   async function send(userText) {
     if (!apiKey.value || !userText.trim()) return
@@ -65,7 +82,7 @@ export function useConversation() {
 
       const raw = await apiSend({
         apiKey: apiKey.value,
-        system: buildSystemPrompt(activeScenario.value, level.value),
+        system: buildSystemPrompt(activeScenario.value, level.value, recentMistakes.value),
         messages: apiMessages,
       })
 
@@ -85,6 +102,16 @@ export function useConversation() {
       }
 
       allHistory.value = { ...allHistory.value, [scenarioId.value]: [...msgs, reply] }
+
+      // Fire-and-forget: capture non-empty corrections into the mistake journal
+      if (reply.correction) {
+        reviewApi.captureMistake({
+          userText: userText,
+          correction: reply.correction,
+          scenario: scenarioId.value,
+          level: level.value,
+        }).then(() => loadRecentMistakes()).catch(() => {})
+      }
     } catch (e) {
       error.value = e.message
     } finally {
@@ -98,5 +125,5 @@ export function useConversation() {
     allHistory.value = h
   }
 
-  return { apiKey, hasKey, scenarioId, level, loading, error, activeScenario, activeHistory, send, clearHistory }
+  return { apiKey, hasKey, scenarioId, level, loading, error, activeScenario, activeHistory, recentMistakes, send, clearHistory }
 }

@@ -1,6 +1,6 @@
 import { ref, reactive, watch } from 'vue'
 
-const DEFAULT_ORDER = ['wanikani', 'vocab', 'jisho', 'shadowing', 'onomatopoeia', 'grammar', 'reading', 'conversation']
+const DEFAULT_ORDER = ['wanikani', 'vocab', 'jisho', 'shadowing', 'onomatopoeia', 'grammar', 'reading', 'conversation', 'review']
 const DEFAULT_CONFIG = {
   wanikani:     { colSpan: 1, height: null },
   vocab:        { colSpan: 2, height: null },
@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
   grammar:      { colSpan: 1, height: null },
   reading:      { colSpan: 2, height: null },
   conversation: { colSpan: 2, height: null },
+  review:       { colSpan: 1, height: null },
 }
 
 const STORAGE_KEY = 'japandash:widget-layout-v1'

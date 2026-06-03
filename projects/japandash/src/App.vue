@@ -98,6 +98,7 @@ import OnomatopoeiaWidget from './components/widgets/OnomatopoeiaWidget.vue'
 import GrammarWidget from './components/widgets/GrammarWidget.vue'
 import ReadingWidget from './components/widgets/ReadingWidget.vue'
 import ConversationWidget from './components/widgets/ConversationWidget.vue'
+import MistakeReviewWidget from './components/widgets/MistakeReviewWidget.vue'
 
 const { widgetOrder } = useWidgetLayout()
 
@@ -110,6 +111,7 @@ const widgetComponents = {
   grammar: GrammarWidget,
   reading: ReadingWidget,
   conversation: ConversationWidget,
+  review: MistakeReviewWidget,
 }
 
 const showSettings = ref(false)
