@@ -4,34 +4,39 @@ export default {
     './index.html',
     './src/**/*.{vue,js}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Shippori Mincho"', 'Georgia', 'serif'],
-        body: ['"Noto Sans JP"', '"DM Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Noto Serif JP"', 'Georgia', 'serif'],
+        body: ['"Noto Sans JP"', 'system-ui', 'sans-serif'],
         mono: ['"DM Mono"', 'monospace'],
       },
       colors: {
-        washi: '#F7F3EC',
-        koshi: '#EDE9E0',
-        sumi: '#2C2C2C',
-        usuzumi: '#8A8580',
-        ai: '#2D4A7A',
-        'ai-light': '#D6E0EF',
-        beni: '#C0503A',
-        matcha: '#5A7A52',
+        // All palette colors are CSS-variable driven so light/dark both work
+        // and all existing `bg-washi`, `text-sumi`, `border-koshi` etc. stay valid.
+        washi:      'rgb(var(--washi)    / <alpha-value>)',
+        koshi:      'rgb(var(--koshi)    / <alpha-value>)',
+        surface:    'rgb(var(--surface)  / <alpha-value>)',
+        sumi:       'rgb(var(--sumi)     / <alpha-value>)',
+        usuzumi:    'rgb(var(--usuzumi)  / <alpha-value>)',
+        ai:         'rgb(var(--ai)       / <alpha-value>)',
+        'ai-light': 'rgb(var(--ai-light) / <alpha-value>)',
+        beni:       'rgb(var(--beni)     / <alpha-value>)',
+        matcha:     'rgb(var(--matcha)   / <alpha-value>)',
+        kin:        'rgb(var(--kin)      / <alpha-value>)',
       },
       animation: {
-        'fade-in': 'fadeIn 0.4s ease forwards',
+        'fade-in':    'fadeIn 0.4s ease forwards',
         'slide-down': 'slideDown 0.3s ease forwards',
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' },
+          '0%':   { opacity: '0' },
           '100%': { opacity: '1' },
         },
         slideDown: {
-          '0%': { opacity: '0', transform: 'translateY(-8px)' },
+          '0%':   { opacity: '0', transform: 'translateY(-8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
@@ -39,8 +44,11 @@ export default {
   },
   plugins: [],
   safelist: [
-    'col-span-1', 'col-span-2', 'col-span-3',
-    'md:col-span-2', 'md:col-span-3',
-    'xl:col-span-2', 'xl:col-span-3',
+    // Bento span classes — computed at runtime so JIT can't detect them statically
+    'col-span-1', 'col-span-2',
+    'md:col-span-2',
+    'row-span-1', 'row-span-2',
+    // Skill-area dot colors — also computed at runtime
+    'bg-ai', 'bg-matcha', 'bg-beni', 'bg-kin', 'bg-usuzumi',
   ],
 }

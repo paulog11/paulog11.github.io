@@ -1,6 +1,29 @@
 <template>
-  <WidgetFrame title="Vocab & Audio" icon="🔊" span="double" collapsible :loading="wk.vocabLoading.value">
-    <div class="space-y-3">
+  <WidgetFrame title="Vocab & Audio" icon="🔊" widget-id="vocab" collapsible :loading="wk.vocabLoading.value">
+    <template #default="{ focused }">
+
+      <!-- Compact summary (dashboard tile) -->
+      <div v-if="!focused" class="space-y-3">
+        <div v-if="!wk.hasKey.value" class="text-center py-4 text-usuzumi text-sm space-y-1">
+          <p class="text-2xl">🔑</p>
+          <p>Add WaniKani key in Settings</p>
+        </div>
+        <template v-else>
+          <div class="rounded-lg bg-koshi/20 p-3 space-y-1">
+            <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi">Learned</p>
+            <p class="text-4xl font-bold text-sumi">{{ wk.learnedVocabulary.value.length }}</p>
+            <p class="text-[0.65rem] text-usuzumi">words</p>
+          </div>
+          <div v-if="featuredWord" class="flex items-baseline gap-2 px-2 py-1.5 rounded-md bg-koshi/20">
+            <span class="font-display text-lg font-semibold">{{ featuredWord.characters }}</span>
+            <span class="font-mono text-xs text-usuzumi">{{ featuredWord.primaryReading }}</span>
+            <span class="text-xs text-sumi/80 ml-auto truncate">{{ featuredWord.primaryMeaning }}</span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Full practice view (focused) -->
+      <div v-else class="space-y-3">
 
       <!-- No API key -->
       <div v-if="!wk.hasKey.value" class="text-center py-6 text-usuzumi text-sm">
@@ -118,7 +141,7 @@
               v-model="searchQuery"
               type="text"
               placeholder="Search word or meaning..."
-              class="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-koshi bg-white/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
+              class="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-koshi bg-surface/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
               @input="selectedVocab = null"
             />
             <button
@@ -135,7 +158,7 @@
             <span class="font-mono text-[0.6rem] uppercase tracking-wider text-usuzumi shrink-0">EN Voice</span>
             <select
               v-model="selectedVoiceName"
-              class="flex-1 px-2 py-1 text-xs rounded-md border border-koshi bg-white/80 text-sumi focus:outline-none focus:ring-1 focus:ring-ai/40"
+              class="flex-1 px-2 py-1 text-xs rounded-md border border-koshi bg-surface/80 text-sumi focus:outline-none focus:ring-1 focus:ring-ai/40"
             >
               <option v-for="v in englishVoices" :key="v.name" :value="v.name">
                 {{ v.name }} ({{ v.lang }})
@@ -150,7 +173,7 @@
           </p>
 
           <!-- Vocabulary list -->
-          <div class="max-h-56 overflow-y-auto space-y-0.5 pr-1">
+          <div class="overflow-y-auto space-y-0.5 pr-1 max-h-[50vh]">
             <div
               v-for="item in filteredVocab"
               :key="item.subjectId"
@@ -216,9 +239,10 @@
                 <span
                   v-for="r in selectedVocab.readings"
                   :key="r.reading"
-                  class="font-mono text-xs px-2 py-0.5 rounded bg-white/60 border border-koshi"
+                  class="font-mono text-xs px-2 py-0.5 rounded bg-surface/60 border border-koshi"
                   :class="r.primary ? 'font-semibold' : 'text-usuzumi'"
                 >{{ r.reading }}</span>
+
               </div>
             </div>
 
@@ -286,7 +310,9 @@
           </div>
         </template>
       </template>
-    </div>
+      </div><!-- end focused -->
+
+    </template>
   </WidgetFrame>
 
   <!-- Context sentences modal -->
@@ -377,6 +403,10 @@ watch(
     }
   },
   { immediate: true }
+)
+
+const featuredWord = computed(() =>
+  selectedVocab.value ?? wk.learnedVocabulary.value[0] ?? null
 )
 
 const filteredVocab = computed(() => {
@@ -648,18 +678,18 @@ function checkMatch() {
 
 function itemClassLeft(item) {
   const id = item.subjectId
-  if (matched.value.has(id))             return 'opacity-35 cursor-default border-koshi bg-white/40'
+  if (matched.value.has(id))             return 'opacity-35 cursor-default border-koshi bg-surface/40'
   if (wrongLeft.value === id)            return 'border-beni bg-beni/10 text-beni'
   if (selectedLeft.value?.subjectId === id) return 'border-ai bg-ai-light ring-1 ring-ai'
-  return 'border-koshi bg-white/60 hover:bg-koshi/40 cursor-pointer'
+  return 'border-koshi bg-surface/60 hover:bg-koshi/40 cursor-pointer'
 }
 
 function itemClassRight(item) {
   const id = item.subjectId
-  if (matched.value.has(id))              return 'opacity-35 cursor-default border-koshi bg-white/40'
+  if (matched.value.has(id))              return 'opacity-35 cursor-default border-koshi bg-surface/40'
   if (wrongRight.value === id)            return 'border-beni bg-beni/10 text-beni'
   if (selectedRight.value?.subjectId === id) return 'border-ai bg-ai-light ring-1 ring-ai'
-  return 'border-koshi bg-white/60 hover:bg-koshi/40 cursor-pointer'
+  return 'border-koshi bg-surface/60 hover:bg-koshi/40 cursor-pointer'
 }
 
 onBeforeUnmount(() => {

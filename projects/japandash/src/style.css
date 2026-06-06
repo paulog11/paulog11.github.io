@@ -3,15 +3,43 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-family: 'Noto Sans JP', 'DM Sans', system-ui, sans-serif;
-    background-color: #F7F3EC;
-    color: #2C2C2C;
+  /* ── Light theme tokens ───────────────────────────────── */
+  :root {
+    --washi:    247 243 236;
+    --koshi:    237 233 224;
+    --surface:  255 255 255;
+    --sumi:     28  28  28;
+    --usuzumi:  138 133 128;
+    --ai:       45  74  122;
+    --ai-light: 214 224 239;
+    --beni:     192 80  58;
+    --matcha:   90  122 82;
+    --kin:      166 124 46;
   }
 
-  /* Ruby (furigana) styling */
+  /* ── Dark "sumi mode" tokens ──────────────────────────── */
+  .dark {
+    --washi:    26  25  22;
+    --koshi:    36  34  32;
+    --surface:  42  40  37;
+    --sumi:     237 233 224;
+    --usuzumi:  150 143 134;
+    --ai:       122 150 198;
+    --ai-light: 47  60  84;
+    --beni:     214 120 102;
+    --matcha:   138 168 128;
+    --kin:      200 165 100;
+  }
+
+  html {
+    font-family: 'Noto Sans JP', system-ui, sans-serif;
+    background-color: rgb(var(--washi));
+    color: rgb(var(--sumi));
+  }
+
+  /* Furigana ruby */
   ruby rt {
     font-size: 0.55em;
-    color: #8A8580;
+    color: rgb(var(--usuzumi));
   }
 }

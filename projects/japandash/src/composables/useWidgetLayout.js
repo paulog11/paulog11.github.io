@@ -1,59 +1,70 @@
-import { ref, reactive, watch } from 'vue'
+import { ref, watch } from 'vue'
+
+export const WIDGET_META = {
+  wanikani:     { area: 'track',     size: 'large', tool: true  },
+  review:       { area: 'track',     size: 'small' },
+  vocab:        { area: 'input',     size: 'large' },
+  shadowing:    { area: 'input',     size: 'wide'  },
+  reading:      { area: 'input',     size: 'large' },
+  conversation: { area: 'output',    size: 'large' },
+  jisho:        { area: 'reference', size: 'small', tool: true  },
+  grammar:      { area: 'reference', size: 'small' },
+  onomatopoeia: { area: 'reference', size: 'small' },
+}
+
+export const ZONES = [
+  { id: 'track',     ja: '進捗',       en: 'Track' },
+  { id: 'input',     ja: 'インプット',   en: 'Input' },
+  { id: 'output',    ja: 'アウトプット', en: 'Output' },
+  { id: 'reference', ja: '辞書',       en: 'Reference' },
+]
+
+export const PATHS = [
+  { id: 'all',    label: 'All',           icon: '🔍', widgets: null },
+  { id: 'warmup', label: 'Daily Warmup',  icon: '🌅', widgets: ['wanikani', 'vocab', 'onomatopoeia'] },
+  { id: 'read',   label: 'Comprehension', icon: '📖', widgets: ['reading', 'shadowing'], rail: ['jisho', 'grammar'] },
+  { id: 'speak',  label: 'Speaking',      icon: '🗣', widgets: ['conversation', 'review'] },
+]
 
 const DEFAULT_ORDER = ['wanikani', 'vocab', 'jisho', 'shadowing', 'onomatopoeia', 'grammar', 'reading', 'conversation', 'review']
-const DEFAULT_CONFIG = {
-  wanikani:     { colSpan: 1, height: null },
-  vocab:        { colSpan: 2, height: null },
-  jisho:        { colSpan: 1, height: null },
-  shadowing:    { colSpan: 2, height: null },
-  onomatopoeia: { colSpan: 1, height: null },
-  grammar:      { colSpan: 1, height: null },
-  reading:      { colSpan: 2, height: null },
-  conversation: { colSpan: 2, height: null },
-  review:       { colSpan: 1, height: null },
-}
 
-const STORAGE_KEY = 'japandash:widget-layout-v1'
-
-function loadSaved() {
+function loadSavedOrder() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
+    const v2 = localStorage.getItem('japandash:widget-layout-v2')
+    if (v2) {
+      const saved = JSON.parse(v2)
+      if (saved?.order?.length === DEFAULT_ORDER.length) return saved.order
+    }
+    // Fall back to v1 order to preserve any existing drag arrangement
+    const v1 = localStorage.getItem('japandash:widget-layout-v1')
+    if (v1) {
+      const saved = JSON.parse(v1)
+      if (saved?.order?.length === DEFAULT_ORDER.length) return saved.order
+    }
+  } catch {}
+  return [...DEFAULT_ORDER]
 }
 
-const saved = loadSaved()
+function loadSavedPath() {
+  try { return localStorage.getItem('japandash:active-path') || 'all' } catch { return 'all' }
+}
 
-// Module-level singleton — shared by all WidgetFrame instances
-const widgetOrder = ref(
-  saved?.order?.length === DEFAULT_ORDER.length ? saved.order : [...DEFAULT_ORDER]
-)
+// Module-level singletons — shared by all consumers
+const widgetOrder   = ref(loadSavedOrder())
+const activePath    = ref(loadSavedPath())
+const draggingId    = ref(null)
+const dragOverId    = ref(null)
+const focusedWidget = ref(null)
 
-const widgetConfig = reactive(
-  Object.fromEntries(
-    DEFAULT_ORDER.map(id => [
-      id,
-      { ...DEFAULT_CONFIG[id], ...(saved?.config?.[id] ?? {}) },
-    ])
-  )
-)
+watch(widgetOrder, () => {
+  try {
+    localStorage.setItem('japandash:widget-layout-v2', JSON.stringify({ order: widgetOrder.value }))
+  } catch {}
+}, { deep: true })
 
-// Shared drag state
-const draggingId = ref(null)
-const dragOverId = ref(null)
-
-watch(
-  [widgetOrder, widgetConfig],
-  () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      order: widgetOrder.value,
-      config: { ...widgetConfig },
-    }))
-  },
-  { deep: true }
-)
+watch(activePath, (val) => {
+  try { localStorage.setItem('japandash:active-path', val) } catch {}
+})
 
 export function useWidgetLayout() {
   function reorder(fromId, toId) {
@@ -67,10 +78,14 @@ export function useWidgetLayout() {
     widgetOrder.value = arr
   }
 
-  function updateConfig(id, updates) {
-    if (widgetConfig[id]) Object.assign(widgetConfig[id], updates)
-    else widgetConfig[id] = { ...updates }
+  function setFocus(id) {
+    if (!id || WIDGET_META[id]?.tool) return
+    focusedWidget.value = id
   }
 
-  return { widgetOrder, widgetConfig, draggingId, dragOverId, reorder, updateConfig }
+  function clearFocus() {
+    focusedWidget.value = null
+  }
+
+  return { widgetOrder, activePath, draggingId, dragOverId, reorder, focusedWidget, setFocus, clearFocus }
 }

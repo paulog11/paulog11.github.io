@@ -1,93 +1,116 @@
 <template>
-  <WidgetFrame title="Mistake Review" icon="直" collapsible :loading="review.loading.value">
-    <div class="space-y-3">
+  <WidgetFrame title="Mistake Review" icon="直" widget-id="review" collapsible :loading="review.loading.value">
+    <template #default="{ focused }">
 
-      <!-- Error -->
-      <div v-if="review.error.value" class="rounded-md bg-beni/10 px-3 py-2 text-sm text-beni">
-        {{ review.error.value }}
+      <!-- Compact summary (dashboard tile) -->
+      <div v-if="!focused" class="space-y-3">
+        <div class="rounded-lg bg-koshi/20 p-4 text-center">
+          <template v-if="review.done.value">
+            <p class="text-3xl mb-1">🎉</p>
+            <p class="text-sm font-medium text-sumi">何もありません</p>
+            <p class="text-xs text-usuzumi">Nothing due right now</p>
+          </template>
+          <template v-else>
+            <p class="text-4xl font-bold text-beni mb-1">{{ review.total.value }}</p>
+            <p class="text-xs text-usuzumi uppercase tracking-wide font-mono">due to review</p>
+          </template>
+          <p v-if="review.reviewedToday.value > 0" class="text-[0.65rem] text-matcha mt-2">
+            ✓ {{ review.reviewedToday.value }} reviewed this session
+          </p>
+        </div>
       </div>
 
-      <!-- All done -->
-      <div v-else-if="review.done.value" class="text-center py-6 space-y-2">
-        <p class="text-3xl">🎉</p>
-        <p class="text-sm font-medium text-sumi">何もありません</p>
-        <p class="text-xs text-usuzumi">Nothing due right now</p>
-        <p v-if="review.reviewedToday.value > 0" class="text-[0.65rem] text-matcha">
-          ✓ {{ review.reviewedToday.value }} reviewed this session
-        </p>
-        <button
-          class="mt-2 px-3 py-1.5 text-xs rounded-md border border-koshi text-usuzumi hover:bg-koshi/40 transition-colors"
-          @click="review.loadDue()"
-        >Check again</button>
-      </div>
+      <!-- Full practice view (focused) -->
+      <div v-else class="space-y-3">
 
-      <!-- Reviewing -->
-      <template v-else-if="review.current.value">
-        <!-- Progress -->
-        <div class="flex items-center justify-between text-[0.65rem] text-usuzumi font-mono">
-          <span>{{ review.index.value + 1 }} / {{ review.total.value }}</span>
-          <span v-if="review.reviewedToday.value > 0" class="text-matcha">
-            ✓ {{ review.reviewedToday.value }} done
-          </span>
+        <!-- Error -->
+        <div v-if="review.error.value" class="rounded-md bg-beni/10 px-3 py-2 text-sm text-beni">
+          {{ review.error.value }}
         </div>
 
-        <!-- Prompt card -->
-        <div class="rounded-lg bg-koshi/30 p-4 space-y-2">
-          <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi">You said</p>
-          <p class="text-sm leading-relaxed text-sumi">「{{ currentContext.userText }}」</p>
-        </div>
-
-        <!-- Answer input (visible before reveal) -->
-        <div v-if="!review.revealed.value" class="space-y-2">
-          <p class="text-xs text-usuzumi">How would you say it correctly?</p>
-          <div class="flex gap-2">
-            <input
-              v-model="answerInput"
-              type="text"
-              placeholder="正しく言うと…"
-              class="flex-1 px-3 py-2 text-sm rounded-md border border-koshi bg-white/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
-              @keydown.enter.prevent="review.reveal()"
-            />
-            <button
-              class="shrink-0 px-2.5 py-2 rounded-md border text-sm leading-none transition-colors"
-              :class="isRecording ? 'bg-beni text-white border-beni' : 'border-koshi text-sumi hover:bg-koshi/40'"
-              title="Speak your answer"
-              @click="toggleMic"
-            >🎤</button>
-          </div>
+        <!-- All done -->
+        <div v-else-if="review.done.value" class="text-center py-6 space-y-2">
+          <p class="text-3xl">🎉</p>
+          <p class="text-sm font-medium text-sumi">何もありません</p>
+          <p class="text-xs text-usuzumi">Nothing due right now</p>
+          <p v-if="review.reviewedToday.value > 0" class="text-[0.65rem] text-matcha">
+            ✓ {{ review.reviewedToday.value }} reviewed this session
+          </p>
           <button
-            class="w-full py-1.5 text-xs rounded-md border border-koshi text-sumi hover:bg-koshi/40 transition-colors"
-            @click="review.reveal()"
-          >Show correction →</button>
+            class="mt-2 px-3 py-1.5 text-xs rounded-md border border-koshi text-usuzumi hover:bg-koshi/40 transition-colors"
+            @click="review.loadDue()"
+          >Check again</button>
         </div>
 
-        <!-- Correction reveal -->
-        <div v-else class="space-y-3">
-          <div class="rounded-lg bg-[#FFF4E0] border border-[#F0C070]/40 p-3 space-y-1">
-            <p class="font-mono text-[0.55rem] uppercase tracking-widest text-[#A85B00]">Correction</p>
-            <p class="text-sm leading-relaxed text-sumi">{{ currentContext.correction }}</p>
+        <!-- Reviewing -->
+        <template v-else-if="review.current.value">
+          <!-- Progress -->
+          <div class="flex items-center justify-between text-[0.65rem] text-usuzumi font-mono">
+            <span>{{ review.index.value + 1 }} / {{ review.total.value }}</span>
+            <span v-if="review.reviewedToday.value > 0" class="text-matcha">
+              ✓ {{ review.reviewedToday.value }} done
+            </span>
           </div>
 
-          <!-- Self-rating buttons -->
-          <div class="space-y-1">
-            <p class="text-[0.65rem] text-usuzumi text-center">How well did you remember?</p>
-            <div class="grid grid-cols-4 gap-1.5">
+          <!-- Prompt card -->
+          <div class="rounded-lg bg-koshi/30 p-4 space-y-2">
+            <p class="font-mono text-[0.55rem] uppercase tracking-widest text-usuzumi">You said</p>
+            <p class="text-sm leading-relaxed text-sumi">「{{ currentContext.userText }}」</p>
+          </div>
+
+          <!-- Answer input (visible before reveal) -->
+          <div v-if="!review.revealed.value" class="space-y-2">
+            <p class="text-xs text-usuzumi">How would you say it correctly?</p>
+            <div class="flex gap-2">
+              <input
+                v-model="answerInput"
+                type="text"
+                placeholder="正しく言うと…"
+                class="flex-1 px-3 py-2 text-sm rounded-md border border-koshi bg-surface/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-1 focus:ring-ai/40"
+                @keydown.enter.prevent="review.reveal()"
+              />
               <button
-                v-for="r in ratings"
-                :key="r.value"
-                class="py-2 rounded-md text-xs font-medium transition-colors border"
-                :class="r.classes"
-                @click="handleGrade(r.value)"
-              >
-                <div>{{ r.label }}</div>
-                <div class="text-[0.55rem] opacity-70 mt-0.5">{{ r.hint }}</div>
-              </button>
+                class="shrink-0 px-2.5 py-2 rounded-md border text-sm leading-none transition-colors"
+                :class="isRecording ? 'bg-beni text-white border-beni' : 'border-koshi text-sumi hover:bg-koshi/40'"
+                title="Speak your answer"
+                @click="toggleMic"
+              >🎤</button>
+            </div>
+            <button
+              class="w-full py-1.5 text-xs rounded-md border border-koshi text-sumi hover:bg-koshi/40 transition-colors"
+              @click="review.reveal()"
+            >Show correction →</button>
+          </div>
+
+          <!-- Correction reveal -->
+          <div v-else class="space-y-3">
+            <div class="rounded-lg bg-[#FFF4E0] border border-[#F0C070]/40 p-3 space-y-1">
+              <p class="font-mono text-[0.55rem] uppercase tracking-widest text-[#A85B00]">Correction</p>
+              <p class="text-sm leading-relaxed text-sumi">{{ currentContext.correction }}</p>
+            </div>
+
+            <!-- Self-rating buttons -->
+            <div class="space-y-1">
+              <p class="text-[0.65rem] text-usuzumi text-center">How well did you remember?</p>
+              <div class="grid grid-cols-4 gap-1.5">
+                <button
+                  v-for="r in ratings"
+                  :key="r.value"
+                  class="py-2 rounded-md text-xs font-medium transition-colors border"
+                  :class="r.classes"
+                  @click="handleGrade(r.value)"
+                >
+                  <div>{{ r.label }}</div>
+                  <div class="text-[0.55rem] opacity-70 mt-0.5">{{ r.hint }}</div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </template>
+        </template>
 
-    </div>
+      </div>
+
+    </template>
   </WidgetFrame>
 </template>
 

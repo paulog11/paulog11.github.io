@@ -1,31 +1,45 @@
 <template>
   <div
     ref="rootEl"
-    class="flex flex-col rounded-lg border border-koshi bg-white/70 backdrop-blur-sm shadow-sm transition-shadow duration-200 overflow-hidden relative"
+    class="flex flex-col rounded-xl border border-koshi bg-surface/70 backdrop-blur-sm shadow-sm transition-shadow duration-200 overflow-hidden"
     :class="[
-      colSpanClass,
+      isFocused ? 'h-full w-full' : sizeSpanClass,
       isDragging ? 'opacity-40 shadow-none' : '',
       isDragOver ? 'ring-2 ring-ai/50 shadow-md' : (isDragging ? '' : 'hover:shadow-md'),
     ]"
-    :style="rootStyle"
     @dragover.prevent="onDragOver"
     @dragleave="onDragLeave"
     @drop.prevent="onDrop"
   >
     <!-- Title bar (draggable handle) -->
     <div
-      class="flex items-center gap-2 px-4 py-2.5 bg-koshi/50 border-b border-koshi select-none flex-shrink-0 cursor-grab active:cursor-grabbing"
-      draggable="true"
-      @dragstart="onDragStart"
-      @dragend="onDragEnd"
-      @click="collapsible && toggle()"
+      class="flex items-center gap-2 px-4 py-2.5 bg-koshi/50 border-b border-koshi select-none flex-shrink-0"
+      :class="isFocused ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'"
+      :draggable="!isFocused"
+      @dragstart="!isFocused && onDragStart($event)"
+      @dragend="!isFocused && onDragEnd()"
+      @click="!isFocused && collapsible && toggle()"
     >
+      <!-- Skill-area color dot -->
+      <span
+        v-if="widgetId"
+        class="w-1.5 h-1.5 rounded-full shrink-0"
+        :class="areaColorClass"
+      />
       <span v-if="icon" class="text-base leading-none">{{ icon }}</span>
       <span class="font-mono text-[0.7rem] tracking-[0.08em] uppercase text-usuzumi font-medium">
         {{ title }}
       </span>
+      <!-- Exit focus button (replaces collapse chevron when focused) -->
+      <button
+        v-if="isFocused"
+        class="ml-auto text-usuzumi hover:text-sumi text-xs transition-colors px-2 py-0.5 rounded hover:bg-koshi/60"
+        @click="clearFocus()"
+      >
+        ✕ Exit
+      </button>
       <span
-        v-if="collapsible"
+        v-else-if="collapsible"
         class="ml-auto text-usuzumi text-xs transition-transform duration-200"
         :class="{ 'rotate-180': collapsed }"
       >
@@ -38,36 +52,38 @@
       <div v-if="loading" class="flex items-center justify-center py-8">
         <div class="w-5 h-5 border-2 border-ai/30 border-t-ai rounded-full animate-spin" />
       </div>
-      <slot v-else />
+      <slot v-else :focused="isFocused" />
     </div>
 
-    <!-- Right resize handle -->
+    <!-- Practice CTA footer (only for focusable activities, not focused, not collapsed) -->
     <div
-      class="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize z-10 hover:bg-ai/20 transition-colors"
-      @mousedown.stop.prevent="startResize($event, 'right')"
-    />
-    <!-- Bottom resize handle -->
-    <div
-      class="absolute bottom-0 left-2 right-2 h-1.5 cursor-ns-resize z-10 hover:bg-ai/20 transition-colors"
-      @mousedown.stop.prevent="startResize($event, 'bottom')"
-    />
+      v-if="isFocusable && !isFocused && !collapsed"
+      class="flex-shrink-0 border-t border-koshi/60"
+    >
+      <button
+        class="w-full py-2.5 text-sm font-medium bg-ai text-white hover:bg-ai/90 transition-colors flex items-center justify-center gap-1.5"
+        @click="setFocus(widgetId)"
+      >
+        <span class="text-xs">▶</span> Practice
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useWidgetLayout } from '../composables/useWidgetLayout.js'
+import { useWidgetLayout, WIDGET_META } from '../composables/useWidgetLayout.js'
 
 const props = defineProps({
   title: { type: String, required: true },
   icon: { type: String, default: '' },
   widgetId: { type: String, default: '' },
-  span: { type: String, default: 'single', validator: v => ['single', 'double', 'tall'].includes(v) },
+  span: { type: String, default: 'single' },
   collapsible: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
 })
 
-const { widgetConfig, draggingId, dragOverId, reorder, updateConfig } = useWidgetLayout()
+const { draggingId, dragOverId, reorder, focusedWidget, setFocus, clearFocus } = useWidgetLayout()
 
 const rootEl = ref(null)
 const collapsed = ref(false)
@@ -79,23 +95,34 @@ function toggle() {
 const isDragging = computed(() => !!props.widgetId && draggingId.value === props.widgetId)
 const isDragOver = computed(() => !!props.widgetId && dragOverId.value === props.widgetId && draggingId.value !== props.widgetId)
 
-const colSpanClass = computed(() => {
-  let n = 1
-  if (props.widgetId && widgetConfig[props.widgetId]) {
-    n = widgetConfig[props.widgetId].colSpan ?? 1
-  } else {
-    n = props.span === 'double' ? 2 : 1
-  }
-  // Responsive: cap span to available columns at each breakpoint
-  if (n >= 3) return 'col-span-1 md:col-span-2 xl:col-span-3'
-  if (n >= 2) return 'col-span-1 md:col-span-2'
-  return 'col-span-1'
+const isFocused    = computed(() => !!props.widgetId && focusedWidget.value === props.widgetId)
+const isFocusable  = computed(() => !!props.widgetId && !WIDGET_META[props.widgetId]?.tool)
+
+const AREA_COLORS = {
+  track:     'bg-ai',
+  input:     'bg-matcha',
+  output:    'bg-beni',
+  reference: 'bg-kin',
+}
+
+const areaColorClass = computed(() => {
+  const area = WIDGET_META[props.widgetId]?.area
+  return AREA_COLORS[area] ?? 'bg-usuzumi'
 })
 
-const rootStyle = computed(() => {
-  if (!props.widgetId || !widgetConfig[props.widgetId]) return {}
-  const h = widgetConfig[props.widgetId].height
-  return h ? { height: `${h}px` } : {}
+const sizeSpanClass = computed(() => {
+  let size = 'small'
+  if (props.widgetId && WIDGET_META[props.widgetId]) {
+    size = WIDGET_META[props.widgetId].size
+  } else if (props.span === 'double') {
+    size = 'wide'
+  }
+  switch (size) {
+    case 'large': return 'col-span-1 md:col-span-2 row-span-2'
+    case 'wide':  return 'col-span-1 md:col-span-2 row-span-1'
+    case 'tall':  return 'col-span-1 row-span-2'
+    default:      return 'col-span-1 row-span-1'
+  }
 })
 
 // — Drag to reorder —
@@ -104,7 +131,6 @@ function onDragStart(e) {
   if (!props.widgetId) return
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setData('text/plain', props.widgetId)
-  // Delay dim so the drag ghost captures full-opacity state
   setTimeout(() => { draggingId.value = props.widgetId }, 0)
 }
 
@@ -129,57 +155,5 @@ function onDrop(e) {
   if (fromId && props.widgetId) reorder(fromId, props.widgetId)
   draggingId.value = null
   dragOverId.value = null
-}
-
-// — Resize —
-
-function startResize(e, direction) {
-  if (!props.widgetId) return
-  const id = props.widgetId
-  const startX = e.clientX
-  const startY = e.clientY
-  const cfg = widgetConfig[id] ?? { colSpan: 1, height: null }
-  const startColSpan = cfg.colSpan ?? 1
-  const startHeight = rootEl.value?.offsetHeight ?? 300
-
-  function getGridInfo() {
-    const parent = rootEl.value?.parentElement
-    if (!parent) return { colWidth: 300, maxCols: 3, gap: 20 }
-    const style = getComputedStyle(parent)
-    const cols = style.gridTemplateColumns.trim().split(/\s+/)
-    const maxCols = cols.length
-    const colWidth = parseFloat(cols[0]) || 300
-    const gap = parseFloat(style.columnGap) || 20
-    return { colWidth, maxCols, gap }
-  }
-
-  function onMouseMove(e) {
-    const dx = e.clientX - startX
-    const dy = e.clientY - startY
-
-    if (direction === 'right') {
-      const { colWidth, maxCols, gap } = getGridInfo()
-      const baseWidth = startColSpan * colWidth + (startColSpan - 1) * gap
-      const newWidth = baseWidth + dx
-      let newColSpan = Math.round((newWidth + gap) / (colWidth + gap))
-      newColSpan = Math.max(1, Math.min(maxCols, newColSpan))
-      if (newColSpan !== (widgetConfig[id]?.colSpan ?? 1)) {
-        updateConfig(id, { colSpan: newColSpan })
-      }
-    }
-
-    if (direction === 'bottom') {
-      const newHeight = Math.max(80, startHeight + dy)
-      updateConfig(id, { height: Math.round(newHeight) })
-    }
-  }
-
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove)
-    document.removeEventListener('mouseup', onMouseUp)
-  }
-
-  document.addEventListener('mousemove', onMouseMove)
-  document.addEventListener('mouseup', onMouseUp)
 }
 </script>
