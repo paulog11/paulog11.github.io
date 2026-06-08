@@ -24,6 +24,7 @@
 
       <!-- Full practice view (focused) -->
       <div v-else class="space-y-3">
+
         <!-- Channel selector -->
         <div class="flex gap-1.5 overflow-x-auto pb-1">
           <button
@@ -67,30 +68,219 @@
           </button>
         </div>
 
-        <!-- Video embed -->
-        <div v-if="shadowing.selectedVideo.value" class="space-y-2">
-          <div class="aspect-video rounded-lg overflow-hidden bg-sumi/5">
-            <iframe
-              :src="`https://www.youtube.com/embed/${shadowing.selectedVideoId.value}`"
-              class="w-full h-full"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-            />
+        <!-- Practice panel (only when a video is selected) -->
+        <template v-if="shadowing.selectedVideo.value">
+
+          <!-- Step stepper -->
+          <div class="flex items-center">
+            <template v-for="(s, i) in STEPS" :key="i">
+              <div class="flex flex-col items-center">
+                <div
+                  class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium border-2 transition-colors"
+                  :class="i < currentStep
+                    ? 'bg-matcha border-matcha text-white'
+                    : i === currentStep
+                      ? 'bg-ai border-ai text-white'
+                      : 'border-koshi text-usuzumi bg-surface'"
+                >
+                  <span v-if="i < currentStep">✓</span>
+                  <span v-else>{{ i + 1 }}</span>
+                </div>
+                <span
+                  class="text-[0.5rem] mt-0.5 text-center leading-tight w-12 truncate"
+                  :class="i === currentStep ? 'text-ai font-medium' : 'text-usuzumi'"
+                >
+                  {{ s.shortName }}
+                </span>
+              </div>
+              <div
+                v-if="i < 3"
+                class="flex-1 h-0.5 mb-3"
+                :class="i < currentStep ? 'bg-matcha' : 'bg-koshi'"
+              />
+            </template>
           </div>
-          <div class="flex items-center justify-between">
-            <p class="text-sm font-medium">{{ shadowing.selectedVideo.value.title }}</p>
+
+          <!-- Step instruction -->
+          <div class="rounded-lg bg-koshi/20 px-3 py-2">
+            <p class="text-xs font-medium text-sumi">{{ STEPS[currentStep].name }}</p>
+            <p class="text-[0.7rem] text-usuzumi mt-0.5 leading-snug">{{ STEPS[currentStep].desc }}</p>
+          </div>
+
+          <!-- YouTube player -->
+          <div class="aspect-video rounded-lg overflow-hidden bg-sumi/5">
+            <div ref="playerContainer" class="w-full h-full" />
+          </div>
+
+          <!-- Playback controls -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Speed -->
+            <div class="flex gap-1">
+              <button
+                class="px-2 py-1 text-[0.65rem] rounded border transition-colors"
+                :class="playbackRate === 0.75 ? 'bg-sumi text-white border-sumi' : 'border-koshi text-usuzumi hover:bg-koshi/40'"
+                @click="setRate(0.75)"
+              >
+                0.75×
+              </button>
+              <button
+                class="px-2 py-1 text-[0.65rem] rounded border transition-colors"
+                :class="playbackRate === 1 ? 'bg-sumi text-white border-sumi' : 'border-koshi text-usuzumi hover:bg-koshi/40'"
+                @click="setRate(1)"
+              >
+                1×
+              </button>
+            </div>
+            <!-- Replay 5s -->
             <button
-              class="text-xs px-2 py-1 rounded transition-colors"
+              class="px-2 py-1 text-[0.65rem] rounded border border-koshi text-usuzumi hover:bg-koshi/40 transition-colors"
+              @click="replay5s()"
+            >
+              ⟳ 5s
+            </button>
+            <!-- A-B Loop -->
+            <div class="flex gap-1 ml-auto">
+              <button
+                class="px-2 py-1 text-[0.65rem] rounded border transition-colors"
+                :class="loopStart !== null ? 'border-ai text-ai bg-ai/10' : 'border-koshi text-usuzumi hover:bg-koshi/40'"
+                @click="setLoopA()"
+              >
+                A{{ loopStart !== null ? ': ' + formatTime(loopStart) : '' }}
+              </button>
+              <button
+                class="px-2 py-1 text-[0.65rem] rounded border transition-colors"
+                :class="loopEnd !== null ? 'border-ai text-ai bg-ai/10' : 'border-koshi text-usuzumi hover:bg-koshi/40'"
+                @click="setLoopB()"
+              >
+                B{{ loopEnd !== null ? ': ' + formatTime(loopEnd) : '' }}
+              </button>
+              <button
+                v-if="loopStart !== null || loopEnd !== null"
+                class="px-2 py-1 text-[0.65rem] rounded border border-beni/40 text-beni hover:bg-beni/10 transition-colors"
+                @click="clearLoop()"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 4: Record & Compare -->
+          <div v-if="currentStep === 3" class="rounded-lg border border-koshi p-3 space-y-2">
+            <p class="text-xs font-medium text-sumi">Pronunciation Check</p>
+
+            <!-- Target phrase input -->
+            <textarea
+              v-model="targetPhrase"
+              placeholder="Type the phrase you want to shadow (pause the video, copy what the speaker said)..."
+              class="w-full px-3 py-2 text-sm rounded-md border border-koshi bg-surface/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-2 focus:ring-ai/30 resize-none"
+              rows="2"
+            />
+
+            <!-- Record controls -->
+            <div class="flex items-center gap-2">
+              <button
+                v-if="!isRecording && !processingRecording"
+                :disabled="!targetPhrase.trim()"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors"
+                :class="targetPhrase.trim()
+                  ? 'bg-beni text-white hover:bg-beni/90'
+                  : 'bg-koshi/50 text-usuzumi cursor-not-allowed'"
+                @click="startRecording()"
+              >
+                🎤 Record
+              </button>
+              <button
+                v-else-if="isRecording"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-sumi text-white hover:bg-sumi/80 transition-colors"
+                @click="stopRecording()"
+              >
+                ⏹ Stop
+              </button>
+              <span v-else class="text-xs text-usuzumi">Scoring…</span>
+              <span v-if="isRecording" class="text-xs text-beni animate-pulse">● Recording</span>
+              <span v-if="azureKey" class="ml-auto text-[0.55rem] text-usuzumi font-mono">Azure STT</span>
+              <span v-else class="ml-auto text-[0.55rem] text-usuzumi font-mono">Web Speech</span>
+            </div>
+
+            <!-- Recording result -->
+            <div v-if="recordingResult" class="space-y-2">
+              <!-- Error -->
+              <p v-if="recordingResult.type === 'error'" class="text-xs text-beni">
+                {{ recordingResult.error }}
+              </p>
+
+              <template v-else>
+                <!-- Score -->
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-lg font-bold tabular-nums"
+                    :class="recordingResult.score >= 80 ? 'text-matcha' : recordingResult.score >= 50 ? 'text-amber-600' : 'text-beni'"
+                  >
+                    {{ recordingResult.score }}%
+                  </span>
+                  <span class="text-xs text-usuzumi">
+                    {{ recordingResult.score >= 80 ? 'Excellent!' : recordingResult.score >= 50 ? 'Keep going' : 'Try again' }}
+                  </span>
+                </div>
+
+                <!-- Azure: word-level chips -->
+                <div v-if="recordingResult.type === 'azure' && recordingResult.words?.length" class="flex flex-wrap gap-1">
+                  <span
+                    v-for="w in recordingResult.words"
+                    :key="w.word"
+                    class="px-1.5 py-0.5 rounded text-xs"
+                    :class="w.score >= 80 ? 'bg-matcha/15 text-matcha' : w.score >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-beni/15 text-beni'"
+                  >
+                    {{ w.word }}
+                  </span>
+                </div>
+
+                <!-- Web Speech: mora tiles -->
+                <div v-if="recordingResult.type === 'webspeech' && recordingResult.breakdown?.length" class="flex flex-wrap gap-0.5">
+                  <span
+                    v-for="(m, i) in recordingResult.breakdown"
+                    :key="i"
+                    class="w-6 h-6 flex items-center justify-center text-xs rounded"
+                    :class="m.match ? 'bg-matcha/15 text-matcha' : 'bg-beni/15 text-beni'"
+                  >
+                    {{ m.expected || '?' }}
+                  </span>
+                </div>
+
+                <!-- Heard transcript -->
+                <p class="text-[0.65rem] text-usuzumi">Heard: {{ recordingResult.heard }}</p>
+              </template>
+            </div>
+          </div>
+
+          <!-- Step navigation -->
+          <div class="flex items-center justify-between">
+            <button
+              class="text-[0.65rem] text-usuzumi hover:text-sumi transition-colors"
+              @click="resetProgress()"
+            >
+              ↺ Reset
+            </button>
+            <button
+              v-if="currentStep < 3"
+              class="px-4 py-1.5 text-xs font-medium rounded-md bg-ai text-white hover:bg-ai/90 transition-colors"
+              @click="advanceStep()"
+            >
+              Next Step →
+            </button>
+            <button
+              v-else
+              class="px-4 py-1.5 text-xs font-medium rounded-md transition-colors"
               :class="shadowing.isCompleted(shadowing.selectedVideoId.value)
                 ? 'bg-matcha/15 text-matcha'
-                : 'bg-koshi/50 text-usuzumi hover:bg-koshi'"
-              @click="shadowing.markCompleted(shadowing.selectedVideoId.value)"
+                : 'bg-matcha text-white hover:bg-matcha/90'"
+              @click="completeVideo()"
             >
-              {{ shadowing.isCompleted(shadowing.selectedVideoId.value) ? '✓ Completed' : 'Mark Done' }}
+              {{ shadowing.isCompleted(shadowing.selectedVideoId.value) ? '✓ Completed' : 'Mark Complete ✓' }}
             </button>
           </div>
-        </div>
+
+        </template>
 
         <!-- Video list -->
         <div class="max-h-[40vh] overflow-y-auto space-y-1 pr-1">
@@ -134,6 +324,7 @@
             <li>Repeat the same video multiple times for best results</li>
           </ul>
         </details>
+
       </div>
 
     </template>
@@ -141,14 +332,266 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import WidgetFrame from '../WidgetFrame.vue'
 import { useShadowing } from '../../composables/useShadowing.js'
+import { useLocalStorage } from '../../composables/useLocalStorage.js'
+import { recognizeWithAzure } from '../../services/azure-speech.js'
+import { compareReading } from '../../utils/pronunciation.js'
 
 const shadowing = useShadowing()
+const azureKey = useLocalStorage('japandash:azure-speech-key', '')
+const azureRegion = useLocalStorage('japandash:azure-speech-region', 'eastus')
 
 const completedCount = computed(() =>
   shadowing.channels.reduce((total, ch) =>
     total + ch.videos.filter(v => shadowing.isCompleted(v.id)).length, 0)
 )
+
+const currentStep = computed(() =>
+  shadowing.getProgress(shadowing.selectedVideoId.value)?.step ?? 0
+)
+
+const STEPS = [
+  { shortName: 'Listen', name: 'Blind Listen', desc: 'Watch naturally. Let the rhythm and sounds wash over you without worrying about understanding everything.' },
+  { shortName: 'Read', name: 'Listen + Read', desc: 'Replay segments with the A–B loop. Pause to identify individual words and phrases.' },
+  { shortName: 'Shadow', name: 'Shadow Aloud', desc: 'Set speed to 0.75×. Speak immediately after—or along with—the speaker. Focus on rhythm and intonation.' },
+  { shortName: 'Record', name: 'Record & Compare', desc: 'Pause at a phrase. Type it below, then record yourself to get a pronunciation score.' },
+]
+
+// YT Player
+const playerContainer = ref(null)
+let ytPlayer = null
+const playerReady = ref(false)
+const playbackRate = ref(1)
+
+// A-B loop
+const loopStart = ref(null)
+const loopEnd = ref(null)
+let loopInterval = null
+
+// Step 4 recording
+const targetPhrase = ref('')
+const isRecording = ref(false)
+const processingRecording = ref(false)
+const recordingResult = ref(null)
+let mediaRecorder = null
+let audioChunks = []
+let recognizer = null
+
+// YT API singleton loader (module-level so shared across hot-reloads)
+let ytApiPromise = null
+function loadYTApi() {
+  if (!ytApiPromise) {
+    ytApiPromise = new Promise(resolve => {
+      if (window.YT?.Player) { resolve(); return }
+      window.onYouTubeIframeAPIReady = resolve
+      const s = document.createElement('script')
+      s.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(s)
+    })
+  }
+  return ytApiPromise
+}
+
+function createPlayer(videoId) {
+  const container = playerContainer.value
+  if (!container) return
+  playerReady.value = false
+  container.innerHTML = ''
+  const el = document.createElement('div')
+  container.appendChild(el)
+  ytPlayer = new window.YT.Player(el, {
+    videoId,
+    playerVars: { rel: 0, modestbranding: 1 },
+    events: {
+      onReady: () => {
+        playerReady.value = true
+        ytPlayer.setPlaybackRate(playbackRate.value)
+      },
+    },
+  })
+}
+
+async function initPlayer(videoId) {
+  await loadYTApi()
+  createPlayer(videoId)
+}
+
+// Create player when container enters the DOM (widget focused)
+watch(playerContainer, async (el) => {
+  if (!el) {
+    clearLoop()
+    ytPlayer = null
+    playerReady.value = false
+    return
+  }
+  if (shadowing.selectedVideoId.value) {
+    await initPlayer(shadowing.selectedVideoId.value)
+  }
+})
+
+// Update player when selected video changes
+watch(() => shadowing.selectedVideoId.value, async (id) => {
+  stopAnyRecording()
+  recordingResult.value = null
+  targetPhrase.value = ''
+  if (!id) return
+  await nextTick()
+  if (!playerContainer.value) return
+  if (ytPlayer && playerReady.value) {
+    ytPlayer.loadVideoById(id)
+  } else {
+    await initPlayer(id)
+  }
+})
+
+// Clear recording results when stepping
+watch(currentStep, () => {
+  recordingResult.value = null
+  targetPhrase.value = ''
+})
+
+// Playback controls
+function setRate(rate) {
+  playbackRate.value = rate
+  ytPlayer?.setPlaybackRate(rate)
+}
+
+function replay5s() {
+  if (!ytPlayer) return
+  ytPlayer.seekTo(Math.max(0, ytPlayer.getCurrentTime() - 5), true)
+}
+
+function setLoopA() {
+  if (!ytPlayer) return
+  loopStart.value = ytPlayer.getCurrentTime()
+}
+
+function setLoopB() {
+  if (!ytPlayer) return
+  const t = ytPlayer.getCurrentTime()
+  if (loopStart.value !== null && t > loopStart.value) {
+    loopEnd.value = t
+    startLoop()
+  }
+}
+
+function startLoop() {
+  if (loopInterval) clearInterval(loopInterval)
+  loopInterval = setInterval(() => {
+    if (!ytPlayer || loopStart.value === null || loopEnd.value === null) return
+    if (ytPlayer.getCurrentTime() >= loopEnd.value) {
+      ytPlayer.seekTo(loopStart.value, true)
+    }
+  }, 250)
+}
+
+function clearLoop() {
+  if (loopInterval) { clearInterval(loopInterval); loopInterval = null }
+  loopStart.value = null
+  loopEnd.value = null
+}
+
+function formatTime(secs) {
+  if (secs === null) return '–'
+  const m = Math.floor(secs / 60)
+  const s = Math.floor(secs % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+// Step navigation
+function advanceStep() {
+  shadowing.advanceStep(shadowing.selectedVideoId.value)
+}
+
+function completeVideo() {
+  shadowing.markCompleted(shadowing.selectedVideoId.value)
+}
+
+function resetProgress() {
+  shadowing.resetProgress(shadowing.selectedVideoId.value)
+  recordingResult.value = null
+  targetPhrase.value = ''
+}
+
+// Recording
+async function startRecording() {
+  stopAnyRecording()
+  recordingResult.value = null
+
+  if (azureKey.value) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioChunks = []
+      mediaRecorder = new MediaRecorder(stream)
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data) }
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
+        processingRecording.value = true
+        try {
+          const result = await recognizeWithAzure(blob, targetPhrase.value, azureKey.value, azureRegion.value)
+          recordingResult.value = { type: 'azure', ...result }
+        } catch (err) {
+          recordingResult.value = { type: 'error', error: err.message }
+        }
+        processingRecording.value = false
+      }
+      mediaRecorder.start()
+      isRecording.value = true
+    } catch {
+      recordingResult.value = { type: 'error', error: 'Microphone access denied.' }
+    }
+  } else {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) {
+      recordingResult.value = { type: 'error', error: 'Speech recognition not supported. Add an Azure key to enable recording.' }
+      return
+    }
+    recognizer = new SR()
+    recognizer.lang = 'ja-JP'
+    recognizer.interimResults = false
+    recognizer.maxAlternatives = 3
+    recognizer.onresult = (e) => {
+      const alts = Array.from(e.results[0])
+      let best = { score: -1, heard: '' }
+      for (const alt of alts) {
+        const { score } = compareReading(targetPhrase.value, alt.transcript)
+        if (score > best.score) best = { score, heard: alt.transcript }
+      }
+      const { score, breakdown } = compareReading(targetPhrase.value, best.heard)
+      recordingResult.value = { type: 'webspeech', score, heard: best.heard, breakdown }
+      isRecording.value = false
+    }
+    recognizer.onerror = () => { isRecording.value = false }
+    recognizer.onend = () => { isRecording.value = false }
+    recognizer.start()
+    isRecording.value = true
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder?.state === 'recording') {
+    mediaRecorder.stop()
+    isRecording.value = false
+  }
+  if (recognizer) {
+    recognizer.stop()
+  }
+}
+
+function stopAnyRecording() {
+  if (mediaRecorder?.state === 'recording') mediaRecorder.stop()
+  if (recognizer) recognizer.stop()
+  mediaRecorder = null
+  recognizer = null
+  isRecording.value = false
+  processingRecording.value = false
+}
+
+onBeforeUnmount(() => {
+  clearLoop()
+  stopAnyRecording()
+})
 </script>

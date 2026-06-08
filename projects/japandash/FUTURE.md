@@ -167,6 +167,47 @@ Each phase is independently shippable.
 
 ---
 
+## Phase 2b — Shadowing workflow upgrades *(post-Phase 2 implementation)*
+
+Phase 2 ships a client-only shadowing workflow (GitHub Pages compatible): YouTube IFrame API controls, 4-step guided flow, and pronunciation scoring via Azure Speech REST API (key in localStorage) or Web Speech fallback. Phase 2b captures the gaps to close once Vercel + backend are in place.
+
+### 1. Token-based Azure Speech auth (replaces localStorage key)
+Currently `azure-speech.js` reads the key from localStorage and POSTs audio directly from the browser. This exposes the key.
+
+**Upgrade path (Phase 0 prerequisite):**
+- Add `/api/speech-token` endpoint (described in Phase 0) — server exchanges the Azure Speech key for a short-lived token.
+- Replace `recognizeWithAzure()` in [`azure-speech.js`](src/services/azure-speech.js) with the browser Speech SDK (`microsoft-cognitiveservices-speech-sdk`) using `fromAuthorizationToken(token, region)` and `PronunciationAssessmentConfig`.
+- Remove the Azure key inputs from the [App.vue settings panel](src/App.vue) (key lives in Vercel env var `AZURE_SPEECH_KEY`).
+
+### 2. Vercel Blob recording storage (optional, was out of scope)
+After Step 4 scores a recording, let the user save it to Vercel Blob for self-review.
+
+**Design:**
+- After scoring, show a "Save recording" button.
+- POST audio blob to a new `/api/recordings` endpoint → uploads to Vercel Blob, stores URL + metadata in a `shadowing_recordings` Postgres table (video_id, step, score, blob_url, recorded_at).
+- Add a "Past recordings" panel in the Shadowing focused view showing playback + score history per video.
+
+### 3. Server-backed `shadowing_progress` persistence
+Currently progress (which step each video is on) lives in `localStorage` under `japandash:shadowing-progress` — it's lost on cache-clear and doesn't sync across devices.
+
+**Upgrade path (Phase 0 prerequisite, uses `shadowing_progress` DB table already in the schema):**
+- `/api/sync` reads/writes `shadowing_progress` rows keyed by video_id.
+- [`useShadowing.js`](src/composables/useShadowing.js) `getProgress`/`advanceStep`/`resetProgress` become API calls (with optimistic localStorage write + background sync).
+
+### 4. YouTube auto-captions for Step 4 target phrase (was out of scope)
+Currently Step 4 requires the user to manually type the phrase they want to shadow. If captions are available, the app could auto-fill the phrase.
+
+**Design:**
+- Use YouTube Data API v3 (`/captions` endpoint) to fetch caption track IDs for a video.
+- Download the caption `.srv3` / `.ttml` file and parse it into timestamped phrase segments.
+- In Step 4, show a "Load from captions" dropdown populated with phrase segments near the current playback position.
+- **Blocker:** YouTube Data API v3 requires OAuth or API key (server-side). Needs the Vercel backend (Phase 0). Caption file download also requires OAuth for non-public caption tracks.
+
+### 5. Azure Speech region configurability UX
+Currently the region input in settings is a plain text field defaulting to `eastus`. Once token-auth is in place this goes away (region lives in the server). Until then, consider a dropdown of common regions (eastus, westus2, japaneast, southeastasia) to reduce user friction.
+
+---
+
 ## Verification
 
 - **DB:** `drizzle-kit` migration applies to Neon; can insert/query a `review_items` row from a function locally (`vercel dev`).

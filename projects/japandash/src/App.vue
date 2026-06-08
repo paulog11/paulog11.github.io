@@ -100,6 +100,27 @@
             Used by the Conversation widget — get yours at console.anthropic.com
           </p>
         </div>
+        <div class="mt-4">
+          <label class="block font-mono text-[0.65rem] tracking-[0.1em] uppercase text-usuzumi mb-1.5">
+            Azure Speech Key
+          </label>
+          <div class="flex gap-2">
+            <input
+              v-model="azureSpeechKey"
+              type="password"
+              placeholder="Your Azure Speech subscription key..."
+              class="flex-1 px-3 py-2 text-sm rounded-md border border-koshi bg-surface/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-2 focus:ring-ai/30 focus:border-ai/50"
+            />
+            <input
+              v-model="azureSpeechRegion"
+              placeholder="eastus"
+              class="w-24 px-3 py-2 text-sm rounded-md border border-koshi bg-surface/80 placeholder:text-usuzumi/50 focus:outline-none focus:ring-2 focus:ring-ai/30 focus:border-ai/50"
+            />
+          </div>
+          <p class="mt-1.5 text-[0.7rem] text-usuzumi">
+            Used by Shadowing Step 4 for pronunciation scoring — falls back to Web Speech if not set. Region defaults to <code class="font-mono">eastus</code>.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -228,10 +249,16 @@ const storedKey = useLocalStorage('japandash:wanikani-key', '')
 const wanikaniKey = ref(storedKey.value)
 const storedAnthropicKey = useLocalStorage('japandash:anthropic-key', '')
 const anthropicKey = ref(storedAnthropicKey.value)
+const storedAzureSpeechKey = useLocalStorage('japandash:azure-speech-key', '')
+const storedAzureSpeechRegion = useLocalStorage('japandash:azure-speech-region', 'eastus')
+const azureSpeechKey = ref(storedAzureSpeechKey.value)
+const azureSpeechRegion = ref(storedAzureSpeechRegion.value)
 
 function saveSettings() {
   storedKey.value = wanikaniKey.value
   storedAnthropicKey.value = anthropicKey.value
+  storedAzureSpeechKey.value = azureSpeechKey.value
+  storedAzureSpeechRegion.value = azureSpeechRegion.value
   showSettings.value = false
 }
 

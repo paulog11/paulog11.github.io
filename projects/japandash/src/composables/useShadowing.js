@@ -6,6 +6,7 @@ export function useShadowing() {
   const selectedChannelId = ref(channels[0]?.id || '')
   const filterLevel = ref('')
   const completedVideos = useLocalStorage('japandash:shadowing-completed', [])
+  const shadowingProgress = useLocalStorage('japandash:shadowing-progress', {})
   const selectedVideoId = ref(null)
 
   const selectedChannel = computed(() =>
@@ -54,6 +55,21 @@ export function useShadowing() {
     selectedVideoId.value = pick.id
   }
 
+  function getProgress(videoId) {
+    return { step: shadowingProgress.value[videoId] ?? 0 }
+  }
+
+  function advanceStep(videoId) {
+    const current = shadowingProgress.value[videoId] ?? 0
+    shadowingProgress.value = { ...shadowingProgress.value, [videoId]: Math.min(current + 1, 3) }
+  }
+
+  function resetProgress(videoId) {
+    const updated = { ...shadowingProgress.value }
+    delete updated[videoId]
+    shadowingProgress.value = updated
+  }
+
   return {
     channels,
     selectedChannelId,
@@ -68,5 +84,8 @@ export function useShadowing() {
     markCompleted,
     isCompleted,
     randomPick,
+    getProgress,
+    advanceStep,
+    resetProgress,
   }
 }
