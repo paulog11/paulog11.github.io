@@ -165,3 +165,48 @@ Each step is runnable/verifiable on its own.
 - **DB:** `db/client.js` switches to Neon when `DATABASE_URL` is set; schema + `drizzle/` migrations are reused as-is.
 - **Auth:** replace the `// requireAuth(req,res)` seam with the Phase 0 passcode check.
 - **AI:** conversation still uses the browser→Claude path; route it through `/api/ai` when Phase 0 lands.
+
+## Reassessment of next steps for developer
+
+Paulo asked how much of Phase 0 (Vercel project, DB, auth, AI proxy, speech token) from projects/japandash/FUTURE.md is implemented, and what his next steps are. The audit below answers that; the plan section lays out the remaining Phase 0 work in build order, adapted to what he actually has provisioned today: Vercel account ✓, Azure Speech ✓, Neon ✗, Azure OpenAI ✗. Consequence: /api/ai starts Claude-only (Azure-primary routing deferred until an Azure OpenAI resource exists).
+
+Phase 0 status: ~25% — local foundation done, all server/production pieces not started
+Phase 0 item	Status	Evidence
+1. Vercel + DB scaffolding	Partial	Drizzle schema (db/schema.js: review_items, review_log, mistakes), drizzle.config.js, migration drizzle/0000_needy_hairball.sql all exist. But db/client.js is PGLite-only (commented Neon seam at lines 8–10); no vercel.json, no DATABASE_URL handling, no @neondatabase/serverless.
+2. Auth	Not started	No /api/login, no jose, no requireAuth(), no passcode gate. The 4 review endpoints have // Production seam: add requireAuth() comments.
+3. AI proxy /api/ai	Not started	useConversation.js still imports claude-api.js → direct browser calls to Anthropic with localStorage key. No Vercel AI SDK deps.
+4. Speech token	Not started	azure-speech.js POSTs with raw Ocp-Apim-Subscription-Key from localStorage. No /api/speech-token.
+5. Settings/key migration	Not started	App.vue settings panel still collects WaniKani/Anthropic/Azure keys into localStorage.
+Already working beyond Phase 0: the Phase 1 SRS Mistake Journal is complete locally — api/review/{due,grade,mistakes,recent}.js (Vercel-handler-shaped), src/utils/srs.js (SM-2-lite), useReview.js, MistakeReviewWidget.vue, conversation-mistake capture, all running against PGLite via vite-plugin-dev-api.js in dev. This de-risks Phase 0: the handlers and schema deploy as-is once the platform pieces land.
+
+Paulo's manual steps (only he can do these)
+Create the Vercel project: import the repo, Root Directory = projects/japandash, build npm run build, output dist/.
+Provision Neon via Vercel Marketplace (storage tab) → DATABASE_URL env var auto-injected.
+Set remaining env vars in Vercel: ANTHROPIC_API_KEY, AZURE_SPEECH_KEY, AZURE_SPEECH_REGION, APP_PASSCODE (choose one), SESSION_SECRET (random 32+ bytes).
+(Later, optional) Provision Azure OpenAI to enable the Azure-primary/Claude-fallback routing from FUTURE.md.
+Code work (in build order; implementable on approval)
+Step 1 — Neon production seam in db/client.js
+Add @neondatabase/serverless; when process.env.DATABASE_URL is set use drizzle-orm/neon-http, else keep PGLite (dev). Schema/migrations reused unchanged (the seam comment already marks the spot).
+Migration against Neon via drizzle-kit migrate (add db:migrate script reading DATABASE_URL).
+Step 2 — Auth
+api/_lib/auth.js: requireAuth(req, res) verifying a signed JWT cookie (jose); api/login.js: passcode → cookie. Wire requireAuth into the 4 review endpoints at their marked seams.
+SPA: small passcode gate (App.vue-level) that calls /api/login; skipped in dev.
+Mirror new endpoints in vite-plugin-dev-api.js so dev keeps working.
+Step 3 — AI proxy (Claude-only to start)
+api/ai.js using Vercel AI SDK (ai + @ai-sdk/anthropic), generateObject + Zod schema matching the existing { ja, en, furigana, correction } contract.
+Refactor useConversation.js (currently claude-api.js import, send at lines 66–76) to call /api/ai via the existing src/services/apiClient.js pattern; delete claude-api.js once unused.
+Leave an obvious seam for @ai-sdk/azure primary when Azure OpenAI exists.
+Step 4 — Speech token
+api/speech-token.js: exchanges AZURE_SPEECH_KEY for a 10-minute token (POST https://{region}.api.cognitive.microsoft.com/sts/v1.0/issueToken).
+Smallest change in azure-speech.js: keep the existing REST call but swap Ocp-Apim-Subscription-Key header for Authorization: Bearer <token> fetched from /api/speech-token (the STT REST API accepts token auth) — avoids adding the Speech SDK for now. Web Speech compareReading() fallback unchanged.
+Step 5 — Settings cleanup
+Remove Anthropic + Azure key inputs from the App.vue settings panel (keys now server-side). Keep the WaniKani key input — WK stays browser-side until Phase 7.
+Step 6 — Deploy wiring
+Verify Vercel build; then update the japandash card URL in the root App.vue apps array to the Vercel URL (per FUTURE.md, the committed dist/ is no longer needed for this project).
+Verification (per FUTURE.md)
+npm run dev: review endpoints + new login/ai/speech-token all work locally against PGLite.
+Auth: wrong passcode → 401; correct passcode sets cookie and unlocks /api/*.
+Conversation widget works through /api/ai with no Anthropic key in localStorage/network.
+Pronunciation scoring works with no Azure key visible in browser devtools (only short-lived token).
+Deliberate grammar mistake in conversation → row in Neon mistakes + review_items → appears in Mistake Review on a second device after passcode login (cross-device durability).
+Vercel production build succeeds; landing card opens the deployed app.
