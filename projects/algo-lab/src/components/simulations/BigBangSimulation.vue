@@ -36,7 +36,8 @@
 
     <!-- Canvas area -->
     <div class="bb-canvas-wrap" ref="canvasWrap">
-      <canvas ref="canvasEl"></canvas>
+      <canvas ref="canvasEl" v-show="activeView !== 'planetary'"></canvas>
+      <div ref="pixiWrap" class="bb-pixi-wrap" v-show="activeView === 'planetary'"></div>
 
       <!-- Context panel: current epoch + legend -->
       <div class="bb-info-panel">
@@ -45,7 +46,7 @@
           <div class="bb-info-title">{{ currentEpoch.name }}</div>
           <div class="bb-info-desc">{{ currentEpoch.desc }}</div>
           <div class="bb-info-hint">
-            Epochs are named time-windows in the early universe, from the Big Bang (t ≈ 0) to structure formation. The Atom view steps through them in seconds; Celestial view sits in the last epoch, where stars, black holes and planets emerge.
+            Epochs are named time-windows in the early universe, from the Big Bang (t ≈ 0) to structure formation. The Atom view steps through them in seconds; Celestial view sits in the last epoch, where stars, black holes and planets emerge. Planetary view zooms into one young star where worlds condense from its dust disk.
           </div>
           <div v-if="activeView === 'atom'" class="bb-epoch-jump">
             <div class="bb-info-label" style="margin-bottom:5px">Jump to Epoch</div>
@@ -82,9 +83,10 @@
         <div class="bb-view-toggle">
           <button class="bb-view-btn" :class="{ active: activeView === 'atom' }" @click="switchView('atom')">Atom</button>
           <button class="bb-view-btn" :class="{ active: activeView === 'celestial' }" @click="switchView('celestial')">Celestial</button>
+          <button class="bb-view-btn" :class="{ active: activeView === 'planetary' }" @click="switchView('planetary')">Planetary</button>
         </div>
         <div class="bb-divider"></div>
-        <button class="ctrl-btn" @click="resetSim">⟳ {{ activeView === 'atom' ? 'Big Bang' : 'Seed Universe' }}</button>
+        <button class="ctrl-btn" @click="resetSim">⟳ {{ resetLabel }}</button>
         <button class="bb-pause-btn" :class="{ paused: isPaused }" @click="isPaused = !isPaused">
           {{ isPaused ? '▶' : '⏸' }}
         </button>
@@ -112,11 +114,13 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS, CELESTIAL_EPOCH } from './bigbang/constants.js'
+import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS, CELESTIAL_EPOCH, PLANETARY_EPOCH } from './bigbang/constants.js'
 import { createCelestialField, celestialPhysicsStep, drawCelestialBodies } from './bigbang/celestial.js'
+import { createPlanetaryDisk, planetaryPhysicsStep } from './bigbang/planetary.js'
 
 const canvasEl  = ref(null)
 const canvasWrap = ref(null)
+const pixiWrap  = ref(null)
 let ctx, W, H, animId
 
 // ── STATE ──────────────────────────────────────────────────
@@ -130,6 +134,10 @@ let   particles   = []
 let   celestialBodies = []
 let   stars       = []
 let   celestialTime = 0
+let   planetaryBodies = []
+let   planetaryTime = 0
+let   pixiRenderer = null
+let   pixiInit     = null
 
 // ── COMPUTED ──────────────────────────────────────────────
 const outcomeKey = computed(() => {
@@ -154,6 +162,7 @@ const tuningLabel = computed(() => {
 })
 
 const currentEpoch = computed(() => {
+  if (activeView.value === 'planetary') return PLANETARY_EPOCH
   if (activeView.value === 'celestial') return CELESTIAL_EPOCH
   const ep = EPOCHS.find(([s,e]) => bbTime.value >= s && bbTime.value < e)
   const fallback = EPOCHS[EPOCHS.length - 1]
@@ -195,27 +204,61 @@ const CELESTIAL_LEGEND = [
   { label: 'Planet (habitable)', desc: 'Orbits a star. Chemistry permits complex molecules.',  color: 'rgb(80,160,120)'  },
   { label: 'Planet (sterile)',   desc: 'Orbits a star, but chemistry is broken — no life.',    color: 'rgb(120,120,120)' },
 ]
+const PLANETARY_LEGEND = [
+  { label: 'Young Star',   desc: 'Newly ignited star. Its light defines the habitable zone.',  color: 'rgb(255,238,204)' },
+  { label: 'Dust',         desc: 'Disk grains on Keplerian orbits — raw planet material.',     color: 'rgb(210,180,140)' },
+  { label: 'Planetesimal', desc: 'Km-scale body grown from colliding dust.',                   color: 'rgb(170,190,210)' },
+  { label: 'Protoplanet',  desc: 'Molten embryo sweeping its orbital lane clear.',             color: 'rgb(255,150,100)' },
+  { label: 'Planet (habitable)', desc: 'Formed in the habitable zone with working chemistry.', color: 'rgb(80,160,120)'  },
+  { label: 'Planet (sterile)',   desc: 'Outside the zone or chemistry is broken — no life.',   color: 'rgb(120,120,120)' },
+  { label: 'Habitable Zone',     desc: 'Annulus where liquid water could persist.',            color: 'rgba(80,160,120,0.35)' },
+]
 const legendItems = computed(() =>
-  activeView.value === 'atom' ? ATOM_LEGEND : CELESTIAL_LEGEND
+  ({ atom: ATOM_LEGEND, celestial: CELESTIAL_LEGEND, planetary: PLANETARY_LEGEND })[activeView.value]
+)
+const resetLabel = computed(() =>
+  ({ atom: 'Big Bang', celestial: 'Seed Universe', planetary: 'Seed Disk' })[activeView.value]
 )
 
 // ── VIEW SWITCHING ───────────────────────────────────────
-function switchView(view) {
+async function switchView(view) {
   activeView.value = view
   isPaused.value = false
   if (view === 'celestial') {
     celestialBodies = createCelestialField(W, H, constValues)
     celestialTime = 0
+  } else if (view === 'planetary') {
+    await ensurePixi()
+    seedPlanetary()
   }
+}
+
+function ensurePixi() {
+  if (!pixiInit) {
+    // Dynamic import keeps PixiJS out of the main bundle — it loads the
+    // first time the Planetary view is opened.
+    pixiInit = import('./bigbang/planetaryRenderer.js')
+      .then(m => m.createPlanetaryRenderer(pixiWrap.value, W, H))
+      .then(r => { pixiRenderer = r })
+  }
+  return pixiInit
+}
+
+function seedPlanetary() {
+  planetaryBodies = createPlanetaryDisk(W, H, constValues)
+  planetaryTime = 0
+  pixiRenderer?.seed(constValues, planetaryBodies[0], W, H)
 }
 
 function resetSim() {
   isPaused.value = false
   if (activeView.value === 'atom') {
     bigBang()
-  } else {
+  } else if (activeView.value === 'celestial') {
     celestialBodies = createCelestialField(W, H, constValues)
     celestialTime = 0
+  } else {
+    seedPlanetary()
   }
 }
 
@@ -420,6 +463,18 @@ function drawOutcomeViz() {
 
 function loop() {
   animId = requestAnimationFrame(loop)
+
+  if (activeView.value === 'planetary') {
+    if (!pixiRenderer) return
+    if (!isPaused.value) {
+      planetaryTime += 0.016
+      planetaryBodies = planetaryPhysicsStep(planetaryBodies, 0.016, constValues, W, H, outcomeKey.value)
+      if (planetaryBodies.length <= 1) seedPlanetary() // only the sun left
+    }
+    pixiRenderer.update(planetaryBodies, constValues, 0.016, planetaryTime, zoomLevel.value, outcomeKey.value, isPaused.value)
+    return
+  }
+
   ctx.fillStyle='rgba(3,2,10,0.4)'; ctx.fillRect(0,0,W,H)
   drawBG()
 
@@ -452,9 +507,17 @@ function loop() {
 }
 
 function resize() {
-  W = canvasEl.value.width  = canvasEl.value.offsetWidth
-  H = canvasEl.value.height = canvasEl.value.offsetHeight
+  // Measure the wrapper, not the canvas — the canvas is display:none in
+  // the Planetary view and would report 0×0.
+  W = canvasWrap.value.offsetWidth
+  H = canvasWrap.value.offsetHeight
+  canvasEl.value.width  = W
+  canvasEl.value.height = H
   genStars()
+  if (pixiRenderer) {
+    pixiRenderer.resize(W, H)
+    if (activeView.value === 'planetary') seedPlanetary()
+  }
 }
 
 onMounted(() => {
@@ -471,6 +534,9 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(animId)
   window.removeEventListener('resize', resize)
+  pixiRenderer?.destroy()
+  pixiRenderer = null
+  pixiInit = null
 })
 </script>
 
@@ -553,6 +619,8 @@ onUnmounted(() => {
 /* ── Canvas wrap ── */
 .bb-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
 canvas { display: block; width: 100%; height: 100%; }
+.bb-pixi-wrap { position: absolute; inset: 0; }
+.bb-pixi-wrap :deep(canvas) { display: block; width: 100%; height: 100%; }
 
 /* ── Info panel (epoch + legend) ── */
 .bb-info-panel {

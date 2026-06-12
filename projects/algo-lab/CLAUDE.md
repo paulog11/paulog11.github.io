@@ -3,9 +3,9 @@
 Canvas-based algorithm simulation lab with 6 tabbed visualizations.
 
 ## Tech Stack
-- Vue 3 (Composition API), Vite 5, HTML5 Canvas 2D
+- Vue 3 (Composition API), Vite 7, HTML5 Canvas 2D
 - Custom CSS with CSS variables (Space Mono + Syne fonts)
-- No external physics/rendering libraries
+- No external physics/rendering libraries, except PixiJS v8 + pixi-filters (lazy-loaded, used only by the Big Bang Planetary view)
 
 ## Simulations
 

@@ -173,3 +173,12 @@ export const CELESTIAL_EPOCH = {
   name: 'Cosmic Structure Formation',
   desc: 'Gas clouds collapse under gravity, ignite fusion to become stars, and forge heavier elements. Dense cores become black holes; rocky debris condenses into planets.',
 }
+
+/**
+ * Planetary view zooms into a single young star after structure formation —
+ * a protoplanetary disk where dust accretes into worlds.
+ */
+export const PLANETARY_EPOCH = {
+  name: 'Planetary Formation',
+  desc: 'A protoplanetary disk of dust circles a young star. Grains collide and stick, growing into planetesimals and protoplanets that sweep their orbital lanes clear — some settling in the habitable zone.',
+}
