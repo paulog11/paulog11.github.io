@@ -3,11 +3,12 @@
  * Renders the physics bodies from planetary.js plus a dense visual-only
  * layer of ~20K dust tracers on Keplerian orbits, so lane clearing and
  * disk structure are visible at a fidelity Canvas 2D can't reach.
- * The renderer never mutates physics state.
+ * Scene infrastructure (Application, bloom, backdrop, zoom, outcome
+ * overlay) lives in pixiStage.js. The renderer never mutates physics state.
  */
-import { Application, Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Texture } from 'pixi.js'
-import { AdvancedBloomFilter } from 'pixi-filters'
+import { Container, Graphics, Particle, ParticleContainer, Sprite } from 'pixi.js'
 import { DISK, bodyRadius, diskGeometry } from './planetary.js'
+import { TEX_SIZE } from './pixiStage.js'
 
 const BODY_TINTS = {
   planetesimal: 0xaabed2,
@@ -17,32 +18,12 @@ const BODY_TINTS = {
 }
 const TRACER_TINTS = [0xd8b894, 0xc9a87e, 0xe0c8a8, 0xb89c78]
 const PARKED = -100000 // off-screen position for consumed tracers
-const TEX_SIZE = 32
 
-export async function createPlanetaryRenderer(containerEl, W, H) {
-  const app = new Application()
-  await app.init({
-    width: W, height: H,
-    background: 0x03020a,
-    antialias: true,
-    autoStart: false, // the component's rAF loop drives rendering
-    resolution: Math.min(2, window.devicePixelRatio || 1),
-    autoDensity: true,
-  })
-  containerEl.appendChild(app.canvas)
+export function createPlanetaryRenderer(stage) {
+  const dotTex = stage.dotTex
 
-  const dotTex = makeDotTexture()
-
-  // Static star backdrop — outside `world` so it doesn't zoom
-  const starsG = new Graphics()
-  app.stage.addChild(starsG)
-
-  // Zoomable world: HZ ring, sun, dust, trails, bodies
-  const world = new Container()
-  world.filters = [new AdvancedBloomFilter({ threshold: 0.3, bloomScale: 1.1, brightness: 1, blur: 6, quality: 3 })]
-  world.filterArea = new Rectangle(0, 0, W, H)
-  app.stage.addChild(world)
-
+  // Root container: HZ ring, sun, dust, trails, bodies (back → front)
+  const root = new Container()
   const hzG = new Graphics()
   const sun = buildSun(dotTex)
   const dustPC = new ParticleContainer({
@@ -52,30 +33,25 @@ export async function createPlanetaryRenderer(containerEl, W, H) {
   const trailG = new Graphics()
   trailG.blendMode = 'add'
   const bodiesC = new Container()
-  world.addChild(hzG, sun.root, dustPC, trailG, bodiesC)
-
-  // Outcome tint overlay — above world, unzoomed, unbloomed
-  const overlayG = new Graphics()
-  app.stage.addChild(overlayG)
+  root.addChild(hzG, sun.root, dustPC, trailG, bodiesC)
 
   const state = {
-    W, H, geo: null,
+    geo: null,
     tracers: null,
     grains: [], // fixed particle pool mirroring the physics dust grains
     views: new Map(), // DiskBody → sprite container for grown bodies
   }
 
-  function seed(cv, sunBody, width, height) {
-    state.W = width; state.H = height
-    state.geo = diskGeometry(width, height, cv)
-    const cx = width / 2, cy = height / 2
+  function attach() {
+    stage.world.addChild(root)
+    stage.setBloom({ threshold: 0.3, bloomScale: 1.1, blur: 6 })
+  }
+  function detach() { if (root.parent) stage.world.removeChild(root) }
 
-    // Star backdrop
-    starsG.clear()
-    for (let i = 0; i < 180; i++) {
-      starsG.circle(Math.random() * width, Math.random() * height, Math.random())
-        .fill({ color: 0xffffff, alpha: 0.05 + Math.random() * 0.3 })
-    }
+  function seed(cv, sunBody) {
+    stage.seedStars()
+    state.geo = diskGeometry(stage.W, stage.H, cv)
+    const cx = stage.W / 2, cy = stage.H / 2
 
     // Habitable zone annulus
     const { hzInner, hzOuter } = state.geo
@@ -144,32 +120,28 @@ export async function createPlanetaryRenderer(containerEl, W, H) {
     bodiesC.removeChildren().forEach(c => c.destroy({ children: true }))
     state.views.clear()
     trailG.clear()
-    overlayG.clear()
   }
 
   function update(bodies, cv, dt, time, zoom, outcomeKey, paused) {
-    const cx = state.W / 2, cy = state.H / 2
     const sunBody = bodies[0]
 
-    // Zoom about the sun
-    world.pivot.set(cx, cy)
-    world.position.set(cx, cy)
-    world.scale.set(zoom)
+    stage.setZoom(zoom)
 
     // Sun shimmer
     sun.spikes.rotation = time * 0.1
     sun.glow.scale.set(5.6 * sunBody.lum * (1 + Math.sin(time * 2.5) * 0.04))
 
-    if (!paused && state.tracers) advanceTracers(bodies, cv, dt, outcomeKey, cx, cy)
+    if (!paused && state.tracers) advanceTracers(bodies, cv, dt, outcomeKey)
     syncGrains(bodies)
     syncBodies(bodies)
     drawTrails(bodies)
-    drawOverlay(outcomeKey, time)
+    stage.updateOutcome(outcomeKey, time, 'flat')
 
-    app.render()
+    stage.render()
   }
 
-  function advanceTracers(bodies, cv, dt, outcomeKey, cx, cy) {
+  function advanceTracers(bodies, cv, dt, outcomeKey) {
+    const cx = stage.W / 2, cy = stage.H / 2
     const tr = state.tracers
     const G_eff = DISK.G0 * Math.pow(10, cv.G * 0.5)
     const beta = 0.02 * bodies[0].lum * Math.pow(10, cv.c * 0.6)
@@ -289,47 +261,15 @@ export async function createPlanetaryRenderer(containerEl, W, H) {
     }
   }
 
-  function drawOverlay(outcomeKey, time) {
-    overlayG.clear()
-    if (outcomeKey === 'big-crunch') {
-      overlayG.rect(0, 0, state.W, state.H)
-        .fill({ color: 0xf87171, alpha: 0.08 + 0.04 * Math.sin(time * 3) })
-    } else if (outcomeKey === 'heat-death') {
-      overlayG.rect(0, 0, state.W, state.H)
-        .fill({ color: 0x142850, alpha: Math.min(0.18, time * 0.01) })
-    }
-  }
-
-  function resize(width, height) {
-    state.W = width; state.H = height
-    app.renderer.resize(width, height)
-    world.filterArea = new Rectangle(0, 0, width, height)
-    // The Vue component reseeds the disk after a resize, which rebuilds
-    // every position-dependent layer.
-  }
-
   function destroy() {
-    app.destroy(true, { children: true, texture: false })
+    detach()
+    root.destroy({ children: true })
   }
 
-  return { seed, update, resize, destroy }
+  return { seed, update, attach, detach, destroy }
 }
 
 // ── HELPERS ───────────────────────────────────────────────
-
-// Soft white dot — tinted per particle/sprite for every glow in the scene
-function makeDotTexture() {
-  const c = document.createElement('canvas')
-  c.width = c.height = TEX_SIZE
-  const g = c.getContext('2d')
-  const grd = g.createRadialGradient(TEX_SIZE / 2, TEX_SIZE / 2, 0, TEX_SIZE / 2, TEX_SIZE / 2, TEX_SIZE / 2)
-  grd.addColorStop(0, 'rgba(255,255,255,1)')
-  grd.addColorStop(0.3, 'rgba(255,255,255,0.6)')
-  grd.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = grd
-  g.fillRect(0, 0, TEX_SIZE, TEX_SIZE)
-  return Texture.from(c)
-}
 
 function buildSun(dotTex) {
   const root = new Container()

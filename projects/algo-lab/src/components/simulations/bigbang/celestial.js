@@ -2,6 +2,7 @@
  * Celestial body simulation for the Fine Tuning Explorer.
  * Models cosmic structure formation: gas clouds → proto-stars → stars → black holes,
  * with planet spawning, all influenced by the 10 physical constants.
+ * Physics only — rendering lives in celestialRenderer.js (PixiJS).
  */
 
 // ── CELESTIAL BODY CLASS ──────────────────────────────────
@@ -29,7 +30,9 @@ class SubParticle {
 }
 
 // ── COLORS BY TYPE ────────────────────────────────────────
-const COLORS = {
+// Single source of truth for body colors — the renderer derives its
+// tints from this map so it stays in sync with the legend palette.
+export const COLORS = {
   'gas-cloud':        { r: 100, g: 200, b: 220 },
   'dark-matter-halo': { r: 140, g: 100, b: 220 },
   'proto-star':       { r: 255, g: 180, b: 80  },
@@ -235,7 +238,7 @@ function merge(a, b, cv) {
   }
 }
 
-function bodyRadius(b) {
+export function bodyRadius(b) {
   switch (b.type) {
     case 'gas-cloud':        return Math.cbrt(b.mass) * 8
     case 'dark-matter-halo': return Math.cbrt(b.mass) * 10
@@ -246,201 +249,4 @@ function bodyRadius(b) {
     case 'planet-sterile':   return 3
     default:                 return 4
   }
-}
-
-// ── RENDERING ─────────────────────────────────────────────
-export function drawCelestialBodies(ctx, bodies, W, H, zoom, time) {
-  // Sort: draw dark matter first, then gas, then proto-stars, stars, black holes, planets on top
-  const order = { 'dark-matter-halo': 0, 'gas-cloud': 1, 'proto-star': 2, 'star': 3, 'black-hole': 4, 'planet': 5, 'planet-sterile': 5 }
-  const sorted = [...bodies].sort((a, b) => (order[a.type] || 0) - (order[b.type] || 0))
-
-  for (const b of sorted) {
-    if (!b.alive) continue
-    const r = bodyRadius(b)
-
-    switch (b.type) {
-      case 'dark-matter-halo':
-        drawDarkMatterHalo(ctx, b, r, time)
-        break
-      case 'gas-cloud':
-        drawGasCloud(ctx, b, r, time)
-        break
-      case 'proto-star':
-        drawProtoStar(ctx, b, r, time)
-        break
-      case 'star':
-        drawStar(ctx, b, r, time)
-        break
-      case 'black-hole':
-        drawBlackHole(ctx, b, r, time)
-        break
-      case 'planet':
-      case 'planet-sterile':
-        drawPlanet(ctx, b, r)
-        break
-    }
-
-    // Sub-particles
-    for (const sp of b.subParticles) {
-      const alpha = (sp.life / sp.maxLife) * 0.6
-      const c = b.type === 'black-hole' ? COLORS['black-hole'] : COLORS['star']
-      ctx.beginPath()
-      ctx.arc(sp.x, sp.y, 1.2, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${alpha})`
-      ctx.fill()
-    }
-  }
-}
-
-function drawDarkMatterHalo(ctx, b, r, time) {
-  const pulse = 1 + Math.sin(time * 1.5 + b.angle) * 0.08
-  const radius = r * pulse
-  ctx.beginPath()
-  ctx.arc(b.x, b.y, radius, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(140,100,220,0.07)'
-  ctx.lineWidth = 2
-  ctx.setLineDash([4, 6])
-  ctx.stroke()
-  ctx.setLineDash([])
-
-  // Faint inner glow
-  const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, radius * 0.6)
-  grd.addColorStop(0, 'rgba(140,100,220,0.03)')
-  grd.addColorStop(1, 'rgba(140,100,220,0)')
-  ctx.beginPath(); ctx.arc(b.x, b.y, radius * 0.6, 0, Math.PI * 2)
-  ctx.fillStyle = grd; ctx.fill()
-}
-
-function drawGasCloud(ctx, b, r, time) {
-  const pulse = 1 + Math.sin(time * 0.8 + b.angle * 3) * 0.06
-  const radius = r * pulse
-
-  // Multiple overlapping gradients for nebula feel
-  for (let i = 0; i < 3; i++) {
-    const offX = Math.cos(b.angle + i * 2.1) * radius * 0.25
-    const offY = Math.sin(b.angle + i * 2.1) * radius * 0.25
-    const grd = ctx.createRadialGradient(
-      b.x + offX, b.y + offY, 0,
-      b.x + offX, b.y + offY, radius * (0.8 + i * 0.15)
-    )
-    const tint = i === 0 ? '100,200,220' : i === 1 ? '140,180,220' : '180,140,200'
-    grd.addColorStop(0, `rgba(${tint},${0.10 - i * 0.02})`)
-    grd.addColorStop(0.5, `rgba(${tint},${0.05 - i * 0.01})`)
-    grd.addColorStop(1, `rgba(${tint},0)`)
-    ctx.beginPath(); ctx.arc(b.x + offX, b.y + offY, radius * (0.8 + i * 0.15), 0, Math.PI * 2)
-    ctx.fillStyle = grd; ctx.fill()
-  }
-
-  // Bright core dot
-  ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(1, r * 0.15), 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(180,220,240,0.15)'; ctx.fill()
-}
-
-function drawProtoStar(ctx, b, r, time) {
-  const pulse = 1 + Math.sin(time * 2.5 + b.angle) * 0.1
-  const radius = r * pulse
-  const c = COLORS['proto-star']
-
-  // Outer glow
-  const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, radius * 3)
-  grd.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0.25)`)
-  grd.addColorStop(0.3, `rgba(${c.r},${c.g},${c.b},0.08)`)
-  grd.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`)
-  ctx.beginPath(); ctx.arc(b.x, b.y, radius * 3, 0, Math.PI * 2)
-  ctx.fillStyle = grd; ctx.fill()
-
-  // Core
-  ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(2, radius), 0, Math.PI * 2)
-  ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.7)`
-  ctx.shadowColor = `rgb(${c.r},${c.g},${c.b})`; ctx.shadowBlur = radius * 2
-  ctx.fill(); ctx.shadowBlur = 0
-}
-
-function drawStar(ctx, b, r, time) {
-  const pulse = 1 + Math.sin(time * 3 + b.angle) * 0.05
-  const radius = r * pulse
-  const c = COLORS['star']
-
-  // Outer glow
-  const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, radius * 4)
-  grd.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0.35)`)
-  grd.addColorStop(0.2, `rgba(${c.r},${c.g},${c.b},0.1)`)
-  grd.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`)
-  ctx.beginPath(); ctx.arc(b.x, b.y, radius * 4, 0, Math.PI * 2)
-  ctx.fillStyle = grd; ctx.fill()
-
-  // Diffraction spikes (4-pointed)
-  ctx.save()
-  ctx.globalAlpha = 0.25 + Math.sin(time * 2) * 0.05
-  const spikeLen = radius * 5
-  for (let i = 0; i < 4; i++) {
-    const a = (Math.PI / 4) * (i * 2) + time * 0.1
-    const ex = b.x + Math.cos(a) * spikeLen
-    const ey = b.y + Math.sin(a) * spikeLen
-    const sg = ctx.createLinearGradient(b.x, b.y, ex, ey)
-    sg.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0.4)`)
-    sg.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`)
-    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ex, ey)
-    ctx.strokeStyle = sg; ctx.lineWidth = 0.8; ctx.stroke()
-  }
-  ctx.restore()
-
-  // Bright core
-  ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(2, radius * 0.8), 0, Math.PI * 2)
-  ctx.fillStyle = `rgba(255,252,248,0.95)`
-  ctx.shadowColor = `rgb(${c.r},${c.g},${c.b})`; ctx.shadowBlur = radius * 3
-  ctx.fill(); ctx.shadowBlur = 0
-}
-
-function drawBlackHole(ctx, b, r, time) {
-  const radius = r
-
-  // Accretion disk — ellipse
-  ctx.save()
-  ctx.translate(b.x, b.y)
-  ctx.rotate(b.angle * 0.5)
-  ctx.scale(1, 0.4)
-  const diskR = radius * 5
-  const grd = ctx.createRadialGradient(0, 0, radius * 0.8, 0, 0, diskR)
-  grd.addColorStop(0, 'rgba(255,160,60,0.5)')
-  grd.addColorStop(0.4, 'rgba(255,120,40,0.25)')
-  grd.addColorStop(0.7, 'rgba(180,80,200,0.1)')
-  grd.addColorStop(1, 'rgba(140,60,180,0)')
-  ctx.beginPath(); ctx.arc(0, 0, diskR, 0, Math.PI * 2)
-  ctx.fillStyle = grd; ctx.fill()
-
-  // Bright ring
-  ctx.beginPath(); ctx.arc(0, 0, radius * 2.5, 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(255,180,80,${0.3 + Math.sin(time * 4) * 0.1})`
-  ctx.lineWidth = 1.5; ctx.stroke()
-  ctx.restore()
-
-  // Dark core
-  ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(2, radius * 0.7), 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(5,2,10,0.95)'; ctx.fill()
-
-  // Event horizon glow
-  const ehGrd = ctx.createRadialGradient(b.x, b.y, radius * 0.5, b.x, b.y, radius * 1.5)
-  ehGrd.addColorStop(0, 'rgba(5,2,10,0)')
-  ehGrd.addColorStop(0.7, 'rgba(255,140,60,0.08)')
-  ehGrd.addColorStop(1, 'rgba(255,140,60,0)')
-  ctx.beginPath(); ctx.arc(b.x, b.y, radius * 1.5, 0, Math.PI * 2)
-  ctx.fillStyle = ehGrd; ctx.fill()
-}
-
-function drawPlanet(ctx, b, r) {
-  const c = b.type === 'planet' ? COLORS['planet'] : COLORS['planet-sterile']
-
-  // Orbital path
-  if (b.orbitParent && b.orbitParent.alive) {
-    ctx.beginPath()
-    ctx.arc(b.orbitParent.x, b.orbitParent.y, b.orbitRadius, 0, Math.PI * 2)
-    ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},0.06)`
-    ctx.lineWidth = 0.5; ctx.stroke()
-  }
-
-  // Planet dot
-  ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI * 2)
-  ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.8)`
-  ctx.fill()
 }

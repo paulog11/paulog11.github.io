@@ -36,8 +36,7 @@
 
     <!-- Canvas area -->
     <div class="bb-canvas-wrap" ref="canvasWrap">
-      <canvas ref="canvasEl" v-show="activeView !== 'planetary'"></canvas>
-      <div ref="pixiWrap" class="bb-pixi-wrap" v-show="activeView === 'planetary'"></div>
+      <div ref="pixiWrap" class="bb-pixi-wrap"></div>
 
       <!-- Context panel: current epoch + legend -->
       <div class="bb-info-panel">
@@ -115,13 +114,16 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS, CELESTIAL_EPOCH, PLANETARY_EPOCH } from './bigbang/constants.js'
-import { createCelestialField, celestialPhysicsStep, drawCelestialBodies } from './bigbang/celestial.js'
+import { createCelestialField, celestialPhysicsStep } from './bigbang/celestial.js'
 import { createPlanetaryDisk, planetaryPhysicsStep } from './bigbang/planetary.js'
+import { createPixiStage } from './bigbang/pixiStage.js'
+import { createPlanetaryRenderer } from './bigbang/planetaryRenderer.js'
+import { createCelestialRenderer } from './bigbang/celestialRenderer.js'
+import { createAtomRenderer } from './bigbang/atomRenderer.js'
 
-const canvasEl  = ref(null)
 const canvasWrap = ref(null)
 const pixiWrap  = ref(null)
-let ctx, W, H, animId
+let W, H, animId
 
 // ── STATE ──────────────────────────────────────────────────
 const constValues = reactive(Object.fromEntries(BB_CONSTANTS.map(c => [c.id, 0])))
@@ -132,12 +134,14 @@ const activeView  = ref('atom')
 const isPaused    = ref(false)
 let   particles   = []
 let   celestialBodies = []
-let   stars       = []
 let   celestialTime = 0
 let   planetaryBodies = []
 let   planetaryTime = 0
+let   pixiStage    = null
 let   pixiRenderer = null
-let   pixiInit     = null
+let   celRenderer  = null
+let   atomRenderer = null
+let   activeRenderer = null
 
 // ── COMPUTED ──────────────────────────────────────────────
 const outcomeKey = computed(() => {
@@ -221,33 +225,33 @@ const resetLabel = computed(() =>
 )
 
 // ── VIEW SWITCHING ───────────────────────────────────────
-async function switchView(view) {
+function switchView(view) {
   activeView.value = view
   isPaused.value = false
   if (view === 'celestial') {
+    setActiveRenderer(celRenderer)
     celestialBodies = createCelestialField(W, H, constValues)
     celestialTime = 0
+    celRenderer.seed(constValues)
   } else if (view === 'planetary') {
-    await ensurePixi()
+    setActiveRenderer(pixiRenderer)
     seedPlanetary()
+  } else {
+    setActiveRenderer(atomRenderer)
   }
 }
 
-function ensurePixi() {
-  if (!pixiInit) {
-    // Dynamic import keeps PixiJS out of the main bundle — it loads the
-    // first time the Planetary view is opened.
-    pixiInit = import('./bigbang/planetaryRenderer.js')
-      .then(m => m.createPlanetaryRenderer(pixiWrap.value, W, H))
-      .then(r => { pixiRenderer = r })
-  }
-  return pixiInit
+function setActiveRenderer(r) {
+  if (activeRenderer === r) return
+  activeRenderer?.detach()
+  activeRenderer = r
+  activeRenderer?.attach()
 }
 
 function seedPlanetary() {
   planetaryBodies = createPlanetaryDisk(W, H, constValues)
   planetaryTime = 0
-  pixiRenderer?.seed(constValues, planetaryBodies[0], W, H)
+  pixiRenderer?.seed(constValues, planetaryBodies[0])
 }
 
 function resetSim() {
@@ -257,6 +261,7 @@ function resetSim() {
   } else if (activeView.value === 'celestial') {
     celestialBodies = createCelestialField(W, H, constValues)
     celestialTime = 0
+    celRenderer?.seed(constValues)
   } else {
     seedPlanetary()
   }
@@ -309,6 +314,7 @@ function bigBang() {
     p.x += (Math.random()-0.5)*6; p.y += (Math.random()-0.5)*6
     particles.push(p)
   }
+  atomRenderer?.seed(constValues)
 }
 
 // ── PHYSICS ──────────────────────────────────────────────
@@ -387,85 +393,12 @@ function physicsStep(dt) {
   if (bbPhase.value==='expand' && bbTime.value>0.12)  bbPhase.value='settle'
 }
 
-// ── RENDER ────────────────────────────────────────────────
-function genStars() {
-  stars = Array.from({length:180}, () => ({
-    x: Math.random()*W, y: Math.random()*H,
-    r: Math.random()*1.0, a: 0.05+Math.random()*0.3
-  }))
-}
-
-function drawBG() {
-  const grd = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.7)
-  grd.addColorStop(0,'#0d0618'); grd.addColorStop(1,'#03020a')
-  ctx.fillStyle=grd; ctx.fillRect(0,0,W,H)
-  for (const s of stars) {
-    ctx.globalAlpha=s.a; ctx.fillStyle='#fff'
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill()
-  }
-  ctx.globalAlpha=1
-}
-
-function drawFlash() {
-  if (bbTime.value < 0.08) {
-    const alpha = Math.max(0, 0.95 - bbTime.value*12)
-    const grd   = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7)
-    grd.addColorStop(0,    `rgba(255,250,240,${alpha})`)
-    grd.addColorStop(0.15, `rgba(255,200,120,${alpha*0.7})`)
-    grd.addColorStop(0.5,  `rgba(200,100,255,${alpha*0.3})`)
-    grd.addColorStop(1,    `rgba(100,50,200,0)`)
-    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H)
-  }
-}
-
-function drawParticle(p) {
-  const [r,g,b] = p.baseColor
-  let glowR = p.bound ? Math.cbrt(p.mass)*3.5 : p.r
-
-  if (p.trail.length > 1) {
-    const tl = p.trail.length
-    for (let i=1;i<tl;i++) {
-      ctx.beginPath()
-      ctx.moveTo(p.trail[i-1].x, p.trail[i-1].y)
-      ctx.lineTo(p.trail[i].x,   p.trail[i].y)
-      ctx.strokeStyle=`rgba(${r},${g},${b},${(i/tl)*0.35})`
-      ctx.lineWidth=Math.max(0.5,(i/tl)*1.5); ctx.stroke()
-    }
-  }
-  const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,glowR*3.5)
-  grd.addColorStop(0,   `rgba(${r},${g},${b},0.45)`)
-  grd.addColorStop(0.4, `rgba(${r},${g},${b},0.12)`)
-  grd.addColorStop(1,   `rgba(${r},${g},${b},0)`)
-  ctx.beginPath(); ctx.arc(p.x,p.y,glowR*3.5,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill()
-
-  ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1.5,glowR),0,Math.PI*2)
-  ctx.fillStyle=`rgba(${r},${g},${b},0.95)`
-  ctx.shadowColor=`rgb(${r},${g},${b})`; ctx.shadowBlur=glowR*2.5
-  ctx.fill(); ctx.shadowBlur=0
-
-  if (p.bound && p.mass>40) {
-    ctx.font='7px "Space Mono",monospace'; ctx.fillStyle=`rgba(${r},${g},${b},0.4)`
-    ctx.textAlign='center'; ctx.fillText(`${Math.round(p.mass)}m`,p.x,p.y-glowR-5)
-  }
-}
-
-function drawOutcomeViz() {
-  const oc = outcomeKey.value
-  if (oc==='big-crunch') {
-    const pulse = 0.08+0.04*Math.sin(bbTime.value*3)
-    const grd = ctx.createRadialGradient(W/2,H/2,H*0.2,W/2,H/2,H*0.8)
-    grd.addColorStop(0,'rgba(248,113,113,0)'); grd.addColorStop(1,`rgba(248,113,113,${pulse})`)
-    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H)
-  } else if (oc==='heat-death') {
-    ctx.fillStyle=`rgba(20,40,80,${Math.min(0.18,bbTime.value*0.01)})`; ctx.fillRect(0,0,W,H)
-  }
-}
-
+// ── RENDER LOOP ───────────────────────────────────────────
 function loop() {
   animId = requestAnimationFrame(loop)
+  if (!pixiStage) return
 
   if (activeView.value === 'planetary') {
-    if (!pixiRenderer) return
     if (!isPaused.value) {
       planetaryTime += 0.016
       planetaryBodies = planetaryPhysicsStep(planetaryBodies, 0.016, constValues, W, H, outcomeKey.value)
@@ -475,20 +408,7 @@ function loop() {
     return
   }
 
-  ctx.fillStyle='rgba(3,2,10,0.4)'; ctx.fillRect(0,0,W,H)
-  drawBG()
-
-  if (activeView.value === 'atom') {
-    if (!isPaused.value) {
-      for (let s=0;s<3;s++) physicsStep(0.004/3)
-      if (particles.length===0) bigBang()
-    }
-    drawOutcomeViz(); drawFlash()
-    ctx.save()
-    ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
-    for (const p of particles) drawParticle(p)
-    ctx.restore()
-  } else {
+  if (activeView.value === 'celestial') {
     if (!isPaused.value) {
       const dt = 0.016
       celestialTime += dt
@@ -498,31 +418,37 @@ function loop() {
         celestialTime = 0
       }
     }
-    drawOutcomeViz()
-    ctx.save()
-    ctx.translate(W/2,H/2); ctx.scale(zoomLevel.value,zoomLevel.value); ctx.translate(-W/2,-H/2)
-    drawCelestialBodies(ctx, celestialBodies, W, H, zoomLevel.value, celestialTime)
-    ctx.restore()
+    celRenderer.update(celestialBodies, constValues, 0.016, celestialTime, zoomLevel.value, outcomeKey.value, isPaused.value)
+    return
   }
+
+  // Atom view
+  if (!isPaused.value) {
+    for (let s=0;s<3;s++) physicsStep(0.004/3)
+    if (particles.length===0) bigBang()
+  }
+  atomRenderer.update(particles, constValues, bbTime.value, zoomLevel.value, outcomeKey.value, isPaused.value)
 }
 
 function resize() {
-  // Measure the wrapper, not the canvas — the canvas is display:none in
-  // the Planetary view and would report 0×0.
   W = canvasWrap.value.offsetWidth
   H = canvasWrap.value.offsetHeight
-  canvasEl.value.width  = W
-  canvasEl.value.height = H
-  genStars()
-  if (pixiRenderer) {
-    pixiRenderer.resize(W, H)
+  if (pixiStage) {
+    pixiStage.resize(W, H)
+    pixiStage.seedStars()
     if (activeView.value === 'planetary') seedPlanetary()
   }
 }
 
-onMounted(() => {
-  ctx = canvasEl.value.getContext('2d')
-  resize()
+onMounted(async () => {
+  W = canvasWrap.value.offsetWidth
+  H = canvasWrap.value.offsetHeight
+  pixiStage = await createPixiStage(pixiWrap.value, W, H)
+  pixiRenderer = createPlanetaryRenderer(pixiStage)
+  celRenderer = createCelestialRenderer(pixiStage)
+  atomRenderer = createAtomRenderer(pixiStage)
+  pixiStage.seedStars()
+  setActiveRenderer(atomRenderer)
   bigBang()
   canvasWrap.value.addEventListener('wheel', e => {
     e.preventDefault(); zoom(e.deltaY < 0 ? 0.1 : -0.1)
@@ -534,9 +460,12 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(animId)
   window.removeEventListener('resize', resize)
-  pixiRenderer?.destroy()
+  pixiStage?.destroy()
+  pixiStage = null
   pixiRenderer = null
-  pixiInit = null
+  celRenderer = null
+  atomRenderer = null
+  activeRenderer = null
 })
 </script>
 
@@ -618,7 +547,6 @@ onUnmounted(() => {
 
 /* ── Canvas wrap ── */
 .bb-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
-canvas { display: block; width: 100%; height: 100%; }
 .bb-pixi-wrap { position: absolute; inset: 0; }
 .bb-pixi-wrap :deep(canvas) { display: block; width: 100%; height: 100%; }
 
