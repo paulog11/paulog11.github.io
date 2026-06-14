@@ -1,13 +1,20 @@
 /**
  * PixiJS renderer for the Atom view (early-universe epochs).
  * Renders the BBParticle array from the component — trails, glows, mass
- * labels, the bang flash — and adds a visual-only epoch haze: ~10K hot
- * particles whose color and spread are pure functions of bbTime, so the
- * fireball cools from white-hot (Planck) through orange (quark/hadron)
- * and fades out by the end of nucleosynthesis. Being stateless in time,
- * the haze is correct immediately after jumpToEpoch fast-forwards.
+ * labels, the bang flash — and adds three visual-only layers that match the
+ * fidelity of the Celestial/Planetary views:
+ *   1. a ~10K gravitating "matter field" that streams into and accretes onto
+ *      the bound matter clumps (port of Celestial's wisp layer);
+ *   2. richer per-type bodies — dark-matter dashed halos, photon streaks, and
+ *      a warm fusion glow that ignites on heavy clumps;
+ *   3. epoch events — a recombination/CMB shell at the BBN→Structure boundary
+ *      and merge/annihilation sparks.
+ * Plus the original epoch haze (~10K hot particles, a pure function of bbTime
+ * so it stays correct after jumpToEpoch fast-forwards). Physics is untouched.
  */
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text, Texture } from 'pixi.js'
+
+const PARKED = -100000
 
 const HAZE_COUNT = 10000
 const HAZE_OFF_AT = 0.27 // past nucleosynthesis the haze is gone — skip everything
@@ -21,9 +28,26 @@ const HAZE_KEYS = [
   [0.25, 255, 96, 56, 0.00],
 ]
 
+const FIELD_COUNT = 10000
+const FIELD_TINTS = [0x6496c8, 0x88a8d8, 0xb0b0e0]
+
+const SPARK_COUNT = 120
+const RING_REF_R = 32 // dashed-halo texture is baked at this radius
+
+const DM_TINT = 0x8c64dc
+const PHOTON_TINT = 0xfff0b4
+const FUSION_TINT = 0xff9a50
+
+// Recombination shell window — centred on the BBN→Structure boundary (0.25),
+// where the real universe becomes transparent (last scattering / CMB)
+const RECOMB_START = 0.20
+const RECOMB_END = 0.34
+
 export function createAtomRenderer(stage) {
   const dotTex = stage.dotTex
   const hardDotTex = stage.hardDotTex
+  const dashedRingTex = makeDashedRingTexture()
+  const shellTex = makeShellTexture()
 
   // Bang flash — unzoomed, under the world (canvas drew it before the
   // zoom transform)
@@ -34,13 +58,49 @@ export function createAtomRenderer(stage) {
   const root = new Container()
   const hazePC = new ParticleContainer({ dynamicProperties: { position: true, color: true } })
   hazePC.blendMode = 'add'
+  const fieldPC = new ParticleContainer({ dynamicProperties: { position: true } })
+  fieldPC.blendMode = 'add'
   const trailG = new Graphics()
   const bodiesC = new Container()
-  root.addChild(hazePC, trailG, bodiesC)
+  const sparkPC = new ParticleContainer({ dynamicProperties: { position: true, scale: true, color: true } })
+  sparkPC.blendMode = 'add'
+  const recombSprite = new Sprite(shellTex)
+  recombSprite.anchor.set(0.5)
+  recombSprite.blendMode = 'add'
+  recombSprite.tint = 0xbfa8ff
+  recombSprite.visible = false
+  root.addChild(hazePC, fieldPC, trailG, bodiesC, sparkPC, recombSprite)
 
   const state = {
     views: new Map(), // BBParticle → view
     haze: null,
+    field: null,
+    sparks: null,
+    frame: 0,
+    animTime: 0, // cosmetic clock — only advances while running, so pause freezes
+  }
+
+  // Spark pool (lifetimes are short; 120 covers bursty merging)
+  {
+    const n = SPARK_COUNT
+    const sparks = {
+      n,
+      life: new Float32Array(n),
+      maxLife: new Float32Array(n),
+      vx: new Float32Array(n), vy: new Float32Array(n),
+      parts: new Array(n),
+      next: 0,
+    }
+    for (let i = 0; i < n; i++) {
+      const p = new Particle({
+        texture: dotTex, x: PARKED, y: PARKED,
+        scaleX: 0.06, scaleY: 0.06, anchorX: 0.5, anchorY: 0.5,
+        tint: 0xffffff, alpha: 0,
+      })
+      sparks.parts[i] = p
+      sparkPC.addParticle(p)
+    }
+    state.sparks = sparks
   }
 
   function attach() {
@@ -55,9 +115,17 @@ export function createAtomRenderer(stage) {
     stage.setBackgroundGradient(false)
   }
 
-  // Recompute the haze velocity field — mirrors the bigBang() speed
-  // formula so the fireball expands with the H₀/Λ sliders
+  // Recompute the haze + matter-field seeds — the haze velocity field mirrors
+  // the bigBang() speed formula so the fireball expands with the H₀/Λ sliders.
+  // Also clears stale body views so a reset/jump doesn't spark or leak.
   function seed(cv) {
+    seedHaze(cv)
+    seedField()
+    for (const view of state.views.values()) view.root.destroy({ children: true })
+    state.views.clear()
+  }
+
+  function seedHaze(cv) {
     if (!state.haze) {
       const n = HAZE_COUNT
       const haze = {
@@ -94,6 +162,8 @@ export function createAtomRenderer(stage) {
   }
 
   function update(particles, cv, bbTime, zoom, outcomeKey, paused) {
+    state.frame++
+    if (!paused) state.animTime += 0.016
     stage.setZoom(zoom)
 
     // Bang flash — pure function of bbTime
@@ -106,14 +176,21 @@ export function createAtomRenderer(stage) {
       flashSprite.visible = false
     }
 
+    if (!paused && state.field) advanceField(particles, 0.016)
+    // Hide the field under the bang flash, fade it in as structure forms
+    fieldPC.alpha = Math.min(1, Math.max(0, (bbTime - 0.01) * 5))
+
     updateHaze(bbTime)
     drawTrails(particles)
     syncBodies(particles)
+    if (!paused) advanceSparks(0.016)
+    updateRecomb(bbTime)
     stage.updateOutcome(outcomeKey, bbTime, 'vignette')
 
     stage.render()
   }
 
+  // ── EPOCH HAZE ──────────────────────────────────────────
   function updateHaze(bbTime) {
     const h = state.haze
     if (!h) return
@@ -144,21 +221,129 @@ export function createAtomRenderer(stage) {
     }
   }
 
+  // ── GRAVITATING MATTER FIELD ────────────────────────────
+  function seedField() {
+    if (!state.field) {
+      const n = FIELD_COUNT
+      const field = {
+        n,
+        x: new Float32Array(n), y: new Float32Array(n),
+        vx: new Float32Array(n), vy: new Float32Array(n),
+        targets: new Array(n).fill(null),
+        parts: new Array(n),
+      }
+      for (let i = 0; i < n; i++) {
+        const scale = 0.04 + Math.random() * 0.06
+        const p = new Particle({
+          texture: dotTex, x: 0, y: 0,
+          scaleX: scale, scaleY: scale, anchorX: 0.5, anchorY: 0.5,
+          tint: FIELD_TINTS[(Math.random() * FIELD_TINTS.length) | 0],
+          alpha: 0.03 + Math.random() * 0.04,
+        })
+        field.parts[i] = p
+        fieldPC.addParticle(p)
+      }
+      state.field = field
+    }
+    const f = state.field
+    for (let i = 0; i < f.n; i++) {
+      f.x[i] = Math.random() * stage.W
+      f.y[i] = Math.random() * stage.H
+      const a = Math.random() * Math.PI * 2
+      const s = 1 + Math.random() * 3
+      f.vx[i] = Math.cos(a) * s
+      f.vy[i] = Math.sin(a) * s
+      f.targets[i] = null
+      f.parts[i].x = f.x[i]
+      f.parts[i].y = f.y[i]
+    }
+  }
+
+  function respawnField(f, i) {
+    const side = (Math.random() * 4) | 0
+    if (side === 0) { f.x[i] = Math.random() * stage.W; f.y[i] = -10 }
+    else if (side === 1) { f.x[i] = Math.random() * stage.W; f.y[i] = stage.H + 10 }
+    else if (side === 2) { f.x[i] = -10; f.y[i] = Math.random() * stage.H }
+    else { f.x[i] = stage.W + 10; f.y[i] = Math.random() * stage.H }
+    const a = Math.atan2(stage.H / 2 - f.y[i], stage.W / 2 - f.x[i]) + (Math.random() - 0.5) * 1.2
+    const s = 2 + Math.random() * 4
+    f.vx[i] = Math.cos(a) * s
+    f.vy[i] = Math.sin(a) * s
+    f.targets[i] = null
+  }
+
+  function isFieldAttractor(p) {
+    return p.alive && p.bound && p.type === 'matter'
+  }
+
+  function advanceField(particles, dt) {
+    const f = state.field
+    const attractors = particles.filter(isFieldAttractor)
+    const stride = state.frame & 15
+
+    for (let i = 0; i < f.n; i++) {
+      // Strided nearest-attractor re-pick: 1/16 of the field per frame
+      if ((i & 15) === stride && attractors.length) {
+        let best = null, bd = Infinity
+        for (const b of attractors) {
+          const dx = b.x - f.x[i], dy = b.y - f.y[i]
+          const d2 = dx * dx + dy * dy
+          if (d2 < bd) { bd = d2; best = b }
+        }
+        f.targets[i] = best
+      }
+      const t = f.targets[i]
+      if (t && isFieldAttractor(t)) {
+        const dx = t.x - f.x[i], dy = t.y - f.y[i]
+        const d = Math.sqrt(dx * dx + dy * dy) + 0.01
+        if (d < t.r * 1.5) {
+          // Accreted — recycle at the edges so the field never piles up
+          respawnField(f, i)
+          f.parts[i].x = f.x[i]; f.parts[i].y = f.y[i]
+          continue
+        }
+        const acc = 60 * t.mass / Math.max(d, 40)
+        f.vx[i] += dx / d * acc * dt
+        f.vy[i] += dy / d * acc * dt
+      }
+      // Gentle damping + speed cap keep streams orderly
+      f.vx[i] *= 0.99; f.vy[i] *= 0.99
+      const sp2 = f.vx[i] * f.vx[i] + f.vy[i] * f.vy[i]
+      if (sp2 > 576) {
+        const k = 24 / Math.sqrt(sp2)
+        f.vx[i] *= k; f.vy[i] *= k
+      }
+      f.x[i] += f.vx[i] * dt
+      f.y[i] += f.vy[i] * dt
+      if (f.x[i] < -80 || f.x[i] > stage.W + 80 || f.y[i] < -80 || f.y[i] > stage.H + 80) {
+        respawnField(f, i)
+      }
+      f.parts[i].x = f.x[i]
+      f.parts[i].y = f.y[i]
+    }
+  }
+
+  // ── TRAILS ──────────────────────────────────────────────
   function drawTrails(particles) {
     trailG.clear()
     for (const p of particles) {
       const t = p.trail
       if (!t || t.length < 2) continue
-      const [r, g, b] = p.baseColor
+      const isPhoton = p.type === 'photon'
+      const [r, g, b] = isPhoton ? [255, 240, 180] : p.baseColor
       const tint = (r << 16) | (g << 8) | b
       const tl = t.length
+      // Photons read as fast, bright light streaks; matter as soft trails
+      const wMul = isPhoton ? 2.4 : 1.5
+      const aMul = isPhoton ? 0.55 : 0.35
       for (let i = 1; i < tl; i++) {
         trailG.moveTo(t[i - 1].x, t[i - 1].y).lineTo(t[i].x, t[i].y)
-          .stroke({ width: Math.max(0.5, (i / tl) * 1.5), color: tint, alpha: (i / tl) * 0.35 })
+          .stroke({ width: Math.max(0.5, (i / tl) * wMul), color: tint, alpha: (i / tl) * aMul })
       }
     }
   }
 
+  // ── BODY VIEWS ──────────────────────────────────────────
   function syncBodies(particles) {
     for (const view of state.views.values()) view.seen = false
     for (const p of particles) {
@@ -170,12 +355,47 @@ export function createAtomRenderer(stage) {
         bodiesC.addChild(view.root)
       }
       view.seen = true
+      view.lastX = p.x; view.lastY = p.y
       const glowR = p.bound ? Math.cbrt(p.mass) * 3.5 : p.r
-      view.glow.width = view.glow.height = glowR * 3.5 * 2
-      view.core.width = view.core.height = Math.max(1.5, glowR) * 2
       view.root.position.set(p.x, p.y)
-      // Mass label for heavy bound clumps — created lazily, text updated
-      // only when the rounded mass changes
+
+      if (p.type === 'dark') {
+        view.glow.width = view.glow.height = glowR * 3.5 * 2
+        const ringR = glowR * 1.6
+        view.ring.scale.set(ringR / RING_REF_R)
+        view.ring.rotation = state.animTime * 0.5
+        view.core.width = view.core.height = Math.max(1.2, glowR * 0.6) * 2
+      } else if (p.type === 'photon') {
+        // Orient + stretch the glow into a streak along the velocity
+        const ang = Math.atan2(p.vy, p.vx)
+        const len = Math.max(8, glowR * 6)
+        const thick = Math.max(2, glowR * 1.5)
+        view.glow.rotation = ang
+        view.glow.width = len
+        view.glow.height = thick
+        view.core.width = view.core.height = Math.max(1.5, glowR) * 2
+      } else {
+        // matter
+        view.glow.width = view.glow.height = glowR * 3.5 * 2
+        view.core.width = view.core.height = Math.max(1.5, glowR) * 2
+        // Fusion glow ignites on heavy bound clumps — created lazily
+        if (p.bound && p.mass > 30) {
+          if (!view.fusion) {
+            view.fusion = new Sprite({ texture: dotTex, anchor: 0.5 })
+            view.fusion.blendMode = 'add'
+            view.fusion.tint = FUSION_TINT
+            view.root.addChildAt(view.fusion, 0)
+          }
+          view.fusion.visible = true
+          view.fusion.alpha = Math.min(0.5, Math.max(0, (p.mass - 30) / 120))
+          view.fusion.width = view.fusion.height = glowR * 2 * 2
+        } else if (view.fusion) {
+          view.fusion.visible = false
+        }
+      }
+
+      // Mass label for heavy bound clumps — created lazily, text updated only
+      // when the rounded mass changes
       if (p.bound && p.mass > 40) {
         if (!view.label) {
           const [r, g, b] = p.baseColor
@@ -200,6 +420,14 @@ export function createAtomRenderer(stage) {
     }
     for (const [particle, view] of state.views) {
       if (!view.seen) {
+        // Merge / annihilation spark — only for on-screen non-photon deaths
+        // (photons die far off-screen at the cull margin; exclude them)
+        if (view.lastType !== 'photon' &&
+            view.lastX > -20 && view.lastX < stage.W + 20 &&
+            view.lastY > -20 && view.lastY < stage.H + 20) {
+          const [r, g, b] = particle.baseColor
+          spawnSparks(view.lastX, view.lastY, (r << 16) | (g << 8) | b)
+        }
         view.root.destroy({ children: true })
         state.views.delete(particle)
       }
@@ -210,15 +438,87 @@ export function createAtomRenderer(stage) {
     const [r, g, b] = p.baseColor
     const tint = (r << 16) | (g << 8) | b
     const root = new Container()
-    const glow = new Sprite({ texture: dotTex, anchor: 0.5 })
-    glow.blendMode = 'add'
-    glow.tint = tint
-    glow.alpha = 0.45
-    const core = new Sprite({ texture: hardDotTex, anchor: 0.5 })
-    core.tint = tint
-    core.alpha = 0.95
-    root.addChild(glow, core)
-    return { root, glow, core, label: null, lastMass: 0, seen: true }
+    const view = { root, type: p.type, lastType: p.type, label: null, lastMass: 0, seen: true, lastX: p.x, lastY: p.y }
+
+    if (p.type === 'dark') {
+      // Invisible scaffold — diffuse glow + dashed halo + faint core
+      const glow = new Sprite({ texture: dotTex, anchor: 0.5 })
+      glow.blendMode = 'add'
+      glow.tint = DM_TINT
+      glow.alpha = 0.05
+      const ring = new Sprite({ texture: dashedRingTex, anchor: 0.5 })
+      ring.tint = DM_TINT
+      ring.alpha = 0.10
+      const core = new Sprite({ texture: hardDotTex, anchor: 0.5 })
+      core.tint = tint
+      core.alpha = 0.3
+      root.addChild(glow, ring, core)
+      view.glow = glow; view.ring = ring; view.core = core
+    } else {
+      const isPhoton = p.type === 'photon'
+      const glow = new Sprite({ texture: dotTex, anchor: 0.5 })
+      glow.blendMode = 'add'
+      glow.tint = isPhoton ? PHOTON_TINT : tint
+      glow.alpha = isPhoton ? 0.5 : 0.45
+      const core = new Sprite({ texture: hardDotTex, anchor: 0.5 })
+      core.tint = isPhoton ? PHOTON_TINT : tint
+      core.alpha = 0.95
+      root.addChild(glow, core)
+      view.glow = glow; view.core = core; view.fusion = null
+    }
+    return view
+  }
+
+  // ── SPARKS ──────────────────────────────────────────────
+  function spawnSparks(x, y, tint) {
+    const s = state.sparks
+    const count = 4 + ((Math.random() * 3) | 0)
+    for (let k = 0; k < count; k++) {
+      const idx = s.next
+      s.next = (s.next + 1) % s.n
+      const a = Math.random() * Math.PI * 2
+      const sp = 30 + Math.random() * 60
+      s.vx[idx] = Math.cos(a) * sp
+      s.vy[idx] = Math.sin(a) * sp
+      s.life[idx] = s.maxLife[idx] = 0.3 + Math.random() * 0.2
+      const p = s.parts[idx]
+      p.x = x; p.y = y
+      p.tint = tint
+      p.alpha = 0.9
+      const sc = 0.05 + Math.random() * 0.05
+      p.scaleX = p.scaleY = sc
+    }
+  }
+
+  function advanceSparks(dt) {
+    const s = state.sparks
+    for (let i = 0; i < s.n; i++) {
+      if (s.life[i] <= 0) continue
+      s.life[i] -= dt
+      const p = s.parts[i]
+      if (s.life[i] <= 0) {
+        p.x = PARKED; p.y = PARKED; p.alpha = 0
+        continue
+      }
+      p.x += s.vx[i] * dt
+      p.y += s.vy[i] * dt
+      s.vx[i] *= 0.92; s.vy[i] *= 0.92
+      p.alpha = (s.life[i] / s.maxLife[i]) * 0.9
+    }
+  }
+
+  // ── RECOMBINATION SHELL ─────────────────────────────────
+  function updateRecomb(bbTime) {
+    if (bbTime < RECOMB_START || bbTime > RECOMB_END) {
+      recombSprite.visible = false
+      return
+    }
+    const phase = (bbTime - RECOMB_START) / (RECOMB_END - RECOMB_START)
+    recombSprite.visible = true
+    recombSprite.position.set(stage.W / 2, stage.H / 2)
+    const radius = phase * Math.max(stage.W, stage.H) * 0.8
+    recombSprite.width = recombSprite.height = Math.max(1, radius * 2)
+    recombSprite.alpha = Math.sin(phase * Math.PI) * 0.3
   }
 
   function destroy() {
@@ -229,6 +529,8 @@ export function createAtomRenderer(stage) {
 
   return { seed, update, attach, detach, destroy }
 }
+
+// ── TEXTURES ──────────────────────────────────────────────
 
 // Port of canvas drawFlash(): white core → orange → purple → transparent
 function makeFlashTexture() {
@@ -241,6 +543,40 @@ function makeFlashTexture() {
   grd.addColorStop(0.15, 'rgba(255,200,120,0.7)')
   grd.addColorStop(0.5, 'rgba(200,100,255,0.3)')
   grd.addColorStop(1, 'rgba(100,50,200,0)')
+  g.fillStyle = grd
+  g.fillRect(0, 0, S, S)
+  return Texture.from(c)
+}
+
+// Dashed circle baked once for dark-matter halos (port of celestial's)
+function makeDashedRingTexture() {
+  const S = 80
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')
+  g.strokeStyle = '#fff'
+  g.lineWidth = 2
+  g.setLineDash([4, 6])
+  g.beginPath()
+  g.arc(S / 2, S / 2, RING_REF_R, 0, Math.PI * 2)
+  g.stroke()
+  return Texture.from(c)
+}
+
+// Thin crisp ring for the expanding recombination shell — a transparent
+// interior with a narrow bright band near the edge, so it reads as a
+// shockwave outline rather than a filled disc
+function makeShellTexture() {
+  const S = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const g = c.getContext('2d')
+  const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grd.addColorStop(0, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.80, 'rgba(255,255,255,0)')
+  grd.addColorStop(0.88, 'rgba(255,255,255,1)')
+  grd.addColorStop(0.96, 'rgba(255,255,255,0)')
+  grd.addColorStop(1, 'rgba(255,255,255,0)')
   g.fillStyle = grd
   g.fillRect(0, 0, S, S)
   return Texture.from(c)
