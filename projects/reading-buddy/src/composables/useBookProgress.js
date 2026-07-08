@@ -169,7 +169,6 @@ export function useBookProgress(book) {
     resetProgress,
     nextChapter,
     progress,
-    visibleCharacterKeys,
     characterProfiles,
     brothersTimeline,
     unlockedChaptersFlat,

@@ -1,6 +1,7 @@
 export default {
   id: 'jesus-for-japan',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'Jesus for Japan',
   author: 'Mariana Nesbitt',
   coverEmoji: '🗾',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'the-cultural-gap',
       title: 'The Cultural Gap',
-      japanese: '文化の壁 (Bunka no Kabe)',
+      label: '文化の壁 (Bunka no Kabe)',
       subtitle: 'Why Christianity Feels Foreign in Japan',
       steps: {
         summary: {
@@ -40,7 +41,7 @@ export default {
     {
       id: 'japanese-worldview',
       title: 'The Japanese Worldview',
-      japanese: '世界観 (Sekaikan)',
+      label: '世界観 (Sekaikan)',
       subtitle: 'Shinto, Buddhism, and the Shape of Japanese Spirituality',
       steps: {
         summary: {
@@ -70,7 +71,7 @@ export default {
     {
       id: 'shame-and-the-gospel',
       title: 'Shame and the Gospel',
-      japanese: '恥と福音 (Haji to Fukuin)',
+      label: '恥と福音 (Haji to Fukuin)',
       subtitle: 'Reframing Salvation for a Shame Culture',
       steps: {
         summary: {
@@ -100,7 +101,7 @@ export default {
     {
       id: 'group-harmony',
       title: 'Group Harmony and Faith',
-      japanese: '和 (Wa)',
+      label: '和 (Wa)',
       subtitle: 'The Cost of Believing Alone',
       steps: {
         summary: {
@@ -130,7 +131,7 @@ export default {
     {
       id: 'ancestor-veneration',
       title: 'Ancestor Veneration',
-      japanese: '先祖崇拝 (Senzo Sūhai)',
+      label: '先祖崇拝 (Senzo Sūhai)',
       subtitle: 'Navigating Family Religion and Church',
       steps: {
         summary: {
@@ -160,7 +161,7 @@ export default {
     {
       id: 'contextualizing-jesus',
       title: 'Contextualizing Jesus',
-      japanese: 'イエスの文脈化 (Iesu no Bunmyakuka)',
+      label: 'イエスの文脈化 (Iesu no Bunmyakuka)',
       subtitle: 'Presenting Christ Within Japanese Categories',
       steps: {
         summary: {
@@ -190,7 +191,7 @@ export default {
     {
       id: 'witness-in-japan',
       title: 'Witness in Japan',
-      japanese: '証し (Akashi)',
+      label: '証し (Akashi)',
       subtitle: 'Practical Approaches to Sharing Faith in Japanese Soil',
       steps: {
         summary: {

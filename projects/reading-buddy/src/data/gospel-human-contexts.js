@@ -1,6 +1,7 @@
 export default {
   id: 'gospel-human-contexts',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'The Gospel in Human Contexts',
   author: 'Paul G. Hiebert',
   coverEmoji: '🌍',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'human-exegesis',
       title: 'Human Exegesis',
-      japanese: '人間の釈義',
+      label: '人間の釈義',
       subtitle: 'Reading People as Carefully as We Read Scripture',
       steps: {
         summary: {
@@ -40,7 +41,7 @@ export default {
     {
       id: 'missional-theology',
       title: 'Missional Theology',
-      japanese: '宣教神学',
+      label: '宣教神学',
       subtitle: 'A Third Way of Doing Theology',
       steps: {
         summary: {
@@ -70,7 +71,7 @@ export default {
     {
       id: 'changing-views',
       title: 'Changing Views of the Other',
-      japanese: '他者理解の変遷',
+      label: '他者理解の変遷',
       subtitle: 'How the West Has Seen—and Misread—Non-Western People',
       steps: {
         summary: {
@@ -100,7 +101,7 @@ export default {
     {
       id: 'early-anthropology',
       title: 'Early Anthropology and Missions',
-      japanese: '初期人類学',
+      label: '初期人類学',
       subtitle: 'How Evolutionary Frameworks Shaped Missionary Practice',
       steps: {
         summary: {
@@ -130,7 +131,7 @@ export default {
     {
       id: 'recent-anthropology',
       title: 'Recent Anthropology and Missions',
-      japanese: '現代人類学',
+      label: '現代人類学',
       subtitle: 'Dynamic Cultures, Local Agency, and the Limits of the Outside View',
       steps: {
         summary: {
@@ -160,7 +161,7 @@ export default {
     {
       id: 'systems-approach',
       title: 'A Systems Approach to Human Contexts',
-      japanese: 'システム的理解',
+      label: 'システム的理解',
       subtitle: 'Why Changing One Thing Changes Everything',
       steps: {
         summary: {
@@ -190,7 +191,7 @@ export default {
     {
       id: 'research-methods',
       title: 'Research Methods for Human Exegesis',
-      japanese: '調査方法論',
+      label: '調査方法論',
       subtitle: 'The Practical Skills of Understanding Another Culture',
       steps: {
         summary: {
@@ -218,7 +219,7 @@ export default {
     {
       id: 'intercultural-mediation',
       title: 'Mission as Intercultural Mediation',
-      japanese: '異文化間仲介',
+      label: '異文化間仲介',
       subtitle: 'From One-Way Transmission to Two-Way Bridge',
       steps: {
         summary: {
@@ -248,7 +249,7 @@ export default {
     {
       id: 'glocal-mediation',
       title: 'Missions as Glocal Mediation',
-      japanese: 'グローカル宣教',
+      label: 'グローカル宣教',
       subtitle: 'When Local and Global Are No Longer Separable',
       steps: {
         summary: {
@@ -278,7 +279,7 @@ export default {
     {
       id: 'global-mediators',
       title: 'Missionaries as Global Mediators',
-      japanese: '超文化的仲介者',
+      label: '超文化的仲介者',
       subtitle: 'The Formation and Identity of the In-Between Person',
       steps: {
         summary: {

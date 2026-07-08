@@ -1,6 +1,7 @@
 export default {
   id: 'japanese-culture',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'Japanese Culture',
   author: 'Roger J. Davies',
   coverEmoji: '⛩️',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'origins',
       title: 'Origins of the Japanese',
-      japanese: '日本人の起源',
+      label: '日本人の起源',
       subtitle: 'Where the Japanese Came From',
       steps: {
         summary: {
@@ -39,7 +40,7 @@ export default {
     {
       id: 'cultural-history',
       title: 'Approaches to Japanese Cultural History',
-      japanese: '日本文化史',
+      label: '日本文化史',
       subtitle: 'Frameworks for Understanding Japan',
       steps: {
         summary: {
@@ -68,7 +69,7 @@ export default {
     {
       id: 'shinto',
       title: 'Shinto',
-      japanese: '神道',
+      label: '神道',
       subtitle: 'The Way of the Gods',
       steps: {
         summary: {
@@ -98,7 +99,7 @@ export default {
     {
       id: 'buddhism',
       title: 'Buddhism',
-      japanese: '仏教',
+      label: '仏教',
       subtitle: 'The Path to Enlightenment',
       steps: {
         summary: {
@@ -128,7 +129,7 @@ export default {
     {
       id: 'taoism',
       title: 'Taoism',
-      japanese: '道教',
+      label: '道教',
       subtitle: 'The Hidden Current',
       steps: {
         summary: {
@@ -158,7 +159,7 @@ export default {
     {
       id: 'zen',
       title: 'Zen',
-      japanese: '禅',
+      label: '禅',
       subtitle: 'Direct Pointing at the Mind',
       steps: {
         summary: {
@@ -186,7 +187,7 @@ export default {
     {
       id: 'confucianism',
       title: 'Confucianism',
-      japanese: '儒教',
+      label: '儒教',
       subtitle: 'The Social Order',
       steps: {
         summary: {
@@ -216,7 +217,7 @@ export default {
     {
       id: 'western-influences',
       title: 'Western Influences',
-      japanese: '西洋の影響',
+      label: '西洋の影響',
       subtitle: 'The Modern Layer',
       steps: {
         summary: {

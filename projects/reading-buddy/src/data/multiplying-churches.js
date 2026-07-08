@@ -1,6 +1,7 @@
 export default {
   id: 'multiplying-churches',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'Multiplying Churches in Japanese Soil',
   author: 'John Wm. Mehn',
   coverEmoji: '✝️',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'gospel-penetration',
       title: 'Gospel Penetration in Japanese Soil',
-      japanese: '福音の浸透',
+      label: '福音の浸透',
       subtitle: 'Why 500 Years Yielded 1%',
       steps: {
         summary: {
@@ -40,7 +41,7 @@ export default {
     {
       id: 'church-in-japan',
       title: 'The Church in Japanese Soil',
-      japanese: '日本の教会',
+      label: '日本の教会',
       subtitle: 'Health, Relevance, and the 0.84% Reality',
       steps: {
         summary: {
@@ -70,7 +71,7 @@ export default {
     {
       id: 'religious-movements',
       title: 'Japanese Religious Movements',
-      japanese: '宗教運動',
+      label: '宗教運動',
       subtitle: 'Lessons from Soka Gakkai and Tenrikyo',
       steps: {
         summary: {
@@ -100,7 +101,7 @@ export default {
     {
       id: 'strategic-perspectives',
       title: 'Strategic Perspectives on Church Planting',
-      japanese: '戦略的視点',
+      label: '戦略的視点',
       subtitle: 'Principles That Have Worked',
       steps: {
         summary: {
@@ -130,7 +131,7 @@ export default {
     {
       id: 'effective-models',
       title: 'Effective Models of Reproducing Churches',
-      japanese: '再生モデル',
+      label: '再生モデル',
       subtitle: 'Six Approaches That Multiply',
       steps: {
         summary: {
@@ -160,7 +161,7 @@ export default {
     {
       id: 'leaders',
       title: 'Leaders Reproducing Churches',
-      japanese: 'リーダーシップ',
+      label: 'リーダーシップ',
       subtitle: 'What Effective Japanese Church Planters Share',
       steps: {
         summary: {
@@ -188,7 +189,7 @@ export default {
     {
       id: 'future-challenges',
       title: 'Future Challenges for Multiplying Churches',
-      japanese: '将来の課題',
+      label: '将来の課題',
       subtitle: 'What Must Change for Growth to Happen',
       steps: {
         summary: {

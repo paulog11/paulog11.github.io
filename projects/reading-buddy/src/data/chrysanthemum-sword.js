@@ -1,6 +1,7 @@
 export default {
   id: 'chrysanthemum-sword',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'The Chrysanthemum and the Sword',
   author: 'Ruth Benedict',
   coverEmoji: '\u2694\uFE0F',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'assignment-japan',
       title: 'Assignment: Japan',
-      japanese: '\u65E5\u672C\u7814\u7A76 (Nihon Kenky\u016B)',
+      label: '\u65E5\u672C\u7814\u7A76 (Nihon Kenky\u016B)',
       subtitle: 'Reading a Culture Without Setting Foot In It',
       steps: {
         summary: {
@@ -39,7 +40,7 @@ export default {
     {
       id: 'japanese-in-the-war',
       title: 'The Japanese in the War',
-      japanese: '\u6226\u6642\u306E\u7CBE\u795E (Senji no Seishin)',
+      label: '\u6226\u6642\u306E\u7CBE\u795E (Senji no Seishin)',
       subtitle: "Honor, Surrender, and the Warrior\u2019s Code",
       steps: {
         summary: {
@@ -68,7 +69,7 @@ export default {
     {
       id: 'taking-proper-station',
       title: "Taking One\u2019s Proper Station",
-      japanese: '\u5206 (Bun)',
+      label: '\u5206 (Bun)',
       subtitle: 'Hierarchy as the Natural Order of Things',
       steps: {
         summary: {
@@ -97,7 +98,7 @@ export default {
     {
       id: 'meiji-reform',
       title: 'The Meiji Reform',
-      japanese: '\u660E\u6CBB\u7DAD\u65B0 (Meiji Ishin)',
+      label: '\u660E\u6CBB\u7DAD\u65B0 (Meiji Ishin)',
       subtitle: 'Modernization Without Losing the Hierarchy',
       steps: {
         summary: {
@@ -126,7 +127,7 @@ export default {
     {
       id: 'on-obligation',
       title: 'Debtor to the Ages and the World',
-      japanese: '\u6069 (On)',
+      label: '\u6069 (On)',
       subtitle: 'The Infinite Debt That Cannot Be Repaid',
       steps: {
         summary: {
@@ -155,7 +156,7 @@ export default {
     {
       id: 'ko-filial-piety',
       title: 'Repaying -ko on One Ten-thousandth',
-      japanese: '\u5B5D (Ko)',
+      label: '\u5B5D (Ko)',
       subtitle: 'Filial Piety as a Moral Foundation',
       steps: {
         summary: {
@@ -184,7 +185,7 @@ export default {
     {
       id: 'circle-of-feelings',
       title: 'The Circle of Human Feelings',
-      japanese: '\u4EBA\u60C5 (Ninjo)',
+      label: '\u4EBA\u60C5 (Ninjo)',
       subtitle: 'When Desire and Duty Pull in Opposite Directions',
       steps: {
         summary: {
@@ -213,7 +214,7 @@ export default {
     {
       id: 'clearing-ones-name',
       title: "Clearing One\u2019s Name",
-      japanese: '\u6065 (Haji)',
+      label: '\u6065 (Haji)',
       subtitle: 'Shame as the Primary Social Compass',
       steps: {
         summary: {
@@ -242,7 +243,7 @@ export default {
     {
       id: 'giri-repayment',
       title: 'The Repayment Called Giri',
-      japanese: '\u7FA9\u7406 (Giri)',
+      label: '\u7FA9\u7406 (Giri)',
       subtitle: 'The Web of Social Obligation',
       steps: {
         summary: {
@@ -271,7 +272,7 @@ export default {
     {
       id: 'dilemma-of-virtue',
       title: 'The Dilemma of Virtue',
-      japanese: '\u5FB3 (Toku)',
+      label: '\u5FB3 (Toku)',
       subtitle: 'When Obligations Conflict, There Is No Innocent Choice',
       steps: {
         summary: {
@@ -300,7 +301,7 @@ export default {
     {
       id: 'self-discipline',
       title: 'Self-Discipline',
-      japanese: '\u81EA\u5236 (Jisei)',
+      label: '\u81EA\u5236 (Jisei)',
       subtitle: 'Mastery Over the Self as a Lifelong Practice',
       steps: {
         summary: {
@@ -329,7 +330,7 @@ export default {
     {
       id: 'the-child-learns',
       title: 'The Child Learns',
-      japanese: '\u5B50\u80B2\u3066 (Kosodate)',
+      label: '\u5B50\u80B2\u3066 (Kosodate)',
       subtitle: 'How Socialization Builds the Japanese Self',
       steps: {
         summary: {
@@ -358,7 +359,7 @@ export default {
     {
       id: 'japanese-since-vj-day',
       title: 'The Japanese Since VJ-Day',
-      japanese: '\u6226\u5F8C (Sengo)',
+      label: '\u6226\u5F8C (Sengo)',
       subtitle: 'Patterns That Persist After Defeat',
       steps: {
         summary: {

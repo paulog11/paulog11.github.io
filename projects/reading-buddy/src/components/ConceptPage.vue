@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import ConceptCard from './ConceptCard.vue'
 import HistoryCard from './HistoryCard.vue'
 import ApologeticsCard from './ApologeticsCard.vue'
-import { coverImages } from '../assets/coverImages.js'
+import BookCover from './BookCover.vue'
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -23,13 +23,7 @@ const activeConcept = computed(() =>
     <!-- Landing state: no concept selected -->
     <div v-if="!activeConcept" class="text-center py-16 px-4">
       <div class="mb-6 flex justify-center">
-        <img
-          v-if="coverImages[book.id]"
-          :src="coverImages[book.id]"
-          :alt="book.title"
-          class="w-24 h-32 object-cover rounded shadow-md"
-        />
-        <div v-else class="text-5xl">{{ book.coverEmoji || '&#128214;' }}</div>
+        <BookCover :book="book" size="lg" />
       </div>
       <h2 class="font-serif text-3xl text-silver-100 mb-2">
         {{ book.title }}
@@ -46,7 +40,7 @@ const activeConcept = computed(() =>
           @click="emit('select', concept.id)"
           class="text-left px-3 py-2 rounded-lg bg-forest-900/40 border border-forest-700/30 hover:border-gold-400/40 hover:bg-forest-800/60 transition-all"
         >
-          <span class="text-silver-400 font-mono text-xs block">{{ concept.japanese }}</span>
+          <span class="text-silver-400 font-mono text-xs block">{{ concept.label }}</span>
           <span class="text-silver-200 text-sm">{{ concept.title }}</span>
         </button>
       </div>
@@ -56,7 +50,7 @@ const activeConcept = computed(() =>
     <div v-else class="max-w-3xl mx-auto">
       <HistoryCard      v-if="book.cardType === 'history'"      :concept="activeConcept" />
       <ApologeticsCard  v-else-if="book.cardType === 'apologetics'" :concept="activeConcept" />
-      <ConceptCard      v-else                                    :concept="activeConcept" />
+      <ConceptCard      v-else                                    :concept="activeConcept" :comments-label="book.commentsLabel" />
     </div>
   </div>
 </template>

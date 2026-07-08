@@ -20,7 +20,7 @@ const emit = defineEmits(['select'])
           : 'text-silver-300 hover:bg-forest-800/50 hover:text-silver-100',
       ]"
     >
-      <span class="flex-shrink-0 text-silver-400 font-mono text-xs">{{ concept.japanese }}</span>
+      <span class="flex-shrink-0 text-silver-400 font-mono text-xs">{{ concept.label }}</span>
       <span class="truncate">{{ concept.title }}</span>
     </button>
   </div>

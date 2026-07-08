@@ -13,7 +13,7 @@ export default {
     {
       id: 'law-of-human-nature',
       title: 'The Law of Human Nature',
-      japanese: 'Bk I · 1',
+      label: 'Bk I · 1',
       subtitle: 'Right and Wrong as a Clue to the Meaning of the Universe',
       steps: {
         summary: {
@@ -46,7 +46,7 @@ export default {
     {
       id: 'some-objections',
       title: 'Some Objections',
-      japanese: 'Bk I · 2',
+      label: 'Bk I · 2',
       subtitle: 'Answering the Challenge that Morality is Merely Social Convention',
       steps: {
         summary: {
@@ -79,7 +79,7 @@ export default {
     {
       id: 'reality-of-the-law',
       title: 'The Reality of the Law',
-      japanese: 'Bk I · 3',
+      label: 'Bk I · 3',
       subtitle: 'Why the Moral Law is Not the Same as Nature or Convention',
       steps: {
         summary: {
@@ -112,7 +112,7 @@ export default {
     {
       id: 'what-lies-behind-the-law',
       title: 'What Lies Behind the Law',
-      japanese: 'Bk I · 4',
+      label: 'Bk I · 4',
       subtitle: 'The Clue of the Universe',
       steps: {
         summary: {
@@ -144,7 +144,7 @@ export default {
     {
       id: 'cause-to-be-uneasy',
       title: 'We Have Cause to Be Uneasy',
-      japanese: 'Bk I · 5',
+      label: 'Bk I · 5',
       subtitle: 'The Uncomfortable Conclusion of the First Book',
       steps: {
         summary: {
@@ -178,7 +178,7 @@ export default {
     {
       id: 'rival-conceptions-of-god',
       title: 'The Rival Conceptions of God',
-      japanese: 'Bk II · 1',
+      label: 'Bk II · 1',
       subtitle: 'Atheism is Too Simple',
       steps: {
         summary: {
@@ -211,7 +211,7 @@ export default {
     {
       id: 'the-invasion',
       title: 'The Invasion',
-      japanese: 'Bk II · 2',
+      label: 'Bk II · 2',
       subtitle: 'Christianity as a Fighting Religion',
       steps: {
         summary: {
@@ -243,7 +243,7 @@ export default {
     {
       id: 'shocking-alternative',
       title: 'The Shocking Alternative',
-      japanese: 'Bk II · 3',
+      label: 'Bk II · 3',
       subtitle: 'Why God Became Man',
       steps: {
         summary: {
@@ -275,7 +275,7 @@ export default {
     {
       id: 'perfect-penitent',
       title: 'The Perfect Penitent',
-      japanese: 'Bk II · 4',
+      label: 'Bk II · 4',
       subtitle: 'The Atonement and Why It Had to Be This Way',
       steps: {
         summary: {
@@ -307,7 +307,7 @@ export default {
     {
       id: 'practical-conclusion',
       title: 'The Practical Conclusion',
-      japanese: 'Bk II · 5',
+      label: 'Bk II · 5',
       subtitle: 'How the New Life Gets Into Us',
       steps: {
         summary: {
@@ -341,7 +341,7 @@ export default {
     {
       id: 'three-parts-of-morality',
       title: 'The Three Parts of Morality',
-      japanese: 'Bk III · 1',
+      label: 'Bk III · 1',
       subtitle: 'The Scope of What Morality Asks',
       steps: {
         summary: {
@@ -373,7 +373,7 @@ export default {
     {
       id: 'cardinal-virtues',
       title: 'The "Cardinal Virtues"',
-      japanese: 'Bk III · 2',
+      label: 'Bk III · 2',
       subtitle: 'Prudence, Justice, Fortitude, Temperance',
       steps: {
         summary: {
@@ -405,7 +405,7 @@ export default {
     {
       id: 'social-morality',
       title: 'Social Morality',
-      japanese: 'Bk III · 3',
+      label: 'Bk III · 3',
       subtitle: 'What Christianity Says (and Doesn\'t Say) About Society',
       steps: {
         summary: {
@@ -437,7 +437,7 @@ export default {
     {
       id: 'morality-and-psychoanalysis',
       title: 'Morality and Psychoanalysis',
-      japanese: 'Bk III · 4',
+      label: 'Bk III · 4',
       subtitle: 'Two Kinds of Questions That Must Not Be Confused',
       steps: {
         summary: {
@@ -469,7 +469,7 @@ export default {
     {
       id: 'sexual-morality',
       title: 'Sexual Morality',
-      japanese: 'Bk III · 5',
+      label: 'Bk III · 5',
       subtitle: 'Chastity and the Corruption of the Appetite',
       steps: {
         summary: {
@@ -501,7 +501,7 @@ export default {
     {
       id: 'christian-marriage',
       title: 'Christian Marriage',
-      japanese: 'Bk III · 6',
+      label: 'Bk III · 6',
       subtitle: 'On Falling In Love and Being In Love',
       steps: {
         summary: {
@@ -533,7 +533,7 @@ export default {
     {
       id: 'forgiveness',
       title: 'Forgiveness',
-      japanese: 'Bk III · 7',
+      label: 'Bk III · 7',
       subtitle: 'The Most Unpopular of the Virtues in Practice',
       steps: {
         summary: {
@@ -565,7 +565,7 @@ export default {
     {
       id: 'the-great-sin',
       title: 'The Great Sin',
-      japanese: 'Bk III · 8',
+      label: 'Bk III · 8',
       subtitle: 'Pride as the Chief Vice',
       steps: {
         summary: {
@@ -597,7 +597,7 @@ export default {
     {
       id: 'charity',
       title: 'Charity',
-      japanese: 'Bk III · 9',
+      label: 'Bk III · 9',
       subtitle: 'Love as a Disposition of the Will, Not a Feeling',
       steps: {
         summary: {
@@ -629,7 +629,7 @@ export default {
     {
       id: 'hope',
       title: 'Hope',
-      japanese: 'Bk III · 10',
+      label: 'Bk III · 10',
       subtitle: 'The Desire That Points Beyond the World',
       steps: {
         summary: {
@@ -661,7 +661,7 @@ export default {
     {
       id: 'faith-i',
       title: 'Faith (First Meaning)',
-      japanese: 'Bk III · 11',
+      label: 'Bk III · 11',
       subtitle: 'Faith as the Art of Holding On',
       steps: {
         summary: {
@@ -693,7 +693,7 @@ export default {
     {
       id: 'faith-ii',
       title: 'Faith (Second Meaning)',
-      japanese: 'Bk III · 12',
+      label: 'Bk III · 12',
       subtitle: 'Faith and Works — The Great Practical Question',
       steps: {
         summary: {
@@ -727,7 +727,7 @@ export default {
     {
       id: 'making-and-begetting',
       title: 'Making and Begetting',
-      japanese: 'Bk IV · 1',
+      label: 'Bk IV · 1',
       subtitle: 'The Difference Between Creatures and the Son',
       steps: {
         summary: {
@@ -759,7 +759,7 @@ export default {
     {
       id: 'three-personal-god',
       title: 'The Three-Personal God',
-      japanese: 'Bk IV · 2',
+      label: 'Bk IV · 2',
       subtitle: 'Going Beyond Ordinary Theism',
       steps: {
         summary: {
@@ -791,7 +791,7 @@ export default {
     {
       id: 'time-and-beyond-time',
       title: 'Time and Beyond Time',
-      japanese: 'Bk IV · 3',
+      label: 'Bk IV · 3',
       subtitle: 'How an Eternal God Can Relate to Temporal Prayer',
       steps: {
         summary: {
@@ -823,7 +823,7 @@ export default {
     {
       id: 'good-infection',
       title: 'Good Infection',
-      japanese: 'Bk IV · 4',
+      label: 'Bk IV · 4',
       subtitle: 'How the Divine Life Spreads',
       steps: {
         summary: {
@@ -855,7 +855,7 @@ export default {
     {
       id: 'obstinate-toy-soldiers',
       title: 'The Obstinate Toy Soldiers',
-      japanese: 'Bk IV · 5',
+      label: 'Bk IV · 5',
       subtitle: 'The Problem of the Self and the New Nature',
       steps: {
         summary: {
@@ -887,7 +887,7 @@ export default {
     {
       id: 'two-notes',
       title: 'Two Notes',
-      japanese: 'Bk IV · 6',
+      label: 'Bk IV · 6',
       subtitle: 'On the Male Pronouns for God and on the Devil',
       steps: {
         summary: {
@@ -919,7 +919,7 @@ export default {
     {
       id: 'lets-pretend',
       title: 'Let\'s Pretend',
-      japanese: 'Bk IV · 7',
+      label: 'Bk IV · 7',
       subtitle: 'The Surprising Role of "Acting As If"',
       steps: {
         summary: {
@@ -951,7 +951,7 @@ export default {
     {
       id: 'is-christianity-hard-or-easy',
       title: 'Is Christianity Hard or Easy?',
-      japanese: 'Bk IV · 8',
+      label: 'Bk IV · 8',
       subtitle: 'The Total Demand vs. the Impossible Standard',
       steps: {
         summary: {
@@ -983,7 +983,7 @@ export default {
     {
       id: 'counting-the-cost',
       title: 'Counting the Cost',
-      japanese: 'Bk IV · 9',
+      label: 'Bk IV · 9',
       subtitle: 'Why God Is Not Satisfied With Less Than Everything',
       steps: {
         summary: {
@@ -1015,7 +1015,7 @@ export default {
     {
       id: 'nice-people-or-new-men',
       title: 'Nice People or New Men',
-      japanese: 'Bk IV · 10',
+      label: 'Bk IV · 10',
       subtitle: 'Why Comparison Is the Wrong Measure',
       steps: {
         summary: {
@@ -1047,7 +1047,7 @@ export default {
     {
       id: 'the-new-men',
       title: 'The New Men',
-      japanese: 'Bk IV · 11',
+      label: 'Bk IV · 11',
       subtitle: 'The Destination of the Whole Project',
       steps: {
         summary: {

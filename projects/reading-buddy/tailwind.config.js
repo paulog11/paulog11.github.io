@@ -31,20 +31,14 @@ export default {
           400: '#8B4513',
           500: '#6B3410',
         },
-        page: '#F0E9DC',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease forwards',
-        'slide-down': 'slideDown 0.3s ease forwards',
       },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
-        },
-        slideDown: {
-          '0%': { opacity: '0', transform: 'translateY(-8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

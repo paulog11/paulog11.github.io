@@ -1,6 +1,7 @@
 export default {
   id: 'word-tsumi',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: "The Word 'Tsumi'",
   author: 'Mariana Nesbitt',
   coverEmoji: '罪',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'translation-problem',
       title: 'The Translation Problem',
-      japanese: '翻訳の問題 (Honyaku no Mondai)',
+      label: '翻訳の問題 (Honyaku no Mondai)',
       subtitle: "'Me a Criminal? No Way' — The 400-Year Mistake",
       steps: {
         summary: {
@@ -40,7 +41,7 @@ export default {
     {
       id: 'japanese-religions-sin',
       title: 'Japanese Religions and Wrongdoing',
-      japanese: '日本の宗教と罪 (Nihon no Shūkyō to Tsumi)',
+      label: '日本の宗教と罪 (Nihon no Shūkyō to Tsumi)',
       subtitle: 'How Shinto and Buddhism Frame Moral Failure',
       steps: {
         summary: {
@@ -70,7 +71,7 @@ export default {
     {
       id: 'bible-translation-history',
       title: 'History of the Japanese Bible',
-      japanese: '日本語聖書の歴史 (Nihongo Seisho no Rekishi)',
+      label: '日本語聖書の歴史 (Nihongo Seisho no Rekishi)',
       subtitle: 'How Tsumi Became Entrenched Over Four Centuries',
       steps: {
         summary: {
@@ -100,7 +101,7 @@ export default {
     {
       id: 'etymology-of-tsumi',
       title: 'The Etymology of Tsumi',
-      japanese: '罪の語源 (Tsumi no Gogen)',
+      label: '罪の語源 (Tsumi no Gogen)',
       subtitle: 'What the Character and the History Actually Mean',
       steps: {
         summary: {
@@ -130,7 +131,7 @@ export default {
     {
       id: 'tsumi-in-culture',
       title: 'Tsumi in Japanese Culture',
-      japanese: '文化の中の罪 (Bunka no Naka no Tsumi)',
+      label: '文化の中の罪 (Bunka no Naka no Tsumi)',
       subtitle: 'How the Word Functions in Society, Literature, and Daily Life',
       steps: {
         summary: {
@@ -160,7 +161,7 @@ export default {
     {
       id: 'sin-in-hebrew',
       title: 'Sin in the Hebrew Bible',
-      japanese: 'ヘブル語の罪 (Heburu-go no Tsumi)',
+      label: 'ヘブル語の罪 (Heburu-go no Tsumi)',
       subtitle: 'The Full Vocabulary That Tsumi Erases',
       steps: {
         summary: {
@@ -190,7 +191,7 @@ export default {
     {
       id: 'sin-in-greek',
       title: 'Sin in the Greek New Testament',
-      japanese: 'ギリシャ語の罪 (Girisha-go no Tsumi)',
+      label: 'ギリシャ語の罪 (Girisha-go no Tsumi)',
       subtitle: "Hamartia and the Words Tsumi Can't Carry",
       steps: {
         summary: {
@@ -220,7 +221,7 @@ export default {
     {
       id: 'alternative-expressions',
       title: 'Bridges: Alternative Expressions',
-      japanese: '架け橋となる表現 (Kakehashi to naru Hyōgen)',
+      label: '架け橋となる表現 (Kakehashi to naru Hyōgen)',
       subtitle: 'Metaphors, Proverbs, and Idioms That Can Carry the Load',
       steps: {
         summary: {

@@ -2,6 +2,7 @@ export default {
   id: 'history-japan',
   type: 'concepts',
   cardType: 'history',
+  typeLabel: 'History',
   title: 'A History of Japan',
   author: 'R.H.P. Mason & J.G. Caiger',
   coverEmoji: '🏯',
@@ -11,7 +12,7 @@ export default {
     {
       id: 'early-inhabitants',
       title: 'The Land and Its Early Inhabitants',
-      japanese: '縄文・弥生時代 (Jōmon · Yayoi Jidai)',
+      label: '縄文・弥生時代 (Jōmon · Yayoi Jidai)',
       subtitle: 'Prehistory Through the Rice Revolution',
       steps: {
         summary: {
@@ -67,7 +68,7 @@ export default {
     {
       id: 'emergence-of-state',
       title: 'The Emergence of the Japanese State',
-      japanese: '大和時代 (Yamato Jidai)',
+      label: '大和時代 (Yamato Jidai)',
       subtitle: 'Clans, Courts, and the Chinese Model',
       steps: {
         summary: {
@@ -123,7 +124,7 @@ export default {
     {
       id: 'nara-japan',
       title: 'Nara Japan',
-      japanese: '奈良時代 (Nara Jidai)',
+      label: '奈良時代 (Nara Jidai)',
       subtitle: 'Buddhism, Bureaucracy, and the First Capital',
       steps: {
         summary: {
@@ -179,7 +180,7 @@ export default {
     {
       id: 'heian-period',
       title: 'The Heian Period',
-      japanese: '平安時代 (Heian Jidai)',
+      label: '平安時代 (Heian Jidai)',
       subtitle: 'Court Culture and the Flowering of Japanese Aesthetics',
       steps: {
         summary: {
@@ -235,7 +236,7 @@ export default {
     {
       id: 'kamakura-shogunate',
       title: 'The Kamakura Shogunate',
-      japanese: '鎌倉時代 (Kamakura Jidai)',
+      label: '鎌倉時代 (Kamakura Jidai)',
       subtitle: 'The Rise of the Warrior Class',
       steps: {
         summary: {
@@ -291,7 +292,7 @@ export default {
     {
       id: 'ashikaga-shogunate',
       title: 'The Ashikaga Shogunate',
-      japanese: '室町時代 (Muromachi Jidai)',
+      label: '室町時代 (Muromachi Jidai)',
       subtitle: 'Zen, Art, and Fragmented Power',
       steps: {
         summary: {
@@ -347,7 +348,7 @@ export default {
     {
       id: 'age-of-civil-wars',
       title: 'The Age of Civil Wars',
-      japanese: '戦国時代 (Sengoku Jidai)',
+      label: '戦国時代 (Sengoku Jidai)',
       subtitle: 'A Century of Warfare and Warlords',
       steps: {
         summary: {
@@ -403,7 +404,7 @@ export default {
     {
       id: 'momoyama-period',
       title: 'The Momoyama Period',
-      japanese: '安土桃山時代 (Azuchi-Momoyama Jidai)',
+      label: '安土桃山時代 (Azuchi-Momoyama Jidai)',
       subtitle: 'Unification and the Christian Century',
       steps: {
         summary: {
@@ -454,7 +455,7 @@ export default {
     {
       id: 'tokugawa-political',
       title: 'The Tokugawa Shogunate: Political Structure',
-      japanese: '江戸時代 (Edo Jidai)',
+      label: '江戸時代 (Edo Jidai)',
       subtitle: 'The Architecture of Stability',
       steps: {
         summary: {
@@ -510,7 +511,7 @@ export default {
     {
       id: 'tokugawa-society',
       title: 'Tokugawa Japan: Society and Culture',
-      japanese: '江戸文化 (Edo Bunka)',
+      label: '江戸文化 (Edo Bunka)',
       subtitle: 'Two and a Half Centuries of Peace',
       steps: {
         summary: {
@@ -566,7 +567,7 @@ export default {
     {
       id: 'meiji-restoration',
       title: 'The Meiji Restoration',
-      japanese: '明治維新 (Meiji Ishin)',
+      label: '明治維新 (Meiji Ishin)',
       subtitle: 'Japan Reinvents Itself',
       steps: {
         summary: {
@@ -622,7 +623,7 @@ export default {
     {
       id: 'meiji-modern-state',
       title: 'Meiji Japan: Building a Modern State',
-      japanese: '富国強兵 (Fukoku Kyōhei)',
+      label: '富国強兵 (Fukoku Kyōhei)',
       subtitle: 'Industry, Army, and Empire',
       steps: {
         summary: {
@@ -678,7 +679,7 @@ export default {
     {
       id: 'japan-between-wars',
       title: 'Japan Between the Wars',
-      japanese: '大正・昭和初期 (Taishō · Shōwa Shoki)',
+      label: '大正・昭和初期 (Taishō · Shōwa Shoki)',
       subtitle: 'Democracy, Depression, and Militarism',
       steps: {
         summary: {
@@ -734,7 +735,7 @@ export default {
     {
       id: 'pacific-war',
       title: 'The Pacific War',
-      japanese: '太平洋戦争 (Taiheiyō Sensō)',
+      label: '太平洋戦争 (Taiheiyō Sensō)',
       subtitle: 'Expansion, Overreach, and Catastrophe',
       steps: {
         summary: {
@@ -790,7 +791,7 @@ export default {
     {
       id: 'postwar-japan',
       title: 'Occupied and Independent Japan',
-      japanese: '戦後日本 (Sengo Nihon)',
+      label: '戦後日本 (Sengo Nihon)',
       subtitle: 'Recovery, Reinvention, and the Economic Miracle',
       steps: {
         summary: {

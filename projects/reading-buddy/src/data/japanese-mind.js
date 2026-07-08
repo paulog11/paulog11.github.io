@@ -1,6 +1,7 @@
 export default {
   id: 'japanese-mind',
   type: 'concepts',
+  commentsLabel: 'FM Japan 25 Comments',
   title: 'The Japanese Mind',
   author: 'Roger J. Davies & Osamu Ikeno',
   coverEmoji: '\u26E9\uFE0F',
@@ -10,7 +11,7 @@ export default {
     {
       id: 'amae',
       title: 'Amae',
-      japanese: '\u7518\u3048',
+      label: '\u7518\u3048',
       subtitle: 'Dependency and Indulgence',
       steps: {
         summary: {
@@ -39,7 +40,7 @@ export default {
     {
       id: 'bushido',
       title: 'Bushido',
-      japanese: '\u6B66\u58EB\u9053',
+      label: '\u6B66\u58EB\u9053',
       subtitle: 'The Way of the Warrior',
       steps: {
         summary: {
@@ -68,7 +69,7 @@ export default {
     {
       id: 'chinmoku',
       title: 'Chinmoku',
-      japanese: '\u6C88\u9ED9',
+      label: '\u6C88\u9ED9',
       subtitle: 'The Power of Silence',
       steps: {
         summary: {
@@ -97,7 +98,7 @@ export default {
     {
       id: 'enryo',
       title: 'Enryo',
-      japanese: '\u9060\u616E',
+      label: '\u9060\u616E',
       subtitle: 'Restraint and Reserve',
       steps: {
         summary: {
@@ -126,7 +127,7 @@ export default {
     {
       id: 'giri',
       title: 'Giri',
-      japanese: '\u7FA9\u7406',
+      label: '\u7FA9\u7406',
       subtitle: 'Social Obligation and Duty',
       steps: {
         summary: {
@@ -155,7 +156,7 @@ export default {
     {
       id: 'haji',
       title: 'Haji',
-      japanese: '\u6065',
+      label: '\u6065',
       subtitle: 'Shame and Social Awareness',
       steps: {
         summary: {
@@ -184,7 +185,7 @@ export default {
     {
       id: 'haragei',
       title: 'Haragei',
-      japanese: '\u8179\u82B8',
+      label: '\u8179\u82B8',
       subtitle: 'The Art of the Belly',
       steps: {
         summary: {
@@ -213,7 +214,7 @@ export default {
     {
       id: 'ie',
       title: 'Ie',
-      japanese: '\u5BB6',
+      label: '\u5BB6',
       subtitle: 'The Household System',
       steps: {
         summary: {
@@ -242,7 +243,7 @@ export default {
     {
       id: 'ijime',
       title: 'Ijime',
-      japanese: '\u3044\u3058\u3081',
+      label: '\u3044\u3058\u3081',
       subtitle: 'Bullying and Social Conformity',
       steps: {
         summary: {
@@ -271,7 +272,7 @@ export default {
     {
       id: 'ishin-denshin',
       title: 'Ishin-denshin',
-      japanese: '\u4EE5\u5FC3\u4F1D\u5FC3',
+      label: '\u4EE5\u5FC3\u4F1D\u5FC3',
       subtitle: 'Heart-to-Heart Communication',
       steps: {
         summary: {
@@ -300,7 +301,7 @@ export default {
     {
       id: 'jinji-ido',
       title: 'Jinji Ido',
-      japanese: '\u4EBA\u4E8B\u7570\u52D5',
+      label: '\u4EBA\u4E8B\u7570\u52D5',
       subtitle: 'Personnel Transfers',
       steps: {
         summary: {
@@ -329,7 +330,7 @@ export default {
     {
       id: 'joushiki',
       title: 'Joushiki',
-      japanese: '\u5E38\u8B58',
+      label: '\u5E38\u8B58',
       subtitle: 'Common Sense and Social Norms',
       steps: {
         summary: {
@@ -358,7 +359,7 @@ export default {
     {
       id: 'kata',
       title: 'Kata',
-      japanese: '\u578B',
+      label: '\u578B',
       subtitle: 'Form and Prescribed Pattern',
       steps: {
         summary: {
@@ -387,7 +388,7 @@ export default {
     {
       id: 'kawaii',
       title: 'Kawaii',
-      japanese: '\u304B\u308F\u3044\u3044',
+      label: '\u304B\u308F\u3044\u3044',
       subtitle: 'The Culture of Cuteness',
       steps: {
         summary: {
@@ -416,7 +417,7 @@ export default {
     {
       id: 'ma',
       title: 'Ma',
-      japanese: '\u9593',
+      label: '\u9593',
       subtitle: 'The Space Between',
       steps: {
         summary: {
@@ -444,7 +445,7 @@ export default {
     {
       id: 'meishi',
       title: 'Meishi',
-      japanese: '\u540D\u523A',
+      label: '\u540D\u523A',
       subtitle: 'The Business Card Ritual',
       steps: {
         summary: {
@@ -473,7 +474,7 @@ export default {
     {
       id: 'nemawashi',
       title: 'Nemawashi',
-      japanese: '\u6839\u56DE\u3057',
+      label: '\u6839\u56DE\u3057',
       subtitle: 'Laying the Groundwork',
       steps: {
         summary: {
@@ -502,7 +503,7 @@ export default {
     {
       id: 'nihonjinron',
       title: 'Nihonjinron',
-      japanese: '\u65E5\u672C\u4EBA\u8AD6',
+      label: '\u65E5\u672C\u4EBA\u8AD6',
       subtitle: 'Theories of Japanese Uniqueness',
       steps: {
         summary: {
@@ -531,7 +532,7 @@ export default {
     {
       id: 'on',
       title: 'On',
-      japanese: '\u6069',
+      label: '\u6069',
       subtitle: 'Debts of Gratitude',
       steps: {
         summary: {
@@ -560,7 +561,7 @@ export default {
     {
       id: 'otaku',
       title: 'Otaku',
-      japanese: '\u304A\u305F\u304F',
+      label: '\u304A\u305F\u304F',
       subtitle: 'Obsessive Fandom',
       steps: {
         summary: {
@@ -588,7 +589,7 @@ export default {
     {
       id: 'ringi',
       title: 'Ringi',
-      japanese: '\u7A1F\u8B70',
+      label: '\u7A1F\u8B70',
       subtitle: 'Bottom-Up Decision Making',
       steps: {
         summary: {
@@ -617,7 +618,7 @@ export default {
     {
       id: 'seken',
       title: 'Seken',
-      japanese: '\u4E16\u9593',
+      label: '\u4E16\u9593',
       subtitle: 'The Watching World',
       steps: {
         summary: {
@@ -646,7 +647,7 @@ export default {
     {
       id: 'sempai-kohai',
       title: 'Sempai-Kohai',
-      japanese: '\u5148\u8F29\u30FB\u5F8C\u8F29',
+      label: '\u5148\u8F29\u30FB\u5F8C\u8F29',
       subtitle: 'Senior-Junior Relationships',
       steps: {
         summary: {
@@ -675,7 +676,7 @@ export default {
     {
       id: 'seishin-shugi',
       title: 'Seishin-shugi',
-      japanese: '\u7CBE\u795E\u4E3B\u7FA9',
+      label: '\u7CBE\u795E\u4E3B\u7FA9',
       subtitle: 'The Triumph of Spirit',
       steps: {
         summary: {
@@ -704,7 +705,7 @@ export default {
     {
       id: 'shoganai',
       title: 'Shoganai',
-      japanese: '\u3057\u3087\u3046\u304C\u306A\u3044',
+      label: '\u3057\u3087\u3046\u304C\u306A\u3044',
       subtitle: 'It Can\u2019t Be Helped',
       steps: {
         summary: {
@@ -733,7 +734,7 @@ export default {
     {
       id: 'tatemae-honne',
       title: 'Tatemae / Honne',
-      japanese: '\u5EFA\u524D\u30FB\u672C\u97F3',
+      label: '\u5EFA\u524D\u30FB\u672C\u97F3',
       subtitle: 'Public Face vs. True Feelings',
       steps: {
         summary: {
@@ -762,7 +763,7 @@ export default {
     {
       id: 'wabi-sabi',
       title: 'Wabi-Sabi',
-      japanese: '\u4F98\u5BC2',
+      label: '\u4F98\u5BC2',
       subtitle: 'Beauty in Imperfection',
       steps: {
         summary: {
