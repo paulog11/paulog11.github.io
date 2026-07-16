@@ -197,7 +197,7 @@ const epochLabel = computed(() => currentEpoch.value.name)
 const EPOCH_STAGE = {
   'Planck Epoch': 0, 'Grand Unification': 0, 'Quark Epoch': 0,
   'Hadron Epoch': 1, 'Lepton Epoch': 1,
-  'Big Bang Nucleosynthesis': 3,
+  'Big Bang Nucleosynthesis': 2,
   'Structure Formation': 4,
 }
 const chainStages = computed(() => {
