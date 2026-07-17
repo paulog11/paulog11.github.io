@@ -10,7 +10,10 @@
  *   3. epoch events — a recombination/CMB shell at the BBN→Structure boundary
  *      and merge/annihilation sparks.
  * Plus the original epoch haze (~10K hot particles, a pure function of bbTime
- * so it stays correct after jumpToEpoch fast-forwards). Physics is untouched.
+ * so it stays correct after jumpToEpoch fast-forwards), and one outcome-gated
+ * cue: no-chemistry tints matter cores gray/sterile in syncBodies. All of the
+ * above is render-only — physics (including the other outcome-gated changes,
+ * in BigBangSimulation.vue's bigBang()/physicsStep()) is untouched here.
  */
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text, Texture } from 'pixi.js'
 import { BB_OUTCOMES } from './constants.js'
@@ -38,6 +41,7 @@ const RING_REF_R = 32 // dashed-halo texture is baked at this radius
 const DM_TINT = 0x8c64dc
 const PHOTON_TINT = 0xfff0b4
 const FUSION_TINT = 0xff9a50
+const STERILE_TINT = 0x787878 // no-chemistry: matter core reads as dead/gray
 
 // Recombination shell window — centred on the BBN→Structure boundary (0.25),
 // where the real universe becomes transparent (last scattering / CMB)
@@ -229,7 +233,7 @@ export function createAtomRenderer(stage) {
 
     updateHaze(bbTime)
     drawTrails(particles)
-    syncBodies(particles, bbTime)
+    syncBodies(particles, bbTime, outcomeKey)
     updateCallouts(particles, bbTime, outcomeKey)
     if (!paused) advanceSparks(0.016)
     updateRecomb(bbTime)
@@ -392,7 +396,7 @@ export function createAtomRenderer(stage) {
   }
 
   // ── BODY VIEWS ──────────────────────────────────────────
-  function syncBodies(particles, bbTime) {
+  function syncBodies(particles, bbTime, outcomeKey) {
     for (const view of state.views.values()) view.seen = false
     for (const p of particles) {
       if (!p.alive) continue
@@ -426,6 +430,14 @@ export function createAtomRenderer(stage) {
         // matter
         view.glow.width = view.glow.height = glowR * 3.5 * 2
         view.core.width = view.core.height = Math.max(1.5, glowR) * 2
+        // No-chemistry: sterile universe — matter cores read as dead/gray,
+        // reverts to normal tint the moment the outcome changes back
+        if (outcomeKey === 'no-chemistry') {
+          view.core.tint = STERILE_TINT
+        } else {
+          const [cr, cg, cb] = p.baseColor
+          view.core.tint = (cr << 16) | (cg << 8) | cb
+        }
         // Fusion glow ignites on heavy bound clumps — created lazily
         if (p.bound && p.mass > 30) {
           if (!view.fusion) {

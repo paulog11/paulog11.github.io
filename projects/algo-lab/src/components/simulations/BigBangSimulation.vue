@@ -348,7 +348,7 @@ function bigBang() {
     const speed   = (60 + Math.random()*90) * H0mod * Lmod
     const rng     = Math.random()
     const type    = rng < 0.12 ? 'photon' : rng < 0.28 ? 'dark' : 'matter'
-    const hMod    = Math.max(0.1, 1 + constValues.higgs * 0.5)
+    const hMod    = outcomeKey.value === 'massless-chaos' ? 0.1 : Math.max(0.1, 1 + constValues.higgs * 0.5)
     const mass    = type==='dark' ? 8+Math.random()*20 : type==='photon' ? 0.5 : (2+Math.random()*14)*hMod
     const p = new BBParticle(angle, speed, mass, type)
     p.x += (Math.random()-0.5)*6; p.y += (Math.random()-0.5)*6
@@ -391,7 +391,8 @@ function physicsStep(dt) {
       a.vx += fx/a.mass*dt; a.vy += fy/a.mass*dt
       b.vx -= fx/b.mass*dt; b.vy -= fy/b.mass*dt
 
-      const fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
+      let fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
+      if (outcomeKey.value === 'massless-chaos') fusionR *= 0.1
       if (d < fusionR && a.type!=='photon' && b.type!=='photon') {
         const tm = a.mass+b.mass
         a.vx=(a.vx*a.mass+b.vx*b.mass)/tm; a.vy=(a.vy*a.mass+b.vy*b.mass)/tm
@@ -415,6 +416,13 @@ function physicsStep(dt) {
     if (p.type==='photon') {
       const margin = W*1.5
       if (p.x<-margin||p.x>W+margin||p.y<-margin||p.y>H+margin) p.alive=false
+    }
+  }
+
+  // Antimatter annihilation — matter randomly flashes away into radiation
+  if (outcomeKey.value === 'antimatter-dom') {
+    for (const p of particles) {
+      if (p.type === 'matter' && Math.random() < 0.005) p.alive = false
     }
   }
 
