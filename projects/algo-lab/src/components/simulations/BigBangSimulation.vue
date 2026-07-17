@@ -365,6 +365,7 @@ function physicsStep(dt) {
   const alphaEM = 1 + constValues.alpha * 0.5
   const alphaS  = 1 + constValues.alphaS * 0.6
   const SOFTEN  = 120
+  const chaos   = outcomeKey.value === 'massless-chaos'
 
   // Expansion forces
   if (bbPhase.value === 'bang' || bbPhase.value === 'expand') {
@@ -392,7 +393,7 @@ function physicsStep(dt) {
       b.vx -= fx/b.mass*dt; b.vy -= fy/b.mass*dt
 
       let fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
-      if (outcomeKey.value === 'massless-chaos') fusionR *= 0.1
+      if (chaos) fusionR *= 0.1
       if (d < fusionR && a.type!=='photon' && b.type!=='photon') {
         const tm = a.mass+b.mass
         a.vx=(a.vx*a.mass+b.vx*b.mass)/tm; a.vy=(a.vy*a.mass+b.vy*b.mass)/tm

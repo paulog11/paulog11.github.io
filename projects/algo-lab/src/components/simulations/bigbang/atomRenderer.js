@@ -16,7 +16,7 @@
  * in BigBangSimulation.vue's bigBang()/physicsStep()) is untouched here.
  */
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text, Texture } from 'pixi.js'
-import { BB_OUTCOMES } from './constants.js'
+import { BB_OUTCOMES, EPOCHS } from './constants.js'
 
 const PARKED = -100000
 
@@ -49,10 +49,10 @@ const RECOMB_START = 0.20
 const RECOMB_END = 0.34
 
 // ── CLASSIFICATION & CALLOUTS ───────────────────────────
-// Epoch boundaries for classifyParticle — mirror EPOCHS in constants.js
-const EPOCH_HADRON = 0.025    // pre-hadron below this
-const EPOCH_BBN = 0.10        // hadron/lepton epochs below this
-const EPOCH_STRUCTURE = 0.25  // BBN window below this, else structure epoch
+// Epoch boundaries for classifyParticle — derived from EPOCHS in constants.js
+const EPOCH_HADRON = EPOCHS[3][0]    // Hadron Epoch start — pre-hadron below this
+const EPOCH_BBN = EPOCHS[5][0]       // BBN start — hadron/lepton epochs below this
+const EPOCH_STRUCTURE = EPOCHS[6][0] // Structure Formation start — BBN window below this
 
 // ELI5 one-liners for callout line 2, keyed by particle type
 const TYPE_ELI5 = {
@@ -538,10 +538,18 @@ export function createAtomRenderer(stage) {
 
   function pickCalloutTarget(particles, kind) {
     if (kind === 'matter') {
-      // Heaviest on-screen bound matter clump
+      // Heaviest on-screen bound matter clump; if nothing has bound (e.g.
+      // massless-chaos, no-nuclei — physics guarantees no binding), fall
+      // back to the heaviest on-screen unbound matter particle instead
       let best = null, bestMass = -Infinity
       for (const p of particles) {
         if (p.alive && p.type === 'matter' && p.bound && isOnScreen(p) && p.mass > bestMass) {
+          best = p; bestMass = p.mass
+        }
+      }
+      if (best) return best
+      for (const p of particles) {
+        if (p.alive && p.type === 'matter' && !p.bound && isOnScreen(p) && p.mass > bestMass) {
           best = p; bestMass = p.mass
         }
       }
