@@ -393,7 +393,7 @@ function physicsStep(dt) {
       b.vx -= fx/b.mass*dt; b.vy -= fy/b.mass*dt
 
       let fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
-      if (chaos) fusionR *= 0.1
+      if (chaos) fusionR *= 0
       if (d < fusionR && a.type!=='photon' && b.type!=='photon') {
         const tm = a.mass+b.mass
         a.vx=(a.vx*a.mass+b.vx*b.mass)/tm; a.vy=(a.vy*a.mass+b.vy*b.mass)/tm
