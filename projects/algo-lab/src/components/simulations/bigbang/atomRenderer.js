@@ -10,9 +10,13 @@
  *   3. epoch events — a recombination/CMB shell at the BBN→Structure boundary
  *      and merge/annihilation sparks.
  * Plus the original epoch haze (~10K hot particles, a pure function of bbTime
- * so it stays correct after jumpToEpoch fast-forwards). Physics is untouched.
+ * so it stays correct after jumpToEpoch fast-forwards), and one outcome-gated
+ * cue: no-chemistry tints matter cores gray/sterile in syncBodies. All of the
+ * above is render-only — physics (including the other outcome-gated changes,
+ * in BigBangSimulation.vue's bigBang()/physicsStep()) is untouched here.
  */
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text, Texture } from 'pixi.js'
+import { BB_OUTCOMES, EPOCHS } from './constants.js'
 
 const PARKED = -100000
 
@@ -37,11 +41,38 @@ const RING_REF_R = 32 // dashed-halo texture is baked at this radius
 const DM_TINT = 0x8c64dc
 const PHOTON_TINT = 0xfff0b4
 const FUSION_TINT = 0xff9a50
+const STERILE_TINT = 0x787878 // no-chemistry: matter core reads as dead/gray
 
 // Recombination shell window — centred on the BBN→Structure boundary (0.25),
 // where the real universe becomes transparent (last scattering / CMB)
 const RECOMB_START = 0.20
 const RECOMB_END = 0.34
+
+// ── CLASSIFICATION & CALLOUTS ───────────────────────────
+// Epoch boundaries for classifyParticle — derived from EPOCHS in constants.js
+const EPOCH_HADRON = EPOCHS[3][0]    // Hadron Epoch start — pre-hadron below this
+const EPOCH_BBN = EPOCHS[5][0]       // BBN start — hadron/lepton epochs below this
+const EPOCH_STRUCTURE = EPOCHS[6][0] // Structure Formation start — BBN window below this
+
+// ELI5 one-liners for callout line 2, keyed by particle type
+const TYPE_ELI5 = {
+  matter: 'clumps into atoms, stars, and planets',
+  photon: 'pure light — flies on forever',
+  dark: 'invisible scaffold, felt only through gravity',
+}
+
+const CALLOUT_KINDS = ['matter', 'photon', 'dark']
+const CALLOUT_INTERVAL = 2 // seconds of animTime between re-picks
+
+// Maps type + epoch + mass to the name shown on labels/callouts
+function classifyParticle(p, bbTime) {
+  if (p.type === 'photon') return 'photon — light'
+  if (p.type === 'dark') return 'dark matter'
+  if (!p.bound) return bbTime < EPOCH_HADRON ? 'quark' : 'free particle'
+  if (bbTime < EPOCH_BBN) return 'proton/neutron'
+  if (bbTime < EPOCH_STRUCTURE) return 'light nucleus (H/He)'
+  return p.mass > 100 ? 'proto-star seed' : 'matter clump'
+}
 
 export function createAtomRenderer(stage) {
   const dotTex = stage.dotTex
@@ -69,7 +100,25 @@ export function createAtomRenderer(stage) {
   recombSprite.blendMode = 'add'
   recombSprite.tint = 0xbfa8ff
   recombSprite.visible = false
-  root.addChild(hazePC, fieldPC, trailG, bodiesC, sparkPC, recombSprite)
+
+  // Representative callouts — one leader-line Graphics (cleared/redrawn per
+  // frame, like trailG) + one persistent two-line Text per kind
+  const labelsC = new Container()
+  const leaderG = new Graphics()
+  const callouts = {}
+  for (const kind of CALLOUT_KINDS) {
+    const text = new Text({
+      text: '',
+      style: { fontFamily: '"Space Mono", monospace', fontSize: 7, fill: 0xe8e8e8 },
+    })
+    text.anchor.set(0, 1)
+    text.alpha = 0.85
+    text.visible = false
+    callouts[kind] = { text, target: null, lastStr: '', lastColor: 0xe8e8e8 }
+  }
+  labelsC.addChild(leaderG, callouts.matter.text, callouts.photon.text, callouts.dark.text)
+
+  root.addChild(hazePC, fieldPC, trailG, bodiesC, sparkPC, recombSprite, labelsC)
 
   const state = {
     views: new Map(), // BBParticle → view
@@ -78,6 +127,7 @@ export function createAtomRenderer(stage) {
     sparks: null,
     frame: 0,
     animTime: 0, // cosmetic clock — only advances while running, so pause freezes
+    calloutNextPick: 0, // animTime of the next scheduled callout re-pick
   }
 
   // Spark pool (lifetimes are short; 120 covers bursty merging)
@@ -123,6 +173,7 @@ export function createAtomRenderer(stage) {
     seedField()
     for (const view of state.views.values()) view.root.destroy({ children: true })
     state.views.clear()
+    for (const kind of CALLOUT_KINDS) callouts[kind].target = null
   }
 
   function seedHaze(cv) {
@@ -182,7 +233,8 @@ export function createAtomRenderer(stage) {
 
     updateHaze(bbTime)
     drawTrails(particles)
-    syncBodies(particles)
+    syncBodies(particles, bbTime, outcomeKey)
+    updateCallouts(particles, bbTime, outcomeKey)
     if (!paused) advanceSparks(0.016)
     updateRecomb(bbTime)
     stage.updateOutcome(outcomeKey, bbTime, 'vignette')
@@ -344,7 +396,7 @@ export function createAtomRenderer(stage) {
   }
 
   // ── BODY VIEWS ──────────────────────────────────────────
-  function syncBodies(particles) {
+  function syncBodies(particles, bbTime, outcomeKey) {
     for (const view of state.views.values()) view.seen = false
     for (const p of particles) {
       if (!p.alive) continue
@@ -378,6 +430,14 @@ export function createAtomRenderer(stage) {
         // matter
         view.glow.width = view.glow.height = glowR * 3.5 * 2
         view.core.width = view.core.height = Math.max(1.5, glowR) * 2
+        // No-chemistry: sterile universe — matter cores read as dead/gray,
+        // reverts to normal tint the moment the outcome changes back
+        if (outcomeKey === 'no-chemistry') {
+          view.core.tint = STERILE_TINT
+        } else {
+          const [cr, cg, cb] = p.baseColor
+          view.core.tint = (cr << 16) | (cg << 8) | cb
+        }
         // Fusion glow ignites on heavy bound clumps — created lazily
         if (p.bound && p.mass > 30) {
           if (!view.fusion) {
@@ -395,8 +455,8 @@ export function createAtomRenderer(stage) {
       }
 
       // Mass label for heavy bound clumps — created lazily, text updated only
-      // when the rounded mass changes
-      if (p.bound && p.mass > 40) {
+      // when the rounded mass or classification name changes
+      if (p.bound && p.mass > 15) {
         if (!view.label) {
           const [r, g, b] = p.baseColor
           view.label = new Text({
@@ -408,9 +468,11 @@ export function createAtomRenderer(stage) {
           view.root.addChild(view.label)
         }
         const m = Math.round(p.mass)
-        if (view.lastMass !== m) {
-          view.label.text = `${m}m`
+        const name = classifyParticle(p, bbTime)
+        if (view.lastMass !== m || view.lastLabelName !== name) {
+          view.label.text = `${name.toUpperCase()} · ${m} mass`
           view.lastMass = m
+          view.lastLabelName = name
         }
         view.label.position.set(0, -glowR - 5)
         view.label.visible = true
@@ -438,7 +500,7 @@ export function createAtomRenderer(stage) {
     const [r, g, b] = p.baseColor
     const tint = (r << 16) | (g << 8) | b
     const root = new Container()
-    const view = { root, type: p.type, lastType: p.type, label: null, lastMass: 0, seen: true, lastX: p.x, lastY: p.y }
+    const view = { root, type: p.type, lastType: p.type, label: null, lastMass: 0, lastLabelName: '', seen: true, lastX: p.x, lastY: p.y }
 
     if (p.type === 'dark') {
       // Invisible scaffold — diffuse glow + dashed halo + faint core
@@ -467,6 +529,83 @@ export function createAtomRenderer(stage) {
       view.glow = glow; view.core = core; view.fusion = null
     }
     return view
+  }
+
+  // ── CALLOUTS ────────────────────────────────────────────
+  function isOnScreen(p) {
+    return p.x > -20 && p.x < stage.W + 20 && p.y > -20 && p.y < stage.H + 20
+  }
+
+  function pickCalloutTarget(particles, kind) {
+    if (kind === 'matter') {
+      // Heaviest on-screen bound matter clump; if nothing has bound (e.g.
+      // massless-chaos, no-nuclei — physics guarantees no binding), fall
+      // back to the heaviest on-screen unbound matter particle instead
+      let best = null, bestMass = -Infinity
+      for (const p of particles) {
+        if (p.alive && p.type === 'matter' && p.bound && isOnScreen(p) && p.mass > bestMass) {
+          best = p; bestMass = p.mass
+        }
+      }
+      if (best) return best
+      for (const p of particles) {
+        if (p.alive && p.type === 'matter' && !p.bound && isOnScreen(p) && p.mass > bestMass) {
+          best = p; bestMass = p.mass
+        }
+      }
+      return best
+    }
+    for (const p of particles) {
+      if (p.alive && p.type === kind && isOnScreen(p)) return p
+    }
+    return null
+  }
+
+  // Re-picks targets every ~2s of animTime (frozen while paused) or immediately
+  // when a target dies / its view disappears (covers jumpToEpoch resets, since
+  // seed() clears state.views before the fast-forwarded particles ever render).
+  function updateCallouts(particles, bbTime, outcomeKey) {
+    const due = state.animTime >= state.calloutNextPick
+    for (const kind of CALLOUT_KINDS) {
+      const c = callouts[kind]
+      if (c.target && (!c.target.alive || !state.views.has(c.target))) c.target = null
+      if (due || !c.target) c.target = pickCalloutTarget(particles, kind)
+    }
+    if (due) state.calloutNextPick = state.animTime + CALLOUT_INTERVAL
+
+    leaderG.clear()
+    for (const kind of CALLOUT_KINDS) renderCallout(callouts[kind], kind, bbTime, outcomeKey)
+  }
+
+  function renderCallout(c, kind, bbTime, outcomeKey) {
+    const p = c.target
+    if (!p || !isOnScreen(p)) { c.text.visible = false; return }
+
+    const name = classifyParticle(p, bbTime)
+    let line2 = TYPE_ELI5[p.type]
+    let color = kind === 'photon' ? PHOTON_TINT
+      : kind === 'dark' ? DM_TINT
+      : `rgb(${p.baseColor[0]},${p.baseColor[1]},${p.baseColor[2]})`
+
+    // Matter callout appends the outcome's atomTag, in the outcome color,
+    // whenever the tuned constants broke the universe
+    if (kind === 'matter' && outcomeKey !== 'life-permitting') {
+      const outcome = BB_OUTCOMES[outcomeKey]
+      if (outcome && outcome.atomTag) {
+        line2 += ` — ${outcome.atomTag}`
+        color = outcome.color
+      }
+    }
+
+    const str = `${name.toUpperCase()}\n${line2}`
+    if (c.lastStr !== str) { c.text.text = str; c.lastStr = str }
+    if (c.lastColor !== color) { c.text.style.fill = color; c.lastColor = color }
+
+    const ox = 16, oy = -22
+    c.text.position.set(p.x + ox, p.y + oy)
+    c.text.visible = true
+    leaderG.moveTo(p.x, p.y).lineTo(p.x + ox, p.y + oy)
+      .stroke({ width: 1, color, alpha: 0.35 })
   }
 
   // ── SPARKS ──────────────────────────────────────────────

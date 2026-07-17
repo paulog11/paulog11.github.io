@@ -77,6 +77,22 @@
         <div class="bb-outcome-desc">{{ outcomeData.desc }}</div>
       </div>
 
+      <!-- Build chain + narrative strip -->
+      <div v-if="activeView === 'atom'" class="bb-chain-panel" :style="{ borderColor: outcomeData.borderColor }">
+        <div class="bb-chain-row">
+          <template v-for="(s, i) in chainStages" :key="s.label">
+            <span class="bb-chain-stage" :class="'is-' + s.cls" :style="s.cls === 'broken' ? { color: outcomeData.color } : {}">
+              <template v-if="s.mark">{{ s.mark }} </template>{{ s.label }}
+            </span>
+            <span v-if="i < chainStages.length - 1" class="bb-chain-arrow">→</span>
+          </template>
+        </div>
+        <div class="bb-chain-narrative">
+          <template v-if="outcomeData.breaksAt == null">{{ currentEpoch.eli5 }}</template>
+          <template v-else><strong :style="{ color: outcomeData.color }">{{ outcomeData.name }}:</strong> {{ outcomeData.eli5 }}</template>
+        </div>
+      </div>
+
       <!-- Bottom bar -->
       <div class="bb-bottom-bar">
         <div class="bb-view-toggle">
@@ -113,7 +129,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
-import { BB_CONSTANTS, BB_OUTCOMES, EPOCHS, CELESTIAL_EPOCH, PLANETARY_EPOCH } from './bigbang/constants.js'
+import { BB_CONSTANTS, BB_OUTCOMES, BUILD_CHAIN, EPOCHS, CELESTIAL_EPOCH, PLANETARY_EPOCH } from './bigbang/constants.js'
 import { createCelestialField, celestialPhysicsStep } from './bigbang/celestial.js'
 import { createPlanetaryDisk, planetaryPhysicsStep } from './bigbang/planetary.js'
 import { createPixiStage } from './bigbang/pixiStage.js'
@@ -170,10 +186,34 @@ const currentEpoch = computed(() => {
   if (activeView.value === 'celestial') return CELESTIAL_EPOCH
   const ep = EPOCHS.find(([s,e]) => bbTime.value >= s && bbTime.value < e)
   const fallback = EPOCHS[EPOCHS.length - 1]
-  const [, , name, desc] = ep || fallback
-  return { name, desc }
+  const [, , name, desc, eli5] = ep || fallback
+  return { name, desc, eli5 }
 })
 const epochLabel = computed(() => currentEpoch.value.name)
+
+// ── BUILD CHAIN STRIP ────────────────────────────────────
+// Maps the current atom-view epoch to how far up BUILD_CHAIN the
+// life-permitting universe has climbed (Life stays aspirational/unchecked).
+const EPOCH_STAGE = {
+  'Planck Epoch': 0, 'Grand Unification': 0, 'Quark Epoch': 0,
+  'Hadron Epoch': 1, 'Lepton Epoch': 1,
+  'Big Bang Nucleosynthesis': 2,
+  'Structure Formation': 4,
+}
+const chainStages = computed(() => {
+  const breaksAt = outcomeData.value.breaksAt
+  const reached = EPOCH_STAGE[currentEpoch.value.name] ?? 0
+  return BUILD_CHAIN.map((label, i) => {
+    if (breaksAt == null) {
+      if (i < reached)   return { label, mark: '✓', cls: 'done' }
+      if (i === reached) return { label, mark: '✓', cls: 'current' }
+      return { label, mark: '', cls: 'future' }
+    }
+    if (i < breaksAt)   return { label, mark: '✓', cls: 'checked' }
+    if (i === breaksAt) return { label, mark: '✕', cls: 'broken' }
+    return { label, mark: '', cls: 'grayed' }
+  })
+})
 
 // ── EPOCH JUMP ───────────────────────────────────────────
 // Each physicsStep advances bbTime by DT = 0.004/3.
@@ -308,7 +348,7 @@ function bigBang() {
     const speed   = (60 + Math.random()*90) * H0mod * Lmod
     const rng     = Math.random()
     const type    = rng < 0.12 ? 'photon' : rng < 0.28 ? 'dark' : 'matter'
-    const hMod    = Math.max(0.1, 1 + constValues.higgs * 0.5)
+    const hMod    = outcomeKey.value === 'massless-chaos' ? 0.1 : Math.max(0.1, 1 + constValues.higgs * 0.5)
     const mass    = type==='dark' ? 8+Math.random()*20 : type==='photon' ? 0.5 : (2+Math.random()*14)*hMod
     const p = new BBParticle(angle, speed, mass, type)
     p.x += (Math.random()-0.5)*6; p.y += (Math.random()-0.5)*6
@@ -325,6 +365,7 @@ function physicsStep(dt) {
   const alphaEM = 1 + constValues.alpha * 0.5
   const alphaS  = 1 + constValues.alphaS * 0.6
   const SOFTEN  = 120
+  const chaos   = outcomeKey.value === 'massless-chaos'
 
   // Expansion forces
   if (bbPhase.value === 'bang' || bbPhase.value === 'expand') {
@@ -351,7 +392,8 @@ function physicsStep(dt) {
       a.vx += fx/a.mass*dt; a.vy += fy/a.mass*dt
       b.vx -= fx/b.mass*dt; b.vy -= fy/b.mass*dt
 
-      const fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
+      let fusionR = (a.r+b.r)*0.8*alphaS*Math.max(0.2,alphaEM)
+      if (chaos) fusionR *= 0
       if (d < fusionR && a.type!=='photon' && b.type!=='photon') {
         const tm = a.mass+b.mass
         a.vx=(a.vx*a.mass+b.vx*b.mass)/tm; a.vy=(a.vy*a.mass+b.vy*b.mass)/tm
@@ -375,6 +417,13 @@ function physicsStep(dt) {
     if (p.type==='photon') {
       const margin = W*1.5
       if (p.x<-margin||p.x>W+margin||p.y<-margin||p.y>H+margin) p.alive=false
+    }
+  }
+
+  // Antimatter annihilation — matter randomly flashes away into radiation
+  if (outcomeKey.value === 'antimatter-dom') {
+    for (const p of particles) {
+      if (p.type === 'matter' && Math.random() < 0.005) p.alive = false
     }
   }
 
@@ -616,6 +665,38 @@ onUnmounted(() => {
   margin-bottom: 6px; line-height: 1.2; transition: color 0.4s;
 }
 .bb-outcome-desc { font-size: 8px; line-height: 1.65; color: rgba(255,255,255,0.65); }
+
+/* ── Build chain + narrative strip ── */
+.bb-chain-panel {
+  position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%);
+  width: min(620px, calc(100% - 32px));
+  padding: 10px 16px; background: rgba(7,8,15,0.88);
+  border: 1px solid rgba(192,132,252,0.2); border-radius: 12px;
+  backdrop-filter: blur(12px); z-index: 20;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: border-color 0.5s;
+}
+.bb-chain-row {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 4px 6px; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.bb-chain-arrow { color: rgba(255,255,255,0.25); }
+.bb-chain-stage { white-space: nowrap; transition: color 0.3s, opacity 0.3s; }
+.bb-chain-stage.is-done,
+.bb-chain-stage.is-current { color: var(--accent-bang); }
+.bb-chain-stage.is-current { animation: bb-chain-pulse 1.4s ease-in-out infinite; }
+.bb-chain-stage.is-future { color: rgba(255,255,255,0.3); }
+.bb-chain-stage.is-checked { color: var(--accent-bang); opacity: 0.55; }
+.bb-chain-stage.is-broken { font-weight: 700; }
+.bb-chain-stage.is-grayed { color: rgba(255,255,255,0.3); }
+@keyframes bb-chain-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.bb-chain-narrative {
+  font-size: 8px; line-height: 1.65; color: rgba(255,255,255,0.7);
+  letter-spacing: 0.02em; text-align: center; transition: color 0.4s;
+}
 
 /* ── Bottom bar ── */
 .bb-bottom-bar {
