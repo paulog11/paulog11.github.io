@@ -9,4 +9,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  server: {
+    watch: {
+      // .pglite/ is the local Postgres engine's live data directory, not source —
+      // watching it races the dev server's own startup (see plugin-vue handleHotUpdate crash)
+      ignored: ['**/.pglite/**'],
+    },
+  },
 })

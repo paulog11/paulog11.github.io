@@ -19,6 +19,12 @@ export function useWaniKani() {
   const vocabLoading = ref(false)
   const vocabError = ref(null)
 
+  // Kanji mnemonic review state
+  const kanjiCache = useLocalStorage('japandash:wanikani-kanji-cache-v1', null)
+  const reviewKanji = ref(kanjiCache.value?.items ?? [])
+  const kanjiLoading = ref(false)
+  const kanjiError = ref(null)
+
   const SRS_LABELS = {
     1: 'apprentice', 2: 'apprentice', 3: 'apprentice', 4: 'apprentice',
     5: 'guru', 6: 'guru',
@@ -51,6 +57,84 @@ export function useWaniKani() {
       readings: sd.readings ?? [],
       audios,
       contextSentences: (sd.context_sentences ?? []).map(s => ({ ja: s.ja, en: s.en })),
+    }
+  }
+
+  function mergeKanjiItem(assignment, subject) {
+    const sd = subject.data
+    const ad = assignment.data
+    const primaryMeaning = sd.meanings?.find(m => m.primary)?.meaning ?? sd.meanings?.[0]?.meaning ?? ''
+    const primaryReading = sd.readings?.find(r => r.primary)?.reading ?? sd.readings?.[0]?.reading ?? ''
+    return {
+      subjectId: subject.id,
+      srsStage: ad.srs_stage,
+      srsLabel: SRS_LABELS[ad.srs_stage] ?? 'apprentice',
+      level: sd.level,
+      characters: sd.characters,
+      primaryMeaning,
+      meanings: sd.meanings?.map(m => m.meaning) ?? [],
+      primaryReading,
+      readings: sd.readings ?? [],
+      meaningMnemonic: sd.meaning_mnemonic ?? '',
+      meaningHint: sd.meaning_hint ?? null,
+      readingMnemonic: sd.reading_mnemonic ?? '',
+      readingHint: sd.reading_hint ?? null,
+    }
+  }
+
+  async function fetchKanjiMnemonics(forceRefresh = false) {
+    if (!apiKey.value || assignments.value.length === 0) return
+
+    const cached = kanjiCache.value
+    if (
+      !forceRefresh &&
+      cached &&
+      cached.userId === user.value?.username &&
+      Date.now() - new Date(cached.fetchedAt).getTime() < 24 * 60 * 60 * 1000
+    ) {
+      reviewKanji.value = cached.items
+      return
+    }
+
+    kanjiLoading.value = true
+    kanjiError.value = null
+    try {
+      const kanjiAssignments = assignments.value.filter(
+        a => a.data?.subject_type === 'kanji' && a.data?.srs_stage < 9
+      )
+
+      const subjectIds = kanjiAssignments.map(a => a.data.subject_id)
+      const chunks = []
+      for (let i = 0; i < subjectIds.length; i += 1000) {
+        chunks.push(subjectIds.slice(i, i + 1000))
+      }
+
+      const subjectResults = await Promise.all(
+        chunks.map(chunk =>
+          fetchSubjects(apiKey.value, { types: 'kanji', subject_ids: chunk.join(',') })
+        )
+      )
+      const subjects = subjectResults.flat()
+      const subjectMap = Object.fromEntries(subjects.map(s => [s.id, s]))
+
+      const merged = kanjiAssignments
+        .map(a => {
+          const subject = subjectMap[a.data.subject_id]
+          return subject ? mergeKanjiItem(a, subject) : null
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.level - b.level || a.characters.localeCompare(b.characters))
+
+      reviewKanji.value = merged
+      kanjiCache.value = {
+        fetchedAt: new Date().toISOString(),
+        userId: user.value?.username,
+        items: merged,
+      }
+    } catch (e) {
+      kanjiError.value = e.message
+    } finally {
+      kanjiLoading.value = false
     }
   }
 
@@ -191,5 +275,9 @@ export function useWaniKani() {
     vocabLoading,
     vocabError,
     fetchLearnedVocabulary,
+    reviewKanji,
+    kanjiLoading,
+    kanjiError,
+    fetchKanjiMnemonics,
   }
 }

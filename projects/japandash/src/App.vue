@@ -210,6 +210,7 @@ import { useWidgetLayout, ZONES, PATHS, WIDGET_META } from './composables/useWid
 
 const appVersion = __APP_VERSION__
 import WaniKaniWidget from './components/widgets/WaniKaniWidget.vue'
+import KanjiMnemonicWidget from './components/widgets/KanjiMnemonicWidget.vue'
 import VocabWidget from './components/widgets/VocabWidget.vue'
 import JishoWidget from './components/widgets/JishoWidget.vue'
 import ShadowingWidget from './components/widgets/ShadowingWidget.vue'
@@ -223,6 +224,7 @@ const { widgetOrder, activePath, focusedWidget, setFocus, clearFocus } = useWidg
 
 const widgetComponents = {
   wanikani: WaniKaniWidget,
+  kanji: KanjiMnemonicWidget,
   vocab: VocabWidget,
   jisho: JishoWidget,
   shadowing: ShadowingWidget,
