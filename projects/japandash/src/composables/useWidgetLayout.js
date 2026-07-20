@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 
 export const WIDGET_META = {
   wanikani:     { area: 'track',     size: 'large', tool: true  },
+  kanji:        { area: 'track',     size: 'large' },
   review:       { area: 'track',     size: 'small' },
   vocab:        { area: 'input',     size: 'large' },
   shadowing:    { area: 'input',     size: 'wide'  },
@@ -21,12 +22,12 @@ export const ZONES = [
 
 export const PATHS = [
   { id: 'all',    label: 'All',           icon: '🔍', widgets: null },
-  { id: 'warmup', label: 'Daily Warmup',  icon: '🌅', widgets: ['wanikani', 'vocab', 'onomatopoeia'] },
+  { id: 'warmup', label: 'Daily Warmup',  icon: '🌅', widgets: ['wanikani', 'kanji', 'vocab', 'onomatopoeia'] },
   { id: 'read',   label: 'Comprehension', icon: '📖', widgets: ['reading', 'shadowing'], rail: ['jisho', 'grammar'] },
   { id: 'speak',  label: 'Speaking',      icon: '🗣', widgets: ['conversation', 'review'] },
 ]
 
-const DEFAULT_ORDER = ['wanikani', 'vocab', 'jisho', 'shadowing', 'onomatopoeia', 'grammar', 'reading', 'conversation', 'review']
+const DEFAULT_ORDER = ['wanikani', 'kanji', 'vocab', 'jisho', 'shadowing', 'onomatopoeia', 'grammar', 'reading', 'conversation', 'review']
 
 function loadSavedOrder() {
   try {
