@@ -19,20 +19,16 @@ const PAD = 48, HEAD_Y = 76, ROW0 = 130, ROW_H = 68
 
 const FONT = "'DM Mono', ui-monospace, monospace"
 
+// MeshBasicMaterial only has room for one texture, so this draws a single
+// canvas (previously map and emissiveMap were drawn identically anyway).
 function boardTexture(projects) {
-  const mk = () => {
-    const c = document.createElement('canvas')
-    c.width = PX_W; c.height = PX_H
-    return [c, c.getContext('2d')]
-  }
-  const [cMap, g]  = mk()
-  const [cEmi, ge] = mk()
+  const c = document.createElement('canvas')
+  c.width = PX_W; c.height = PX_H
+  const g = c.getContext('2d')
 
-  for (const ctx of [g, ge]) {
-    ctx.fillStyle = '#04050a'
-    ctx.fillRect(0, 0, PX_W, PX_H)
-    ctx.textBaseline = 'middle'
-  }
+  g.fillStyle = '#04050a'
+  g.fillRect(0, 0, PX_W, PX_H)
+  g.textBaseline = 'middle'
 
   // Header
   const head = (ctx, dim) => {
@@ -46,7 +42,6 @@ function boardTexture(projects) {
     ctx.fillRect(PAD, HEAD_Y + 32, PX_W - PAD * 2, 3)
   }
   head(g, false)
-  head(ge, false)
 
   const hex = (n) => '#' + n.toString(16).padStart(6, '0')
 
@@ -56,30 +51,27 @@ function boardTexture(projects) {
     const main = live ? hex(AMBER) : '#9a8663'
     const stat = live ? hex(CYAN) : '#7d7361'
 
-    for (const ctx of [g, ge]) {
-      // Platform number, the way a real board numbers its tracks.
-      ctx.font = `500 38px ${FONT}`
-      ctx.fillStyle = hex(WARM)
-      ctx.fillText(String(i + 1).padStart(2, '0'), PAD, y)
+    // Platform number, the way a real board numbers its tracks.
+    g.font = `500 38px ${FONT}`
+    g.fillStyle = hex(WARM)
+    g.fillText(String(i + 1).padStart(2, '0'), PAD, y)
 
-      ctx.font = `500 44px ${FONT}`
-      ctx.fillStyle = main
-      ctx.fillText(p.title, PAD + 110, y)
+    g.font = `500 44px ${FONT}`
+    g.fillStyle = main
+    g.fillText(p.title, PAD + 110, y)
 
-      ctx.textAlign = 'right'
-      ctx.font = `400 32px ${FONT}`
-      ctx.fillStyle = '#8e8a7e'
-      ctx.fillText(p.year ?? '', PX_W - PAD - 230, y)
-      ctx.fillStyle = stat
-      ctx.fillText(live ? 'ON TIME' : 'DELAYED', PX_W - PAD, y)
-      ctx.textAlign = 'left'
-    }
+    g.textAlign = 'right'
+    g.font = `400 32px ${FONT}`
+    g.fillStyle = '#8e8a7e'
+    g.fillText(p.year ?? '', PX_W - PAD - 230, y)
+    g.fillStyle = stat
+    g.fillText(live ? 'ON TIME' : 'DELAYED', PX_W - PAD, y)
+    g.textAlign = 'left'
   })
 
-  const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
+  return Object.assign(new THREE.CanvasTexture(c), {
     colorSpace: THREE.SRGBColorSpace, anisotropy: 8,
   })
-  return { map: tex(cMap), emissiveMap: tex(cEmi) }
 }
 
 /** Row centre in board-local Y (metres), converting canvas px to world. */
@@ -92,15 +84,16 @@ export function createDepartureBoard(projects) {
   const group = new THREE.Group()
   const DECK = 2.6                       // underside of the board
 
-  const { map, emissiveMap } = boardTexture(projects)
-  const faceMat = new THREE.MeshStandardMaterial({
-    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.0, roughness: 0.55,
-  })
+  const map = boardTexture(projects)
+  // Basic: the board is a lit display, and its map is already drawn bright —
+  // colour just tints overall brightness, since Basic has no emissive.
+  const faceMat = new THREE.MeshBasicMaterial({ map })
+  faceMat.color.setScalar(0.8)
   const face = new THREE.Mesh(new THREE.PlaneGeometry(W, H), faceMat)
   face.position.set(0, DECK + H / 2, 0.07)
   group.add(face)
 
-  const bezelMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.85 })
+  const bezelMat = new THREE.MeshLambertMaterial({ color: 0x14171f })
   const bezel = new THREE.Mesh(new THREE.BoxGeometry(W + 0.5, H + 0.5, 0.3), bezelMat)
   bezel.position.set(0, DECK + H / 2, -0.08)
   group.add(bezel)
@@ -142,7 +135,7 @@ export function createDepartureBoard(projects) {
       setHover(on) {
         highlight.visible = on
         if (on) highlight.position.y = y
-        faceMat.emissiveIntensity = on ? 1.35 : 1.0
+        faceMat.color.setScalar(on ? 1 : 0.8)
       },
     }
   })

@@ -16,7 +16,7 @@ function panel(w, h, material) {
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), material)
 }
 
-const frameMat = new THREE.MeshStandardMaterial({ color: 0x0a0c12, roughness: 0.9 })
+const frameMat = new THREE.MeshLambertMaterial({ color: 0x0a0c12 })
 
 // A glazed pane plus its frame and centre mullion. Without the dividers a lit
 // window is just a flat bright rectangle stuck on the wall.
@@ -45,7 +45,7 @@ function buildStall(project, i, lightEvery) {
   // ── Body ──────────────────────────────────────────────────────────────────
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(W - 0.12, height, D),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color(shell, shell * 0.95, shell * 1.15), roughness: 0.9 }),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(shell, shell * 0.95, shell * 1.15) }),
   )
   body.position.set(0, height / 2, FRONT_Z - D / 2)
   group.add(body)
@@ -53,7 +53,7 @@ function buildStall(project, i, lightEvery) {
   // Roof slab, overhanging the shopfront like a real awning.
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(W, 0.18, D + 0.7),
-    new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.95 }),
+    new THREE.MeshLambertMaterial({ color: 0x14171f }),
   )
   roof.position.set(0, height + 0.09, FRONT_Z - D / 2 + 0.35)
   group.add(roof)
@@ -61,8 +61,8 @@ function buildStall(project, i, lightEvery) {
   // ── Doorway: recessed, with warm interior spill ───────────────────────────
   const doorway = new THREE.Mesh(
     new THREE.BoxGeometry(1.7, 2.1, 0.5),
-    new THREE.MeshStandardMaterial({
-      color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.5, roughness: 1,
+    new THREE.MeshLambertMaterial({
+      color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.5,
     }),
   )
   doorway.position.set(-0.55, 1.05, FRONT_Z - 0.24)
@@ -74,17 +74,17 @@ function buildStall(project, i, lightEvery) {
   group.add(noren)
 
   // Ground-floor window beside the door.
-  // roughness 1 keeps the environment map from putting a grey sheen on these —
-  // a lit window should read as warm glass, not as a flat panel.
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0x1c1408, emissive: WARM, emissiveIntensity: 0.75, roughness: 1, metalness: 0,
+  // No environment map exists any more, so a lit window reads as warm glass
+  // from the emissive term alone — no roughness/metalness knobs needed.
+  const windowMat = new THREE.MeshLambertMaterial({
+    color: 0x1c1408, emissive: WARM, emissiveIntensity: 0.75,
   })
   group.add(glazing(1.15, 0.95, windowMat, 1.05, 1.35))
 
   // Upper floor: not every flat above a bar is occupied, and an unbroken row of
   // identically-lit windows is what makes a procedural row look fake.
   const upperMat = i % 3 === 1
-    ? new THREE.MeshStandardMaterial({ color: 0x0d1017, roughness: 0.4, metalness: 0.15 })
+    ? new THREE.MeshLambertMaterial({ color: 0x0d1017 })
     : windowMat
   group.add(glazing(1.3, 0.9, upperMat, -0.4, height - 1.5))
 
@@ -94,10 +94,10 @@ function buildStall(project, i, lightEvery) {
   const sign = createSignTexture({
     text: project.title, style: 'neon', orientation: 'horizontal', color: accent, px: 256,
   })
-  const signMat = new THREE.MeshStandardMaterial({
-    map: sign.map, emissiveMap: sign.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 1.0, roughness: 0.5,
-  })
+  // Basic: the map is already the lit neon art, so colour just tints its
+  // brightness — dim at rest, full (white) on hover.
+  const signMat = new THREE.MeshBasicMaterial({ map: sign.map })
+  signMat.color.setScalar(0.5)
   const signW = 3.1
   const signMesh = panel(signW, signW / sign.aspect, signMat)
   signMesh.position.set(-0.25, 2.95, FRONT_Z + 0.09)
@@ -108,10 +108,8 @@ function buildStall(project, i, lightEvery) {
     text: AMBIENT[i % AMBIENT.length], style: i % 2 ? 'neon' : 'lightbox',
     orientation: 'vertical', color: ACCENTS[(i + 2) % ACCENTS.length], px: 256,
   })
-  const vertMat = new THREE.MeshStandardMaterial({
-    map: vert.map, emissiveMap: vert.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.5, side: THREE.DoubleSide,
-  })
+  const vertMat = new THREE.MeshBasicMaterial({ map: vert.map, side: THREE.DoubleSide })
+  vertMat.color.setScalar(0.57)
   // Sits ABOVE the name sign, not beside it — projecting perpendicular at the
   // same height would occlude the project name from this camera angle.
   const vertH = 1.8
@@ -127,30 +125,19 @@ function buildStall(project, i, lightEvery) {
 
   // props.js shares materials between instances, so hovering one stall would
   // otherwise light every lantern in the alley. Clone this stall's copies.
+  // The lantern skin is the only MeshBasicMaterial here (ribs/caps are the
+  // shared matDark, a MeshLambertMaterial), so that's how hover picks it out.
   const lanternMats = []
   lantern.traverse((o) => {
     if (!o.material) return
     o.material = o.material.clone()
-    if (o.material.emissive) lanternMats.push(o.material)
+    if (o.material.isMeshBasicMaterial) lanternMats.push(o.material)
   })
-  const lanternBase = lanternMats.map((m) => m.emissiveIntensity)
+  const lanternBase = lanternMats.map((m) => m.color.clone())
 
   const ac = createAcUnit()
   ac.position.set(1.35, height - 2.4, FRONT_Z + 0.02)
   group.add(ac)
-
-  // Emissive materials illuminate nothing in three.js, so each shopfront needs
-  // a real light to spill its colour onto the wet street.
-  // Aimed low and kept dim: it should pool on the wet street, not wash the
-  // facade. Golden Gai at night is dark buildings and bright signs.
-  // Point lights are the scene's biggest per-fragment cost, so the low tier
-  // lights every other shopfront — the pools still read, at half the shader work.
-  let spill = null
-  if (i % lightEvery === 0) {
-    spill = new THREE.PointLight(new THREE.Color(accent), 3.2, 11, 2)
-    spill.position.set(0, 1.9, FRONT_Z + 2.2)
-    group.add(spill)
-  }
 
   // ── Pick target ───────────────────────────────────────────────────────────
   // One generous invisible box per stall, so the whole shopfront is clickable
@@ -165,12 +152,11 @@ function buildStall(project, i, lightEvery) {
   // Hover: brighten the sign, the lantern and the doorway spill together, so
   // the whole shopfront lights up rather than just the plane under the cursor.
   function setHover(on) {
-    signMat.emissiveIntensity = on ? 2.0 : 1.0
-    vertMat.emissiveIntensity = on ? 1.5 : 0.85
+    signMat.color.setScalar(on ? 1 : 0.5)
+    vertMat.color.setScalar(on ? 1 : 0.57)
     doorway.material.emissiveIntensity = on ? 1.1 : 0.5
     windowMat.emissiveIntensity = on ? 0.95 : 0.55
-    lanternMats.forEach((m, k) => { m.emissiveIntensity = lanternBase[k] * (on ? 1.9 : 1) })
-    if (spill) spill.intensity = on ? 8 : 3.2
+    lanternMats.forEach((m, k) => { m.color.copy(lanternBase[k]).lerp(new THREE.Color(0xffffff), on ? 0.35 : 0) })
   }
 
   // vertMat is exposed for the ambient flicker layer. The project-name sign is

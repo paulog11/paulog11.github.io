@@ -1,26 +1,54 @@
 import * as THREE from 'three'
-import { OrbitControls }   from 'three/addons/controls/OrbitControls.js'
-import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js'
-import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js'
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
-import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js'
-import { NIGHT } from './palette.js'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { MAP_HALF } from './cityLayout.js'
 
-// 1 world unit = 1 metre at street level. Backdrop towers use compressed
-// geometry (Phase 3) because an ortho camera gives them no distance falloff.
-const FRUSTUM  = 26          // metres of vertical view at zoom 1
-const AZIMUTH  = Math.PI / 4 // 45° — the isometric default
+// 1 world unit = 1 metre. The map is a 178m square (see cityLayout.js), and the
+// camera frames all of it at zoom 1 — on ANY aspect ratio.
+//
+// All three constants below are derived from this rig's projection, not tuned
+// against a screenshot:
+//   screenX = 0.707(x - z)      -> x-z spans +/-178, so half-width  = 0.707*178 = 126
+//   screenY = 0.927y - 0.265(x+z)
+// At ground level screenY spans +/-47. The tallest content (~46m towers) adds
+// 0.927*46 = 43 on top, and only at the BACK of the map, so the content box is
+// asymmetric: roughly -47 to +90. That asymmetry is why the camera target sits
+// above the ground rather than on it — with a ground-level target the city
+// bunches into the top of the frame and the bottom third renders empty.
+const CONTENT_W  = 267       // 252 wide + ~6% margin
+const CONTENT_H  = 145       // 137 tall + ~6% margin
+const CONTENT_CY = 21.3      // screenY centre of the content box
+const TARGET_Y   = CONTENT_CY / 0.927   // ~23m — the world height that centres it
+
+const AZIMUTH  = Math.PI / 4 // 45 degrees — the isometric default
 const DRAG_SLOP = 5          // px of pointer travel that still counts as a click
 
+// The closest the camera may get, in metres of vertical view. Expressed as a
+// view size rather than a zoom multiplier so a phone and a desktop reach the
+// same intimacy — a fixed maxZoom would leave narrow screens permanently
+// further out, because their zoom-1 frustum is much larger (see resize()).
+const CLOSEST_VIEW = 30
+const MIN_ZOOM = 0.9
+
+// Render resolution as a fraction of CSS pixels. Below 1 this is a large,
+// near-linear fragment-cost saving, and paired with `image-rendering: pixelated`
+// on the canvas it is not a compromise but the actual 90s look.
+const RES_SCALE = { high: 0.75, low: 0.55 }
+
+// 90s isometric games ran here. Halves the frame budget versus 60fps, and the
+// scene is a static city — nothing in it needs to be smooth.
+const TARGET_FPS = 30
+
 /**
- * The night sky, used both as the visible background and as the reflection
- * environment. Equirectangular, so canvas-Y runs zenith → horizon (mid) → nadir.
- * Tokyo's sky is never black: light pollution puts a warm bloom just above the
- * horizon. That glow also fills the upper corners of the frame, which at this
- * camera elevation are genuinely sky — no ground position projects there, so no
- * amount of backdrop geometry can cover them.
+ * The night sky, used as the visible background. Equirectangular, so canvas-Y
+ * runs zenith -> horizon (mid) -> nadir. Tokyo's sky is never black: light
+ * pollution puts a warm bloom just above the horizon, which also fills the upper
+ * corners of the frame where no ground position can project.
+ *
+ * No PMREM environment any more. That existed only so metallic surfaces had
+ * something to reflect, and nothing in the scene is metallic since the material
+ * policy went unlit/Lambert — generating it was pure startup cost.
  */
-function nightSky(renderer) {
+function nightSky() {
   const c = document.createElement('canvas')
   c.width = 64; c.height = 256
   const g = c.getContext('2d')
@@ -37,55 +65,52 @@ function nightSky(renderer) {
   const src = new THREE.CanvasTexture(c)
   src.mapping = THREE.EquirectangularReflectionMapping
   src.colorSpace = THREE.SRGBColorSpace
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  const env = pmrem.fromEquirectangular(src).texture
-  pmrem.dispose()
-  // `src` stays alive — it is the scene background, not just the PMREM source.
-  return { env, background: src }
+  return src
 }
 
-/**
- * Owns the canvas, camera, post-processing and pointer picking.
- * Throws if WebGL is unavailable — callers should catch and fall back.
- */
 /** Phones and small viewports get a cheaper scene. Overridable for benchmarking. */
 export function detectQuality() {
   return (window.innerWidth < 900 || matchMedia('(pointer: coarse)').matches) ? 'low' : 'high'
 }
 
+/**
+ * Owns the canvas, camera and pointer picking.
+ * Throws if WebGL is unavailable — callers should catch and fall back.
+ */
 export function createStage(canvas, opts = {}) {
   const quality = opts.quality ?? detectQuality()
   const low = quality === 'low'
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !low })
-  renderer.setPixelRatio(Math.min(devicePixelRatio, low ? 1.25 : 2))
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 0.95
+  // antialias off: it fights the pixelated upscale and costs fill rate. The
+  // chunky edges are the point.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false })
+  renderer.setPixelRatio(opts.resScale ?? (low ? RES_SCALE.low : RES_SCALE.high))
+  // No tone mapping. ACES exists to roll off highlights for a bloom pass; with
+  // flat unlit signage and no bloom it only desaturates the neon. Flat saturated
+  // colour is the palette this look wants.
+  renderer.toneMapping = THREE.NoToneMapping
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.Fog(NIGHT, 90, 260)
-  // Without an environment map, any metallic surface has no diffuse and nothing
-  // to reflect, so it renders pure black. Wet asphalt and puddles depend on it.
-  const sky = nightSky(renderer)
-  scene.background = sky.background
-  scene.environment = sky.env
-  scene.environmentIntensity = 0.55
+  // Pushed far out: the camera orbits at radius 160 and the map's far corner is
+  // ~126 units from centre, so the old 90-260 range hazed out half the city.
+  // This only softens the extreme back corner.
+  scene.fog = new THREE.Fog(0x070a12, 220, 500)
+  scene.background = nightSky()
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000)
   const elevation = 22 * Math.PI / 180
-  const radius = 160
+  const radius = 200
   camera.position.set(
     radius * Math.cos(elevation) * Math.sin(AZIMUTH),
-    radius * Math.sin(elevation),
+    radius * Math.sin(elevation) + TARGET_Y,
     radius * Math.cos(elevation) * Math.cos(AZIMUTH),
   )
 
   const controls = new OrbitControls(camera, canvas)
-  controls.target.set(0, 3.4, -1.5)
-  // Panning along the alley is how narrow viewports reach every stall — at
-  // 375px only ~3 of 9 fit, and zooming out far enough to fit all nine makes
-  // the signs unreadable. On touch, one finger travels the street.
+  // Above the station rather than on it — see CONTENT_CY. The pivot being off
+  // the ground is deliberate, not a leftover.
+  controls.target.set(0, TARGET_Y, 0)
   controls.enablePan = true
   controls.screenSpacePanning = false
   controls.touches.ONE = THREE.TOUCH.PAN
@@ -98,34 +123,31 @@ export function createStage(canvas, opts = {}) {
   controls.maxPolarAngle   = Math.PI * 0.46
   controls.minAzimuthAngle = AZIMUTH - Math.PI / 5
   controls.maxAzimuthAngle = AZIMUTH + Math.PI / 5
-  controls.minZoom = 0.7
-  controls.maxZoom = 2.6
+  controls.minZoom = MIN_ZOOM
+  controls.zoom0 = 1
   controls.update()
-
-  // Bloom is the most expensive pass here (five mip blurs over the full frame),
-  // so the low tier renders it at half resolution.
-  const bloomScale = low ? 0.5 : 1
-  const composer = new EffectComposer(renderer)
-  composer.addPass(new RenderPass(scene, camera))
-  const bloom = opts.bloom === false
-    ? null
-    : new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.45, 0.58)
-  if (bloom) composer.addPass(bloom)
-  composer.addPass(new OutputPass())
 
   // ── Sizing ────────────────────────────────────────────────────────────────
   function resize() {
     const { clientWidth: w, clientHeight: h } = canvas
     if (!w || !h) return
     const aspect = w / h
-    camera.left   = -FRUSTUM * aspect / 2
-    camera.right  =  FRUSTUM * aspect / 2
-    camera.top    =  FRUSTUM / 2
-    camera.bottom = -FRUSTUM / 2
+    // The frustum satisfies whichever axis is binding. On a 16:9 desktop that is
+    // height; on a 375px portrait phone the map is ~3.5x too wide to fit inside a
+    // height-derived frustum, so width binds and the view pulls back. A fixed
+    // frustum left narrow screens unable to see the city at all.
+    const frustum = Math.max(CONTENT_H, CONTENT_W / aspect)
+    camera.left   = -frustum * aspect / 2
+    camera.right  =  frustum * aspect / 2
+    camera.top    =  frustum / 2
+    camera.bottom = -frustum / 2
     camera.updateProjectionMatrix()
+    // Zoom range follows the frustum so every device can reach the same closest
+    // view, rather than phones being stuck further out.
+    controls.maxZoom = Math.max(MIN_ZOOM + 0.1, frustum / CLOSEST_VIEW)
+    // updateStyle=false: the backing store shrinks by the pixel ratio while the
+    // canvas keeps its CSS size, so the browser upscales it.
     renderer.setSize(w, h, false)
-    composer.setSize(w, h)
-    bloom?.resolution.set(w * bloomScale, h * bloomScale)
     invalidate()
   }
   const observer = new ResizeObserver(resize)
@@ -173,37 +195,52 @@ export function createStage(canvas, opts = {}) {
   canvas.addEventListener('pointerup',   onPointerUp)
 
   // ── Frame loop ────────────────────────────────────────────────────────────
-  // Under reduced-motion we render on demand only: the scene stays interactive
-  // (orbit, hover) but nothing animates on its own.
   const frameCallbacks = []
   const clock = new THREE.Clock()
   let dirty = true
+  let lastFrame = 0
   const invalidate = () => { dirty = true }
 
-  // Keep panning on rails: slide along the alley only, never off it. Camera and
-  // target move together so the framing stays rigid.
-  const PAN_X = 24, HOME_Y = 3.4, HOME_Z = -1.5
+  // Panning is a box over the map, not a rail: at high zoom you need to reach
+  // every corner, and the camera has to travel with the target so the isometric
+  // framing stays rigid.
   function clampPan() {
     const t = controls.target
-    const dx = THREE.MathUtils.clamp(t.x, -PAN_X, PAN_X) - t.x
-    const dy = HOME_Y - t.y
-    const dz = HOME_Z - t.z
+    const dx = THREE.MathUtils.clamp(t.x, -MAP_HALF, MAP_HALF) - t.x
+    const dy = TARGET_Y - t.y                        // pivot height is fixed, see CONTENT_CY
+    const dz = THREE.MathUtils.clamp(t.z, -MAP_HALF, MAP_HALF) - t.z
     if (!dx && !dy && !dz) return
     t.set(t.x + dx, t.y + dy, t.z + dz)
-    camera.position.set(camera.position.x + dx, camera.position.y + dy, camera.position.z + dz)
+    camera.position.set(
+      camera.position.x + dx,
+      camera.position.y + dy,
+      camera.position.z + dz,
+    )
   }
 
-  function tick() {
+  function tick(now) {
     const moving = controls.update()
     clampPan()
+
+    // Under reduced motion we render on demand only: the scene stays fully
+    // interactive (orbit, zoom, hover) but nothing animates on its own.
     if (reduceMotion) {
       if (!moving && !dirty) return
-    } else {
-      const dt = clock.getDelta()
-      for (const fn of frameCallbacks) fn(dt, clock.elapsedTime)
+      dirty = false
+      renderer.render(scene, camera)
+      return
     }
+
+    // Everything else is capped rather than on-demand, because rain, the train,
+    // steam and neon flicker all animate every frame — there is no idle state to
+    // fall back to. The cap is where the saving comes from.
+    if (now - lastFrame < 1000 / TARGET_FPS) return
+    const dt = Math.min((now - lastFrame) / 1000, 0.1)
+    lastFrame = now
+
+    for (const fn of frameCallbacks) fn(dt, clock.getElapsedTime())
     dirty = false
-    composer.render()
+    renderer.render(scene, camera)
   }
 
   resize()
@@ -235,22 +272,20 @@ export function createStage(canvas, opts = {}) {
           m.dispose()
         }
       })
-      composer.dispose()
+      scene.background?.dispose()
       renderer.dispose()
     },
   }
 }
 
-/** Moonlight and city bounce. The emissive facades do most of the real work. */
+/**
+ * Two lights, not four. Under MeshLambertMaterial every light is per-fragment
+ * work and every distinct light count compiles another shader program; the
+ * emissive maps on the facades do most of the visual work anyway.
+ */
 export function addNightLighting(scene) {
-  scene.add(new THREE.AmbientLight(0x3a4566, 1.6))
-  const moon = new THREE.DirectionalLight(0xc2d2f0, 2.2)
+  scene.add(new THREE.AmbientLight(0x4a5578, 2.2))
+  const moon = new THREE.DirectionalLight(0xc2d2f0, 1.8)
   moon.position.set(-60, 70, 40)
   scene.add(moon)
-  const fill = new THREE.DirectionalLight(0x9fb3d9, 1.5)
-  fill.position.set(110, 50, 110)
-  scene.add(fill)
-  const bounce = new THREE.DirectionalLight(0xff8a4a, 0.6)
-  bounce.position.set(40, -20, 50)
-  scene.add(bounce)
 }

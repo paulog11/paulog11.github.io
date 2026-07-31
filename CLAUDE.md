@@ -60,20 +60,39 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 - `App.vue` — owns the `apps` array (single source of truth for every project) and dispatches scene clicks
 - `components/ShinjukuScene.vue` — the Vue↔three boundary: builds the scene, registers pick targets, falls back on WebGL failure
 - `components/ProjectList.vue` — accessible `<ul>` fallback, rendered *inside* the `<canvas>`. This is what screen readers and crawlers see, so it is not a stub
-- `scene/` — the 3D scene, one module per concern: `renderer` (camera, bloom, picking, quality tier), `palette`, `signTexture`, `alley` (the 9 project stalls), `street`, `towers` (都庁 + Cocoon), `crowd`, `ambient`, `departureBoard`, `konbini`, `streetFurniture`, `props`
-- `spike/` — standalone harnesses the Playwright suites drive (`alley`, `board`, `stage`, `scene`, `perf`). Vite only builds `index.html`, so these never ship
+- `scene/cityLayout.js` — **the single source of truth for where everything stands.** Pure data + maths, imports nothing from three.js. A 3×3 lattice of blocks separated by streets; each block subdivides into a 3×3 lattice of lots; a building occupies one lot. Moving a building is a two-integer edit. Replace *this* file when real Shinjuku coordinates arrive — never hard-code positions in the geometry modules. `node scene/cityLayout.test.mjs` checks its invariants without a browser
+- `scene/` — the 3D scene, one module per concern: `renderer` (camera, picking, quality tier), `palette`, `signTexture`, `cityLayout`, `street` (the road network), `blocks` (filler buildings), `station` (新宿駅, the centrepiece), `projectBuilding` (the 9 clickable ones), `lightPool`, `towers` (都庁 + Cocoon), `alley` (Golden Gai scenery), `ambient`, `departureBoard`, `konbini`, `streetFurniture`, `props`
+- `spike/` — standalone harnesses the Playwright suites drive (`city`, `alley`, `board`, `stage`, `perf`). Vite only builds `index.html`, so these never ship
 - `main.js` / `style.css` — Vue entry point and global Tailwind styles
 - `index.source.html` — permanent Vite entry template (references `./main.js`); never overwritten by deploy
 - `index.html` — at rest this is the built output for GitHub Pages; `predev`/`prebuild` hooks restore it from `index.source.html` before Vite runs
 - `vite.config.js` — Vite config with `base: './'`
 - `tailwind.config.js` — night palette (night/asphalt/lantern/kabuki/neon/paper), mirroring `scene/palette.js`
 
+## Material Policy (the rule the whole scene is built on)
+The scene is deliberately cheap to render, because the retro isometric look and
+the low-GPU look are the same thing. Breaking these puts the cost straight back.
+
+| Use | Material |
+|---|---|
+| Signs, neon, halos, light pools, hit boxes | `MeshBasicMaterial` — **unlit**; the texture *is* the output |
+| Facades, roads, structures, props | `MeshLambertMaterial` — supports `map`, `emissive`, `emissiveMap` |
+| Anything at all | ~~`MeshStandardMaterial`~~ — **banned** |
+
+- **No `metalness`, no `roughness`, anywhere.** No `PointLight`/`SpotLight` either.
+- **`MeshBasicMaterial` has no `emissive` property.** Setting one does nothing and fails silently — a hover effect on a Basic material must change `color`.
+- **There is no bloom pass and no tone mapping** (`NoToneMapping`). Anything that should glow must *be* bright in its own colour or texture, and colours clip rather than roll off — don't blow things out to white.
+- **There is no `scene.environment`.** Nothing may rely on reflections. Wet asphalt is painted into the road texture, not produced by gloss.
+- Ground light-spill is faked with additive `MeshBasicMaterial` radial-gradient decals (`scene/lightPool.js`), never with real lights.
+
 ## Scene Constraints (non-obvious, cost real time to learn)
-- **1 world unit = 1 metre** at street level. Backdrop towers use *compressed* geometry — an orthographic camera has no distance falloff, so a literal 243 m 都庁 would be nine times the screen height.
-- Screen position under this camera (azimuth 45°, elevation 22°) is `screenX = 0.707(x − z)`, `screenY = 0.927y − 0.265(x + z)`. **Depth pushes objects up the frame**, so anything far back is high on screen before its own height counts. Derive placement from these; don't fit constants to one camera position — the camera pans ±24 m.
-- **Emissive materials illuminate nothing** in three.js. Light spilling onto the street comes from real `PointLight`s on the shopfronts.
-- **A metallic material with no `scene.environment` renders pure black** — it has no diffuse and nothing to reflect.
-- A bloom pass runs downstream. Over-bright emissive plus bloom has destroyed the image several times; keep emissive restrained and verify by looking at a render.
+- **1 world unit = 1 metre.** The map is a 178 m square centred on the station. Landmark towers still use *compressed* geometry — an orthographic camera has no distance falloff, so a literal 243 m 都庁 would tower off-frame.
+- Screen position under this camera (azimuth 45°, elevation 22°) is `screenX = 0.707(x − z)`, `screenY = 0.927y − 0.265(x + z)`. **Depth pushes objects up the frame**, so anything far back is high on screen before its own height counts. Derive placement from these; don't fit constants to one camera position.
+- **`FRUSTUM = 145`** is not a taste value — it is what makes all four map corners fit at zoom 1. Detail comes from the zoom range (0.95–5), which is the scene's only LOD mechanism.
+- At zoom 1 there are **~4.8 px per metre** on a 700 px-tall viewport. Anything finer than ~3 m is invisible — put that detail in a texture, not in geometry.
+- **Emissive materials illuminate nothing** in three.js.
+- The renderer draws at a **fraction of CSS resolution** (`RES_SCALE`) and the browser upscales it; `canvas[data-scene] { image-rendering: pixelated }` in `style.css` is what turns that from "blurry" into the intended look. The two belong together.
+- The frame loop is **capped to 30 fps**, not on-demand — rain, the train, steam and flicker animate continuously, so there is no idle state. True on-demand rendering is the `prefers-reduced-motion` path only.
 - `createSignTexture` takes a **string** colour. Canvas2D silently ignores an invalid `fillStyle`, so a palette number used to render black-on-black; the function now coerces, but prefer strings.
 - `prefers-reduced-motion` must produce a perceptually static frame — including CSS animations, which need `motion-safe:`.
 
@@ -87,8 +106,11 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 **Important:** `index.source.html` is the canonical Vite entry. The `predev`/`prebuild`/`deploy` scripts all restore `index.html` from it before Vite runs. Do NOT manually edit `index.html` — edit `index.source.html` instead.
 
 ## Adding a New Project
-Append to the `apps` array in `App.vue` — nothing else. The alley grows one stall,
-the departure board grows one row, and the fallback list grows one entry:
+Two edits, because a project needs both an identity and a street address.
+
+**1. Append to the `apps` array in `App.vue`** — the single source of truth for
+what a project *is*. The departure board grows a row and the accessible fallback
+list grows an entry from this alone:
 ```js
 {
   id: 'my-app', indexNumber: 10, title: 'My App',
@@ -102,9 +124,20 @@ the departure board grows one row, and the fallback list grows one entry:
   github: '',
 }
 ```
+
+**2. Add a site to `PROJECT_SITES` in `scene/cityLayout.js`** — where it *stands*.
+Pick a free lot; `node scene/cityLayout.test.mjs` fails if you collide with
+another project, the station, or Golden Gai:
+```js
+{ id: 'my-app', cell: [0, 1], lot: [2, 0], h: 22 }
+```
+A project with no site simply doesn't get a building (it stays on the board and
+in the fallback list); a site with no matching `id` is skipped with a warning
+rather than rendering a nameless building.
+
 URLs are relative (`./projects/<name>/dist/index.html`) for GitHub Pages. Keep
-`title` short — it is rendered onto a neon sign roughly 3 m wide, and long titles
-shrink to fit rather than wrap.
+`title` short — it is rendered onto a neon sign that must stay readable at ~4.8
+px per metre, and long titles shrink to fit rather than wrap.
 
 ## Subprojects
 - `projects/algo-lab/` — algorithm simulation lab ([CLAUDE.md](projects/algo-lab/CLAUDE.md))

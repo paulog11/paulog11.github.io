@@ -119,9 +119,8 @@ function slab(w, h, d, opts = {}) {
   )
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshLambertMaterial({
       map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.5,
-      roughness: 0.72, metalness: 0.05,
     }),
   )
   return mesh
@@ -152,11 +151,11 @@ function createTocho() {
     g.add(place(slab(5.25, TOP_Y - SPLIT_Y, 12), sx * 4.9, SPLIT_Y, 0))
     g.add(place(new THREE.Mesh(
       new THREE.BoxGeometry(3.9, 1.6, 9),
-      new THREE.MeshStandardMaterial({ color: 0x6a7286, roughness: 0.9 }),
+      new THREE.MeshLambertMaterial({ color: 0x6a7286 }),
     ), sx * 4.9, TOP_Y, 0))
     const mast = new THREE.Mesh(
       new THREE.CylinderGeometry(0.12, 0.2, 6, 6),
-      new THREE.MeshStandardMaterial({ color: 0x7a8394, roughness: 0.8 }),
+      new THREE.MeshLambertMaterial({ color: 0x7a8394 }),
     )
     mast.position.set(sx * 4.9, TOP_Y + 1.6 + 3, 0)
     g.add(mast)
@@ -187,9 +186,8 @@ function createCocoon() {
   const { map, emissiveMap } = latticeTexture()
   const body = new THREE.Mesh(
     new THREE.LatheGeometry(profile, 28),
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshLambertMaterial({
       map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.42,
-      roughness: 0.4, metalness: 0.2,
     }),
   )
   body.scale.z = 0.68        // elliptical in plan, not circular
@@ -197,7 +195,7 @@ function createCocoon() {
 
   const podium = new THREE.Mesh(
     new THREE.BoxGeometry(13, 2.4, 10),
-    new THREE.MeshStandardMaterial({ color: 0x2a2f3a, roughness: 0.9 }),
+    new THREE.MeshLambertMaterial({ color: 0x2a2f3a }),
   )
   podium.position.y = 1.2
   g.add(podium)

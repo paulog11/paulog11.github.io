@@ -11,3 +11,11 @@ body {
   background-color: #070A12;
   -webkit-font-smoothing: antialiased;
 }
+
+/* The scene renders into a backing store smaller than the canvas' CSS size
+   (see RES_SCALE in scene/renderer.js) and the browser upscales it. Without
+   this the upscale is smoothed and the result just looks blurry; with it the
+   chunky pixels are the 90s isometric look the scene is going for. */
+canvas[data-scene] {
+  image-rendering: pixelated;
+}

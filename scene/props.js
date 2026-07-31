@@ -8,13 +8,12 @@ const PLASTIC = 0xcac7ba // weathered off-white plastic — AC casing, machine b
 
 // Shared fixed-colour materials — reused across every prop instance so a
 // street full of crates/poles/pipes doesn't allocate one material each.
-// Low metalness: the scene has no environment map, so a high-metalness
-// material has nothing to reflect and renders near-black under directional
-// lights alone.
-const matDark     = new THREE.MeshStandardMaterial({ color: DARK, roughness: 0.9 })
-const matSteel    = new THREE.MeshStandardMaterial({ color: STEEL, roughness: 0.5, metalness: 0.2 })
-const matPlastic  = new THREE.MeshStandardMaterial({ color: PLASTIC, roughness: 0.6 })
-const matConcrete = new THREE.MeshStandardMaterial({ color: GRANITE, roughness: 0.85 })
+// Lambert, not Standard: metalness/roughness are gone from the pipeline, and
+// the scene has no environment map for a metallic surface to reflect anyway.
+const matDark     = new THREE.MeshLambertMaterial({ color: DARK })
+const matSteel    = new THREE.MeshLambertMaterial({ color: STEEL })
+const matPlastic  = new THREE.MeshLambertMaterial({ color: PLASTIC })
+const matConcrete = new THREE.MeshLambertMaterial({ color: GRANITE })
 
 // Chōchin profile as (radius fraction, height fraction) pairs — shared by the
 // Lathe skin and the rib rings so the ribs sit flush against the bulge.
@@ -30,8 +29,8 @@ export function createLantern({ color = AMBER, size = 0.28 } = {}) {
   const profile = LANTERN_PROFILE.map(([xf, yf]) => new THREE.Vector2(xf * r, yf * h))
   const skin = new THREE.Mesh(
     new THREE.LatheGeometry(profile, 10),
-    new THREE.MeshStandardMaterial({
-      color, emissive: color, emissiveIntensity: 1.4, roughness: 0.6, side: THREE.DoubleSide,
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.3), side: THREE.DoubleSide,
     }),
   )
   g.add(skin)
@@ -68,7 +67,7 @@ export function createNoren({ color = RED, width = 1.2 } = {}) {
   const panels = 3
   const gap = 0.025
   const panelW = (width - gap * (panels - 1)) / panels
-  const fabric = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide })
+  const fabric = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })
   for (let i = 0; i < panels; i++) {
     const panel = new THREE.Mesh(new THREE.BoxGeometry(panelW, h, 0.02), fabric)
     panel.position.set(-width / 2 + panelW / 2 + i * (panelW + gap), h / 2, 0)
@@ -89,7 +88,7 @@ export function createVendingMachine({ color = CYAN } = {}) {
   // Glowing product display — the +Z front face.
   const glow = new THREE.Mesh(
     new THREE.BoxGeometry(w * 0.86, h * 0.68, 0.02),
-    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.3, roughness: 0.4 }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.25) }),
   )
   glow.position.set(0, h * 0.56, d / 2 + 0.011)
   g.add(glow)
@@ -97,7 +96,7 @@ export function createVendingMachine({ color = CYAN } = {}) {
   // Header signage strip.
   const header = new THREE.Mesh(
     new THREE.BoxGeometry(w * 0.94, h * 0.09, 0.02),
-    new THREE.MeshStandardMaterial({ color: RED, emissive: RED, emissiveIntensity: 1.1 }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(RED).lerp(new THREE.Color(0xffffff), 0.15) }),
   )
   header.position.set(0, h * 0.92, d / 2 + 0.011)
   g.add(header)
@@ -138,7 +137,7 @@ export function createAcUnit() {
 export function createCrate({ color = RED } = {}) {
   const s = 0.45
   const g = new THREE.Group()
-  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 })
+  const mat = new THREE.MeshLambertMaterial({ color })
 
   const bodyH = s * 0.62
   const body = new THREE.Mesh(new THREE.BoxGeometry(s, bodyH, s), mat)

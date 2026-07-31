@@ -19,8 +19,8 @@ const SHELF = 0x8a7a5c // warm product-box tone — needs contrast against both 
 const GLOW  = 0xdff2ff // cold fluorescent white — the signature konbini cue
 const CYAN_STR = '#00E5FF' // createSignTexture paints with Canvas2D, which needs a CSS string
 
-const trimMat  = new THREE.MeshStandardMaterial({ color: TRIM, roughness: 0.9 })
-const shelfMat = new THREE.MeshStandardMaterial({ color: SHELF, roughness: 0.8 })
+const trimMat  = new THREE.MeshLambertMaterial({ color: TRIM })
+const shelfMat = new THREE.MeshLambertMaterial({ color: SHELF })
 
 function panel(w, h, material) {
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), material)
@@ -57,7 +57,7 @@ export function createKonbini() {
   // ── Body ────────────────────────────────────────────────────────────────
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(W, BODY_H, D),
-    new THREE.MeshStandardMaterial({ color: BODY, roughness: 0.85 }),
+    new THREE.MeshLambertMaterial({ color: BODY }),
   )
   body.position.set(0, BODY_H / 2, FRONT_Z - D / 2)
   group.add(body)
@@ -66,14 +66,16 @@ export function createKonbini() {
   // below carries the glow so the band itself doesn't double as a window).
   const band = new THREE.Mesh(
     new THREE.BoxGeometry(W, BAND_H, 0.45),
-    new THREE.MeshStandardMaterial({ color: RED, roughness: 0.6 }),
+    new THREE.MeshLambertMaterial({ color: RED }),
   )
   band.position.set(0, BODY_H + BAND_H / 2, FRONT_Z - 0.05)
   group.add(band)
 
-  const litStripMat = new THREE.MeshStandardMaterial({
-    color: GLOW, emissive: GLOW, emissiveIntensity: 1.4, roughness: 0.5,
-  })
+  // Neon tube accent, not a facade element — MeshBasicMaterial, so the old
+  // emissiveIntensity is folded into the resting colour and hover lerps
+  // further toward white (Basic has no emissive to boost instead).
+  const litStripBase = new THREE.Color(GLOW).lerp(new THREE.Color(0xffffff), 0.35)
+  const litStripMat = new THREE.MeshBasicMaterial({ color: litStripBase.clone() })
   const litStrip = new THREE.Mesh(new THREE.BoxGeometry(W * 0.92, 0.06, 0.05), litStripMat)
   litStrip.position.set(0, BODY_H + 0.06, FRONT_Z + 0.18)
   group.add(litStrip)
@@ -82,7 +84,7 @@ export function createKonbini() {
   // face exposed, and moon light hits a flat top face almost head-on.
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(W + 0.3, ROOF_H, D + 0.3),
-    new THREE.MeshStandardMaterial({ color: TRIM, roughness: 0.95 }),
+    new THREE.MeshLambertMaterial({ color: TRIM }),
   )
   roof.position.set(0, BODY_H + BAND_H + ROOF_H / 2, FRONT_Z - D / 2 + 0.15)
   group.add(roof)
@@ -90,8 +92,8 @@ export function createKonbini() {
   // ── Big glass frontage: brilliantly lit, cold fluorescent white ──────────
   // Kept semi-transparent (not just emissive) so the shelving behind it stays
   // visible — an opaque glow plane would hide the racks entirely.
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: GLOW, emissive: GLOW, emissiveIntensity: 1.05, roughness: 1,
+  const windowMat = new THREE.MeshLambertMaterial({
+    color: GLOW, emissive: GLOW, emissiveIntensity: 1.05,
     transparent: true, opacity: 0.42, side: THREE.DoubleSide,
   })
   const glassW = 4.0, glassH = BODY_H - 0.25
@@ -116,8 +118,8 @@ export function createKonbini() {
   }
 
   // ── Entrance: recessed doorway + noren ────────────────────────────────────
-  const doorwayMat = new THREE.MeshStandardMaterial({
-    color: 0x141922, emissive: GLOW, emissiveIntensity: 1.0, roughness: 1,
+  const doorwayMat = new THREE.MeshLambertMaterial({
+    color: 0x141922, emissive: GLOW, emissiveIntensity: 1.0,
   })
   const doorway = new THREE.Mesh(new THREE.BoxGeometry(DOOR_W, 2.3, 0.5), doorwayMat)
   doorway.position.set(DOOR_X, 1.15, FRONT_Z - 0.25)
@@ -134,10 +136,12 @@ export function createKonbini() {
   vend.position.set(VEND_X, 0, FRONT_Z + 0.35)
   group.add(vend)
   // createVendingMachine() builds fresh materials per call (not module-shared),
-  // so mutating them directly in setHover is safe — no clone needed.
+  // so mutating them directly in setHover is safe — no clone needed. The glow
+  // and header panels are the only MeshBasicMaterial in the group (body and
+  // button panel are Lambert), so that's how hover picks them out now.
   const vendGlowMats = []
-  vend.traverse((o) => { if (o.material?.emissiveIntensity > 0) vendGlowMats.push(o.material) })
-  const vendGlowBase = vendGlowMats.map((m) => m.emissiveIntensity)
+  vend.traverse((o) => { if (o.material?.isMeshBasicMaterial) vendGlowMats.push(o.material) })
+  const vendGlowBase = vendGlowMats.map((m) => m.color.clone())
 
   // ── Signage ────────────────────────────────────────────────────────────
   // "Profile" is the navigation element — legibility beats atmosphere, so it
@@ -145,10 +149,10 @@ export function createKonbini() {
   const sign = createSignTexture({
     text: 'Profile', style: 'lightbox', orientation: 'horizontal', color: CYAN_STR, px: 256,
   })
-  const signMat = new THREE.MeshStandardMaterial({
-    map: sign.map, emissiveMap: sign.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.8, roughness: 0.5,
-  })
+  // Basic: the map is already the lit sign art, so colour just tints its
+  // brightness — dim at rest, full (white) on hover.
+  const signMat = new THREE.MeshBasicMaterial({ map: sign.map })
+  signMat.color.setScalar(0.57)
   const signH = BAND_H * 0.72
   const signMesh = panel(signH * sign.aspect, signH, signMat)
   signMesh.position.set(0, BODY_H + BAND_H / 2, FRONT_Z + 0.2)
@@ -158,22 +162,13 @@ export function createKonbini() {
   const vert = createSignTexture({
     text: 'コンビニ', style: 'neon', orientation: 'vertical', color: '#FFB347', px: 256,
   })
-  const vertMat = new THREE.MeshStandardMaterial({
-    map: vert.map, emissiveMap: vert.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.5, side: THREE.DoubleSide,
-  })
+  const vertMat = new THREE.MeshBasicMaterial({ map: vert.map, side: THREE.DoubleSide })
+  vertMat.color.setScalar(0.57)
   const vertH = 1.5
   const vertMesh = panel(vertH * vert.aspect, vertH, vertMat)
   vertMesh.position.set(W / 2 - 0.25, BODY_H - 0.95, FRONT_Z + 0.6)
   vertMesh.rotation.y = -Math.PI / 2
   group.add(vertMesh)
-
-  // Interior spill — cold and brighter than the alley's warm lantern pools,
-  // aimed low so it pools on the street rather than throwing hotspots on the
-  // glossy glass and doorway.
-  const spill = new THREE.PointLight(new THREE.Color(GLOW), 5, 11, 2)
-  spill.position.set(1.4, 1.2, FRONT_Z + 2.6)
-  group.add(spill)
 
   // ── Pick target ────────────────────────────────────────────────────────
   const hit = new THREE.Mesh(
@@ -185,12 +180,11 @@ export function createKonbini() {
 
   function setHover(on) {
     windowMat.emissiveIntensity = on ? 1.65 : 1.05
-    litStripMat.emissiveIntensity = on ? 2.1 : 1.4
-    signMat.emissiveIntensity = on ? 1.4 : 0.8
-    vertMat.emissiveIntensity = on ? 1.5 : 0.85
+    litStripMat.color.copy(litStripBase).lerp(new THREE.Color(0xffffff), on ? 0.35 : 0)
+    signMat.color.setScalar(on ? 1 : 0.57)
+    vertMat.color.setScalar(on ? 1 : 0.57)
     doorwayMat.emissiveIntensity = on ? 1.5 : 1.0
-    spill.intensity = on ? 9 : 5.5
-    vendGlowMats.forEach((m, i) => { m.emissiveIntensity = vendGlowBase[i] * (on ? 1.6 : 1) })
+    vendGlowMats.forEach((m, i) => { m.color.copy(vendGlowBase[i]).lerp(new THREE.Color(0xffffff), on ? 0.35 : 0) })
   }
 
   return { group, hit, setHover }

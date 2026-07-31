@@ -4,8 +4,9 @@
     <canvas
       v-if="!failed"
       ref="canvasEl"
+      data-scene
       class="block h-full w-full cursor-grab touch-none"
-      aria-label="Interactive 3D map of a Shinjuku street. Each stall is one project."
+      aria-label="Interactive 3D map of Shinjuku. Shinjuku Station sits at the centre; each lit building is one project."
     >
       <ProjectList :projects="projects" />
     </canvas>
@@ -15,8 +16,8 @@
       <ProjectList :projects="projects" />
     </div>
 
-    <!-- Panning is the only way to reach every stall on a narrow screen, and
-         nothing about a canvas advertises that. Decorative, so aria-hidden. -->
+    <!-- Nothing about a canvas advertises that it pans and zooms, and at the
+         default zoom the lit buildings are small. Decorative, so aria-hidden. -->
     <div
       v-if="!failed && showHint"
       class="pointer-events-none absolute inset-x-0 bottom-7 flex justify-center"
@@ -26,7 +27,7 @@
       <!-- motion-safe: the pulse is an animation like any other and must not
            run for users who asked for reduced motion. -->
       <span class="motion-safe:animate-pulse rounded-full border border-[#FFB347]/25 bg-black/45 px-4 py-1.5 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#FFB347]/75">
-        drag to walk the alley
+        drag to pan · scroll to zoom · lit buildings are projects
       </span>
     </div>
   </div>
@@ -35,14 +36,13 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { createStage, addNightLighting } from '../scene/renderer.js'
-import { createStreet } from '../scene/street.js'
-import { createTowers } from '../scene/towers.js'
-import { createCrowd } from '../scene/crowd.js'
+import { createStreets } from '../scene/street.js'
+import { createBlocks } from '../scene/blocks.js'
+import { createStation } from '../scene/station.js'
+import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
-import { createAlley } from '../scene/alley.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
-import { createVendingBank, createKoban } from '../scene/streetFurniture.js'
-import { createKonbini } from '../scene/konbini.js'
+import { PROJECT_SITES } from '../scene/cityLayout.js'
 import ProjectList from './ProjectList.vue'
 
 const props = defineProps({
@@ -68,71 +68,49 @@ onMounted(() => {
 
   addNightLighting(stage.scene)
 
-  // Measured cost centres, worst first: crowd geometry (~33%), shopfront point
-  // lights (~24-33%), bloom (~12%). The low tier cuts the first two.
-  const low = stage.quality === 'low'
+  stage.scene.add(createStreets())
+  stage.scene.add(createBlocks())
 
-  // Long enough that panning to either rail never reveals the end of the paving.
-  stage.scene.add(createStreet({ length: 170, width: 26 }))
-  stage.scene.add(createCrowd({ count: low ? 54 : 108 }))
-  stage.scene.add(createTowers())
+  const station = createStation()
+  stage.scene.add(station.group)
 
-  const { group, stalls } = createAlley(props.projects, { lightEvery: low ? 2 : 1 })
-  stage.scene.add(group)
-
-  ambient = createAmbient({
-    reduceMotion: stage.reduceMotion,
-    flickerMaterials: stalls.map((s) => s.vertMat),
-  })
-  stage.scene.add(ambient.group)
-  stage.onFrame((dt, elapsed) => ambient.update(dt, elapsed))
-
-  // Every interactive thing in the scene — stalls and diegetic widgets alike —
-  // registers the same payload shape, so hover and dispatch stay uniform.
+  // Every interactive thing in the scene registers the same payload shape, so
+  // hover and dispatch stay uniform.
   const register = (hit, payload) => stage.addPickable(hit, payload)
 
-  for (const stall of stalls) {
-    register(stall.hit, { kind: 'project', project: stall.project, hover: stall.setHover })
+  // The nine clickable buildings. cityLayout.js owns WHERE they stand; App.vue
+  // owns WHAT they are. A site whose id has no matching project is skipped
+  // rather than rendering a nameless building.
+  const byId = new Map(props.projects.map((p) => [p.id, p]))
+  const signMats = []
+  for (const site of PROJECT_SITES) {
+    const project = byId.get(site.id)
+    if (!project) {
+      console.warn(`cityLayout PROJECT_SITES references unknown project id "${site.id}"`)
+      continue
+    }
+    const building = createProjectBuilding(project, site)
+    stage.scene.add(building.group)
+    register(building.hit, { kind: 'project', project, hover: building.setHover })
+    if (building.signMat) signMats.push(building.signMat)
   }
 
-  // Departure board: the one readable index in the scene. Each ROW is its own
-  // pick target, so it works as a real second route to a project.
+  // The station's destination board: the one readable index in the scene, and
+  // the defence against nine buildings being hard to find on a 178m map. Each
+  // ROW is its own pick target, so it is a real second route to every project.
   const board = createDepartureBoard(props.projects)
-  board.group.position.set(-19.5, 0, 2)
-  stage.scene.add(board.group)
+  station.boardAnchor.add(board.group)
   for (const row of board.rows) {
     register(row.hit, { kind: 'project', project: row.project, hover: row.setHover })
   }
 
-  // Diegetic widgets. Positions are deconflicted in screen space, not just in
-  // world space — the board spans x -29..-15, so street furniture cannot sit there.
-  const vending = createVendingBank()
-  vending.group.position.set(-6, 0, 5)
-  stage.scene.add(vending.group)
-  register(vending.hit, {
-    kind: 'link',
-    url: './assets/Paulo_Gonzales_Resume_SoftwareEngineer.pdf',
-    download: 'Paulo_Gonzales_Resume_SoftwareEngineer.pdf',
-    hover: vending.setHover,
+  ambient = createAmbient({
+    reduceMotion: stage.reduceMotion,
+    flickerMaterials: signMats,
+    trackY: station.trackY,
   })
-
-  const koban = createKoban()
-  koban.group.position.set(8, 0, 11)
-  stage.scene.add(koban.group)
-  register(koban.hit, {
-    kind: 'link',
-    url: 'https://github.com/paulog11',
-    hover: koban.setHover,
-  })
-
-  const konbini = createKonbini()
-  konbini.group.position.set(22, 0, -3)
-  stage.scene.add(konbini.group)
-  register(konbini.hit, {
-    kind: 'link',
-    url: './projects/profile/',
-    hover: konbini.setHover,
-  })
+  stage.scene.add(ambient.group)
+  stage.onFrame((dt, elapsed) => ambient.update(dt, elapsed))
 
   // Only one thing is lit at a time, so the scene reads as a single focus.
   let active = null

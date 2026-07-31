@@ -100,7 +100,9 @@ function createFlicker(materials, rng) {
   const step = Math.max(1, Math.floor(materials.length / count))
   const picks = []
   for (let i = 0; i < count; i++) picks.push(materials[(i * step) % materials.length])
-  const base = picks.map((m) => m.emissiveIntensity)
+  // These are all MeshBasicMaterial now (no emissive), so flicker dims by
+  // scaling the base colour toward black instead of emissiveIntensity.
+  const base = picks.map((m) => m.color.clone())
   const phase = picks.map(() => rng() * 100)
 
   function update(elapsed) {
@@ -108,10 +110,10 @@ function createFlicker(materials, rng) {
       const slow = Math.sin(elapsed * 0.6 + phase[i]) + Math.sin(elapsed * 1.37 + phase[i] * 2.3) * 0.6
       const stuttering = slow < -1.05
       const factor = stuttering ? (Math.sin(elapsed * 47 + phase[i]) > 0 ? 1 : FLICKER_DIM) : 1
-      picks[i].emissiveIntensity = base[i] * factor
+      picks[i].color.copy(base[i]).multiplyScalar(factor)
     }
   }
-  function reset() { for (let i = 0; i < picks.length; i++) picks[i].emissiveIntensity = base[i] }
+  function reset() { for (let i = 0; i < picks.length; i++) picks[i].color.copy(base[i]) }
   return { update, reset }
 }
 
@@ -124,8 +126,8 @@ function createViaduct() {
   // out functionally invisible. A small emissive floor keeps the silhouette
   // readable through the haze without turning it into a light source.
   const structColor = new THREE.Color(NIGHT).lerp(new THREE.Color(0x8a94b0), 0.35)
-  const structMat = new THREE.MeshStandardMaterial({
-    color: structColor, roughness: 0.85, metalness: 0.3,
+  const structMat = new THREE.MeshLambertMaterial({
+    color: structColor,
     emissive: structColor, emissiveIntensity: 0.4,
   })
   const deck = new THREE.Mesh(new THREE.BoxGeometry(110, 0.6, 3), structMat)
@@ -144,9 +146,11 @@ function createViaduct() {
 // travels once per TRAIN_CYCLE, hidden while waiting for the next pass.
 function createTrain() {
   const group = new THREE.Group()
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1b1e26, roughness: 0.6, metalness: 0.4 })
-  const winMat = new THREE.MeshStandardMaterial({ color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.7, roughness: 1 })
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0x1a0608, emissive: RED, emissiveIntensity: 0.6, roughness: 1 })
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1b1e26 })
+  const winMat = new THREE.MeshLambertMaterial({ color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.7 })
+  // Tail light is a beacon, not a window — MeshBasicMaterial like the tower's
+  // aircraft-warning light, with the old emissiveIntensity folded into colour.
+  const tailMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(RED).lerp(new THREE.Color(0xffffff), 0.3) })
   const totalLen = CARRIAGES * CARRIAGE_LEN + (CARRIAGES - 1) * CARRIAGE_GAP
   for (let i = 0; i < CARRIAGES; i++) {
     const cx = -totalLen / 2 + CARRIAGE_LEN / 2 + i * (CARRIAGE_LEN + CARRIAGE_GAP)

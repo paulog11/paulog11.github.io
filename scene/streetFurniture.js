@@ -19,7 +19,7 @@ function createRecycleBin() {
   const g = new THREE.Group()
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(0.24, 0.27, 0.6, 10),
-    new THREE.MeshStandardMaterial({ color: 0x2c2f36, roughness: 0.6, metalness: 0.15 }),
+    new THREE.MeshLambertMaterial({ color: 0x2c2f36 }),
   )
   body.position.y = 0.3
   g.add(body)
@@ -27,7 +27,7 @@ function createRecycleBin() {
   // it's atmosphere, not a hover target.
   const lid = new THREE.Mesh(
     new THREE.CylinderGeometry(0.26, 0.26, 0.05, 10),
-    new THREE.MeshStandardMaterial({ color: CYAN, emissive: CYAN, emissiveIntensity: 0.25, roughness: 0.5 }),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(CYAN).lerp(new THREE.Color(0xffffff), 0.1) }),
   )
   lid.position.y = 0.62
   g.add(lid)
@@ -38,9 +38,8 @@ function createRecycleBin() {
 function createPuddle() {
   const p = new THREE.Mesh(
     new THREE.CircleGeometry(1, 16),
-    new THREE.MeshStandardMaterial({
-      color: 0x1b2338, roughness: 0.25, metalness: 0.5,
-      emissive: WARM, emissiveIntensity: 0.3,
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0x1b2338).lerp(new THREE.Color(WARM), 0.3),
     }),
   )
   p.scale.set(1.4, 1.0, 1)
@@ -58,7 +57,7 @@ export function createVendingBank() {
 
   const plinth = new THREE.Mesh(
     new THREE.BoxGeometry(totalW + 0.3, plinthH, MD + 0.3),
-    new THREE.MeshStandardMaterial({ color: GRANITE, roughness: 0.9 }),
+    new THREE.MeshLambertMaterial({ color: GRANITE }),
   )
   plinth.position.set(0, plinthH / 2, 0)
   group.add(plinth)
@@ -71,21 +70,19 @@ export function createVendingBank() {
     machine.traverse((o) => {
       if (!o.material) return
       o.material = o.material.clone()
-      if (o.material.emissive) glowMats.push(o.material)
+      if (o.material.isMeshBasicMaterial) glowMats.push(o.material)
     })
     machine.position.set((i - (n - 1) / 2) * (MW + GAP), plinthH, 0)
     group.add(machine)
   })
-  const glowBase = glowMats.map((m) => m.emissiveIntensity)
+  const glowBase = glowMats.map((m) => m.color.clone())
 
   // Résumé sign, mounted above the centre machine — the legible one.
   const sign = createSignTexture({
     text: 'Résumé', sub: 'PDF', style: 'lightbox', orientation: 'horizontal', color: hex(WARM), px: 256,
   })
-  const signMat = new THREE.MeshStandardMaterial({
-    map: sign.map, emissiveMap: sign.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 0.5,
-  })
+  const signMat = new THREE.MeshBasicMaterial({ map: sign.map })
+  signMat.color.setScalar(0.5)
   const signW = 1.0
   const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(signW, signW / sign.aspect), signMat)
   signMesh.position.set(0, plinthH + MH + 0.2, MD / 2 - 0.02)
@@ -107,8 +104,8 @@ export function createVendingBank() {
   group.add(hit)
 
   function setHover(on) {
-    glowMats.forEach((m, k) => { m.emissiveIntensity = glowBase[k] * (on ? 1.9 : 1) })
-    signMat.emissiveIntensity = on ? 1.8 : 0.9
+    glowMats.forEach((m, k) => { m.color.copy(glowBase[k]).lerp(new THREE.Color(0xffffff), on ? 0.45 : 0) })
+    signMat.color.setScalar(on ? 1 : 0.5)
   }
 
   return { group, hit, setHover }
@@ -126,7 +123,7 @@ function glazing(w, h, material, x, y, z) {
   g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), material))
   const frame = new THREE.Mesh(
     new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.9 }),
+    new THREE.MeshLambertMaterial({ color: 0x14171f }),
   )
   frame.position.z = -0.025
   g.add(frame)
@@ -140,12 +137,12 @@ export function createKoban() {
 
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(KW, KH, KD),
-    new THREE.MeshStandardMaterial({ color: GRANITE, roughness: 0.85 }),
+    new THREE.MeshLambertMaterial({ color: GRANITE }),
   )
   body.position.y = KH / 2
   group.add(body)
 
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.95 })
+  const trimMat = new THREE.MeshLambertMaterial({ color: 0x14171f })
   const roof = new THREE.Mesh(new THREE.BoxGeometry(KW + 0.3, 0.2, KD + 0.3), trimMat)
   roof.position.y = KH + 0.1
   group.add(roof)
@@ -155,40 +152,42 @@ export function createKoban() {
   group.add(belt)
 
   const doorW = 1.3, doorH = 2.3
-  const doorMat = new THREE.MeshStandardMaterial({
-    color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.55, roughness: 1,
+  const doorMat = new THREE.MeshLambertMaterial({
+    color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.55,
   })
   const doorway = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.4), doorMat)
   doorway.position.set(0, doorH / 2, FRONT_Z - 0.18)
   group.add(doorway)
 
   // Ground-floor counter window, offset from the door.
-  const windowMat = new THREE.MeshStandardMaterial({
-    color: 0x1c1408, emissive: WARM, emissiveIntensity: 0.8, roughness: 1,
+  const windowMat = new THREE.MeshLambertMaterial({
+    color: 0x1c1408, emissive: WARM, emissiveIntensity: 0.8,
   })
   group.add(glazing(1.1, 1.0, windowMat, 1.1, 1.1, FRONT_Z + 0.02))
   // Counter, just inside the glass — its silhouette against the lit window is
   // the "counter visible" cue; there's no modelled interior beyond it.
   const counter = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.12, 0.3),
-    new THREE.MeshStandardMaterial({ color: 0x2a2015, roughness: 0.85 }),
+    new THREE.MeshLambertMaterial({ color: 0x2a2015 }),
   )
   counter.position.set(1.1, 0.75, FRONT_Z - 0.32)
   group.add(counter)
 
   // Dim upper-floor window — sells the two-storey read without a second lit box.
-  group.add(glazing(0.9, 0.8, new THREE.MeshStandardMaterial({ color: 0x0d1017, roughness: 0.4 }),
+  group.add(glazing(0.9, 0.8, new THREE.MeshLambertMaterial({ color: 0x0d1017 }),
     -0.6, KH - 1.3, FRONT_Z + 0.02))
 
   // ── Red lamp — the single strongest kōban cue ──────────────────────────
-  const armMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6, metalness: 0.2 })
+  const armMat = new THREE.MeshLambertMaterial({ color: 0x2b2b2b })
   const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.32, 6), armMat)
   arm.rotation.z = Math.PI / 2
   arm.position.set(0, doorH + 0.55, FRONT_Z + 0.1)
   group.add(arm)
-  const lampMat = new THREE.MeshStandardMaterial({
-    color: RED, emissive: RED, emissiveIntensity: 1.6, roughness: 0.4,
-  })
+  // Beacon, not a facade element — MeshBasicMaterial, matching the tower's
+  // aircraft-warning-light treatment. Old emissiveIntensity folded into the
+  // resting colour; hover lerps further toward white.
+  const lampBase = new THREE.Color(RED).lerp(new THREE.Color(0xffffff), 0.4)
+  const lampMat = new THREE.MeshBasicMaterial({ color: lampBase.clone() })
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), lampMat)
   lamp.position.set(0, doorH + 0.55, FRONT_Z + 0.28)
   group.add(lamp)
@@ -197,10 +196,8 @@ export function createKoban() {
   const kobanSign = createSignTexture({
     text: '交番', style: 'lightbox', orientation: 'vertical', color: hex(RED), px: 256,
   })
-  const kobanSignMat = new THREE.MeshStandardMaterial({
-    map: kobanSign.map, emissiveMap: kobanSign.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.5, side: THREE.DoubleSide,
-  })
+  const kobanSignMat = new THREE.MeshBasicMaterial({ map: kobanSign.map, side: THREE.DoubleSide })
+  kobanSignMat.color.setScalar(0.61)
   const kobanSignH = 1.4
   const kobanSignMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(kobanSignH * kobanSign.aspect, kobanSignH), kobanSignMat,
@@ -213,10 +210,8 @@ export function createKoban() {
   const contactSign = createSignTexture({
     text: 'Contact', style: 'lightbox', orientation: 'horizontal', color: hex(WARM), px: 256,
   })
-  const contactSignMat = new THREE.MeshStandardMaterial({
-    map: contactSign.map, emissiveMap: contactSign.emissiveMap,
-    emissive: 0xffffff, emissiveIntensity: 0.8, roughness: 0.5,
-  })
+  const contactSignMat = new THREE.MeshBasicMaterial({ map: contactSign.map })
+  contactSignMat.color.setScalar(0.62)
   const contactW = 0.7
   const contactSignMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(contactW, contactW / contactSign.aspect), contactSignMat,
@@ -227,11 +222,11 @@ export function createKoban() {
   // Notice board with a few pinned papers.
   const board = new THREE.Mesh(
     new THREE.BoxGeometry(0.7, 0.55, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.9 }),
+    new THREE.MeshLambertMaterial({ color: 0x3b2a1c }),
   )
   board.position.set(-1.1, 0.85, FRONT_Z + 0.04)
   group.add(board)
-  const paperMat = new THREE.MeshStandardMaterial({ color: 0xf2ede0, roughness: 0.9 })
+  const paperMat = new THREE.MeshLambertMaterial({ color: 0xf2ede0 })
   for (const [dx, dy, rot] of [[-0.12, 0.09, 0.12], [0.1, -0.03, -0.1], [-0.02, -0.13, 0.05]]) {
     const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.26), paperMat)
     paper.position.set(board.position.x + dx, board.position.y + dy, board.position.z + 0.03)
@@ -249,9 +244,9 @@ export function createKoban() {
   function setHover(on) {
     doorMat.emissiveIntensity = on ? 1.0 : 0.55
     windowMat.emissiveIntensity = on ? 1.3 : 0.8
-    lampMat.emissiveIntensity = on ? 2.3 : 1.6
-    kobanSignMat.emissiveIntensity = on ? 1.4 : 0.85
-    contactSignMat.emissiveIntensity = on ? 1.3 : 0.8
+    lampMat.color.copy(lampBase).lerp(new THREE.Color(0xffffff), on ? 0.3 : 0)
+    kobanSignMat.color.setScalar(on ? 1 : 0.61)
+    contactSignMat.color.setScalar(on ? 1 : 0.62)
   }
 
   return { group, hit, setHover }

@@ -1,157 +1,259 @@
-// Wet asphalt street for the Golden Gai alley. No image assets — the neon
-// "reflections" are a hand-drawn canvas texture smeared vertically along Z,
-// applied as an emissiveMap so bloom picks it up (kept subtle, see below).
+// The road network for the 3x3 block grid. Ground, roads, kerbs and light
+// pools all live here; the buildings and station are other modules' concern.
 import * as THREE from 'three'
-import { NIGHT, ASPHALT, RED, CYAN, AMBER, WARM } from './palette.js'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES } from './cityLayout.js'
+import { ASPHALT, RED, CYAN, AMBER, WARM } from './palette.js'
+import { createLightPool } from './lightPool.js'
 
-// Deterministic RNG (same LCG idiom as spike/tocho.html) so streaks/puddles
-// are stable across renders.
-let seed = 20260729
+// Canvas2D wants a CSS string; palette values are hex numbers.
+const hex = (n) => '#' + n.toString(16).padStart(6, '0')
+
+// Deterministic LCG — same idiom as cityLayout.js/ambient.js — so texture
+// grime, per-slab mirroring and light-pool scatter are stable across renders.
+let seed = 20260731
 const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296
 
-const STREAK_COLORS = [RED, CYAN, AMBER, WARM]
+// ── Road surface atlas ───────────────────────────────────────────────────────
+// One shared texture for the whole network. Top half is the "through" band —
+// sampled only by the full-length strips that own the intersections — bottom
+// half is the "segment" band the block-edge fillers use. Splitting by band
+// rather than by texture keeps the network to one material/one draw call.
+const ATLAS_W = 256                 // road cross-section (10m)
+const ATLAS_H = 1200
+const BAND_H = ATLAS_H / 2
+const DASH_PERIOD_M = 7             // dash+gap rhythm, in world metres — kept
+                                     // constant so through-strips and segments
+                                     // read at the same rhythm despite the two
+                                     // bands having different px-per-metre.
 
-// Reflection streaks: soft vertical (canvas-Y = world-Z) smears of neon
-// colour bleeding down the alley toward the viewer, irregular in width,
-// spacing and brightness so it doesn't read as a tiled pattern.
-function reflectionTexture(w, h) {
-  const c = document.createElement('canvas')
-  c.width = w; c.height = h
-  const ctx = c.getContext('2d')
-  // Faint base wash so the surface exists even between light pools. Kept low:
-  // the shopfronts each carry a PointLight, so most of the ground's visibility
-  // comes from real lighting rather than from this.
-  ctx.fillStyle = '#0c1120'
-  ctx.fillRect(0, 0, w, h)
-
-  const count = 26
+function paintDashes(ctx, top, bottom, worldLen) {
+  const span = bottom - top
+  const count = Math.max(1, Math.round(worldLen / DASH_PERIOD_M))
+  const cellH = span / count
+  const cx = ATLAS_W / 2
+  ctx.fillStyle = 'rgba(224,218,200,0.55)'
   for (let i = 0; i < count; i++) {
-    const x = rnd() * w
-    const streakW = 8 + rnd() * 34
-    const color = STREAK_COLORS[Math.floor(rnd() * STREAK_COLORS.length)]
-    const hex = '#' + color.toString(16).padStart(6, '0')
-    // Streak starts near the shopfront edge (canvas top = world z min) and
-    // fades out toward the viewer — mimics light bleeding away from source.
-    const yStart = rnd() * h * 0.4
-    const yEnd = yStart + h * (0.35 + rnd() * 0.55)
-    const alpha = 0.3 + rnd() * 0.4
-
-    const grad = ctx.createLinearGradient(0, yStart, 0, yEnd)
-    grad.addColorStop(0, hex)
-    grad.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.fillStyle = grad
-    ctx.globalAlpha = alpha
-    ctx.filter = `blur(${streakW * 0.35}px)`
-    ctx.fillRect(x - streakW / 2, yStart, streakW, yEnd - yStart)
+    // Jittered offset/length so the rhythm reads as painted, not extruded.
+    const y = top + i * cellH + (rnd() - 0.5) * cellH * 0.2
+    const h = cellH * (0.42 + rnd() * 0.2)
+    ctx.fillRect(cx - 3, Math.max(top, y), 6, Math.min(h, bottom - y))
   }
-  ctx.filter = 'none'
-  ctx.globalAlpha = 1
-
-  return Object.assign(new THREE.CanvasTexture(c), { colorSpace: THREE.SRGBColorSpace })
 }
 
-/** Returns a THREE.Group containing the full ground assembly. */
-export function createStreet({ length = 90, width = 26 } = {}) {
+// A give-way box at a real intersection. Painted only in the through band —
+// the crossing street's own quad stops short of this square (see
+// buildRoadNetwork), so this is the only geometry that will ever cover it,
+// and the marking has to carry both streets' stop lines.
+function paintCrossing(ctx, centerY) {
+  const pxPerMetreV = BAND_H / (2 * MAP_HALF)
+  const half = (STREET / 2) * pxPerMetreV
+  const top = centerY - half
+
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'
+  ctx.fillRect(0, top, ATLAS_W, half * 2)
+
+  ctx.fillStyle = 'rgba(230,225,210,0.65)'
+  const barV = half * 0.5
+  const barU = ATLAS_W * 0.08
+  const inset = half * 0.55
+  // this street's stop lines, perpendicular to its own travel direction
+  ctx.fillRect(0, top + half - inset, ATLAS_W, barV)
+  ctx.fillRect(0, top + half + inset - barV, ATLAS_W, barV)
+  // the crossing street's — its own quad never reaches this square
+  ctx.fillRect(ATLAS_W / 2 - inset, top, barU, half * 2)
+  ctx.fillRect(ATLAS_W / 2 + inset - barU, top, barU, half * 2)
+}
+
+function buildRoadAtlas() {
+  const map = document.createElement('canvas')
+  map.width = ATLAS_W; map.height = ATLAS_H
+  const emi = document.createElement('canvas')
+  emi.width = ATLAS_W; emi.height = ATLAS_H
+  const g = map.getContext('2d')
+  const ge = emi.getContext('2d')
+
+  g.fillStyle = hex(ASPHALT); g.fillRect(0, 0, ATLAS_W, ATLAS_H)
+  ge.fillStyle = '#000'; ge.fillRect(0, 0, ATLAS_W, ATLAS_H)
+
+  // Worn patches, kept subtle — the light pools carry the scene's real
+  // "alive" variation, this just stops the fill from reading as flat colour.
+  g.fillStyle = 'rgba(0,0,0,0.12)'
+  for (let i = 0; i < 140; i++) {
+    const w = 8 + rnd() * 34, h = 6 + rnd() * 22
+    g.fillRect(rnd() * ATLAS_W, rnd() * ATLAS_H, w, h)
+  }
+
+  paintDashes(g, 0, BAND_H, 2 * MAP_HALF)   // through band: full map length
+  paintDashes(g, BAND_H, ATLAS_H, BLOCK)     // segment band: one block width
+
+  // ponytail: one shared atlas + per-slab mirroring (see roadSlab) gives 2
+  // pattern variants per band, not full per-instance uniqueness — the map is
+  // small enough (12 segments, 4 strips) that a careful look could spot two
+  // mirrored twins. A per-instance grime layer would fix it if that ever
+  // actually bugs someone; light pools are doing the heavy lifting for "alive".
+  for (const s of STREET_LINES) {
+    paintCrossing(g, ((s + MAP_HALF) / (2 * MAP_HALF)) * BAND_H)
+  }
+
+  // Neon reflection streaks. MeshStandardMaterial's wet-asphalt gloss is
+  // banned along with metalness/roughness, so the colour has to live here as
+  // an emissiveMap instead of as a material response to the shopfront lights.
+  const NEON = [RED, CYAN, AMBER, WARM]
+  for (let i = 0; i < 26; i++) {
+    const x = rnd() * ATLAS_W, y = rnd() * ATLAS_H
+    const w = 10 + rnd() * 26, h = 30 + rnd() * 90
+    const grad = ge.createLinearGradient(x, y, x, y + h)
+    grad.addColorStop(0, hex(NEON[Math.floor(rnd() * NEON.length)]))
+    grad.addColorStop(1, 'rgba(0,0,0,0)')
+    ge.fillStyle = grad
+    ge.globalAlpha = 0.3 + rnd() * 0.3
+    ge.filter = `blur(${w * 0.3}px)`
+    ge.fillRect(x - w / 2, y, w, h)
+  }
+  ge.filter = 'none'; ge.globalAlpha = 1
+
+  const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
+    colorSpace: THREE.SRGBColorSpace, anisotropy: 8,
+  })
+  return { map: tex(map), emissiveMap: tex(emi) }
+}
+
+// ── Road network geometry ────────────────────────────────────────────────────
+// `swap` trades which default PlaneGeometry axis (U = across width, V = along
+// length) feeds the atlas: through-strips run along Z so their own U/V line up
+// with the atlas already; segments run along X, so U/V have to be swapped
+// before landing in the (fixed U=width, V=length) atlas convention.
+function bakeUV(geo, swap, flip, band) {
+  const uv = geo.attributes.uv
+  for (let i = 0; i < uv.count; i++) {
+    let a = uv.getX(i), b = uv.getY(i)
+    if (swap) { const t = a; a = b; b = t }
+    if (flip) b = 1 - b   // safe: the intersection marks are painted at
+                          // symmetric fractions (see cityLayout.test check),
+                          // so a mirrored strip still lands on real marks.
+    uv.setXY(i, a, band === 'through' ? b * 0.5 : 0.5 + b * 0.5)
+  }
+}
+
+function roadSlab(width, length, cx, cz, { swap, band }) {
+  const geo = new THREE.PlaneGeometry(width, length)
+  bakeUV(geo, swap, rnd() < 0.5, band)
+  geo.rotateX(-Math.PI / 2)
+  geo.translate(cx, 0, cz)
+  return geo
+}
+
+function buildRoadNetwork() {
+  const quads = []
+  const span = 2 * MAP_HALF
+
+  // Full-length strips own every intersection square on the map. Nothing else
+  // is allowed to cover that ground, which is what keeps the crossings from
+  // z-fighting.
+  for (const line of STREET_LINES) {
+    quads.push(roadSlab(STREET, span, line, 0, { swap: false, band: 'through' }))
+  }
+
+  // The perpendicular streets stop at the block edge instead of running
+  // through, so they never re-cover a square the strip above already owns.
+  for (const line of STREET_LINES) {
+    for (const col of [0, 1, 2]) {
+      quads.push(roadSlab(BLOCK, STREET, blockCenter(col), line, { swap: true, band: 'segment' }))
+    }
+  }
+
+  const geometry = mergeGeometries(quads)
+  const { map, emissiveMap } = buildRoadAtlas()
+  const material = new THREE.MeshLambertMaterial({
+    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.5,
+  })
+  return new THREE.Mesh(geometry, material)
+}
+
+// ── Ground + kerbs ───────────────────────────────────────────────────────────
+const GROUND_SIZE = 4 * MAP_HALF   // reaches well past the map edge so the
+                                    // backdrop towers and crowd have ground
+                                    // under them instead of floating in void
+const GROUND_COLOR = 0x080b13
+
+function buildGround() {
+  const geo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE)
+  geo.rotateX(-Math.PI / 2)
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: GROUND_COLOR }))
+  mesh.position.y = -0.04   // strictly under the road slab — coplanar at y=0
+                            // would flicker against it
+  return mesh
+}
+
+const KERB_H = 0.16, KERB_T = 0.4
+const KERB_COLOR = 0x2a2c33
+
+function buildKerbs() {
+  const boxes = []
+  for (const row of [0, 1, 2]) {
+    for (const col of [0, 1, 2]) {
+      const bx = blockCenter(col), bz = blockCenter(row)
+      const half = BLOCK / 2
+      const edges = [
+        [BLOCK, KERB_T, bx, bz - half],   // north
+        [BLOCK, KERB_T, bx, bz + half],   // south
+        [KERB_T, BLOCK, bx - half, bz],   // west
+        [KERB_T, BLOCK, bx + half, bz],   // east
+      ]
+      for (const [w, d, x, z] of edges) {
+        const geo = new THREE.BoxGeometry(w, KERB_H, d)
+        geo.translate(x, KERB_H / 2, z)
+        boxes.push(geo)
+      }
+    }
+  }
+  const geometry = mergeGeometries(boxes)
+  const material = new THREE.MeshLambertMaterial({
+    color: KERB_COLOR, emissive: KERB_COLOR, emissiveIntensity: 0.35,
+  })
+  return new THREE.Mesh(geometry, material)
+}
+
+// ── Light pools ──────────────────────────────────────────────────────────────
+// What actually sells the street as lit, now that the shopfront PointLights
+// are gone. Scattered along every street line in both directions so no
+// stretch of road reads as dead.
+const POOL_COLORS = [RED, CYAN, AMBER, WARM]
+const POOL_STEP = 18       // metres between pools along a line, jittered
+const POOL_MARGIN = 6      // keep clear of the map edge
+
+function addPool(group, x, z) {
+  const color = POOL_COLORS[Math.floor(rnd() * POOL_COLORS.length)]
+  const radius = 4 + rnd() * 5
+  const intensity = 0.5 + rnd() * 0.4
+  const pool = createLightPool({ color, radius, intensity })
+  pool.position.set(x, 0.03, z)   // just above the road so it never
+                                  // depth-fights the flat slab beneath it
+  group.add(pool)
+}
+
+function scatterPools(group) {
+  const along = []
+  for (let p = -MAP_HALF + POOL_MARGIN; p <= MAP_HALF - POOL_MARGIN; p += POOL_STEP) {
+    along.push(p)
+  }
+  for (const line of STREET_LINES) {
+    for (const p of along) {
+      // x-direction street: line is its X, p walks its length along Z
+      addPool(group, line + (rnd() - 0.5) * 3, p + (rnd() - 0.5) * (POOL_STEP * 0.4))
+      // z-direction street: line is its Z, p walks its length along X
+      addPool(group, p + (rnd() - 0.5) * (POOL_STEP * 0.4), line + (rnd() - 0.5) * 3)
+    }
+  }
+}
+
+/** Returns a THREE.Group: ground, roads, kerbs and light pools for the whole map. */
+export function createStreets() {
   const group = new THREE.Group()
-
-  const zMin = -8, zMax = 18   // fixed span per the layout contract
-  const centerZ = (zMin + zMax) / 2
-
-  // Dark base extending well past the paved strip, so the backdrop towers and
-  // crowd buildings have something to stand on instead of floating in void.
-  const base = new THREE.Mesh(
-    new THREE.PlaneGeometry(400, 400),
-    new THREE.MeshStandardMaterial({ color: 0x080b13, roughness: 0.95, metalness: 0 }),
-  )
-  base.rotation.x = -Math.PI / 2
-  base.position.y = -0.04
-  group.add(base)
-
-  // ── Main asphalt slab ──────────────────────────────────────────────────
-  const reflMap = reflectionTexture(256, 512) // narrow x tall: streaks run along Z (canvas Y)
-  const asphalt = new THREE.Mesh(
-    new THREE.PlaneGeometry(length, width),
-    new THREE.MeshStandardMaterial({
-      color: ASPHALT,
-      roughness: 0.35,
-      metalness: 0.4,
-      emissive: 0xffffff,
-      emissiveMap: reflMap,
-      emissiveIntensity: 0.32,
-    }),
-  )
-  asphalt.rotation.x = -Math.PI / 2
-  asphalt.position.set(0, 0, centerZ)
-  group.add(asphalt)
-
-  // ── Centre drainage channel, running along X ───────────────────────────
-  const channelZ = centerZ - 1.5
-  const channel = new THREE.Mesh(
-    new THREE.PlaneGeometry(length, 1.4),
-    new THREE.MeshStandardMaterial({
-      color: NIGHT, roughness: 0.15, metalness: 0.6,
-      emissive: NIGHT, emissiveIntensity: 0.4,
-    }),
-  )
-  channel.rotation.x = -Math.PI / 2
-  channel.position.set(0, -0.03, channelZ)
-  group.add(channel)
-
-  // ── Kerb where the walkable strip meets the shopfront side (z ≈ -1.5) ──
-  const kerb = new THREE.Mesh(
-    new THREE.BoxGeometry(length, 0.15, 0.4),
-    new THREE.MeshStandardMaterial({
-      color: 0x2a2c33, roughness: 0.8, metalness: 0.1,
-      emissive: 0x2a2c33, emissiveIntensity: 0.5,
-    }),
-  )
-  kerb.position.set(0, 0.075, -1.5)
-  group.add(kerb)
-
-  // ── Puddles: flat, low-roughness/high-metalness patches, seeded ────────
-  // A plain (unmapped) emissive tint, not the streak texture — CircleGeometry's
-  // radial UVs would twist the rectangular streak gradient into a rope pattern.
-  // Near-mirror finish so the shopfront PointLights throw specular highlights
-  // here. Puddles must read BRIGHTER than the asphalt — a dark patch reads as
-  // an oil slick or a hole in the road, not water.
-  // Emissive deliberately matches the asphalt's base wash so a puddle never
-  // reads darker than the road around it — a dark patch looks like a hole.
-  // The difference comes from gloss: puddles catch the shopfront lights.
-  // roughness ~0.2, not near-zero: a mirror finish gives pinpoint specular dots
-  // that read as lasers. Water wants a broad soft smear.
-  // Standing water mirrors the SKY, which is brighter than asphalt — so a puddle
-  // must read lighter than the road, never darker. The asphalt carries the bright
-  // streak emissiveMap and these can't (radial UVs would twist it), so the flat
-  // emissive is pitched up to compensate.
-  const puddleMat = new THREE.MeshStandardMaterial({
-    color: 0x1b2338, roughness: 0.22, metalness: 0.5,
-    emissive: 0x233152, emissiveIntensity: 0.85,
-  })
-  for (let i = 0; i < 18; i++) {
-    const rx = 0.8 + rnd() * 1.3
-    const rz = rx * (0.5 + rnd() * 0.4)
-    const puddle = new THREE.Mesh(new THREE.CircleGeometry(1, 16), puddleMat)
-    puddle.scale.set(rx, rz, 1)
-    puddle.rotation.x = -Math.PI / 2
-    puddle.rotation.z = rnd() * Math.PI
-    // Spread tracks the ALLEY, not `length` — the paving runs far past the
-    // stalls so panning never shows its end, and scaling puddles by it would
-    // scatter them off-screen. Kept inside the lit strip: a puddle out in the
-    // unlit road has no light to catch and just reads as a dark hole.
-    puddle.position.set((rnd() - 0.5) * 96, 0.01, -0.8 + rnd() * 8)
-    group.add(puddle)
-  }
-
-  // ── Manhole / utility covers ────────────────────────────────────────────
-  const coverMat = new THREE.MeshStandardMaterial({
-    color: 0x1c1e24, roughness: 0.6, metalness: 0.5,
-    emissive: 0x1c1e24, emissiveIntensity: 0.4,
-  })
-  for (let i = 0; i < 4; i++) {
-    const cover = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.04, 20), coverMat)
-    cover.position.set((rnd() - 0.5) * (length - 6), 0.02, zMin + 1 + rnd() * (zMax - zMin - 2))
-    group.add(cover)
-  }
-
+  group.add(buildGround())
+  group.add(buildRoadNetwork())
+  group.add(buildKerbs())
+  scatterPools(group)
   return group
 }
