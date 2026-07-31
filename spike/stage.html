@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · stage</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    #wrap { position: absolute; inset: 0; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #out {
+      position: absolute; left: 12px; top: 12px; z-index: 2;
+      font: 13px/1.6 ui-monospace, monospace; color: #ffb347;
+      background: rgba(0,0,0,.6); padding: 8px 12px; white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="c"></canvas></div>
+  <div id="out">booting…</div>
+<script type="module">
+import * as THREE from 'three'
+import { createStage, addNightLighting } from '../scene/renderer.js'
+import { ASPHALT, RED, CYAN, AMBER } from '../scene/palette.js'
+
+const out = document.getElementById('out')
+const stage = createStage(document.getElementById('c'))
+addNightLighting(stage.scene)
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(800, 800),
+  new THREE.MeshStandardMaterial({ color: ASPHALT, roughness: 0.35, metalness: 0.35 }),
+)
+ground.rotation.x = -Math.PI / 2
+stage.scene.add(ground)
+
+// Three pickable blocks standing in for stalls.
+const fixtures = [
+  { id: 'one',   title: 'Block One',   color: RED },
+  { id: 'two',   title: 'Block Two',   color: CYAN },
+  { id: 'three', title: 'Block Three', color: AMBER },
+]
+fixtures.forEach((f, i) => {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 12, 8),
+    new THREE.MeshStandardMaterial({ color: f.color, emissive: f.color, emissiveIntensity: 0.35 }),
+  )
+  mesh.position.set((i - 1) * 14, 6, 0)
+  stage.scene.add(mesh)
+  stage.addPickable(mesh, f)
+})
+
+const state = { hover: null, selected: null, frames: 0 }
+const draw = () => {
+  out.textContent =
+    `reduceMotion: ${stage.reduceMotion}\n` +
+    `hover:    ${state.hover ?? '—'}\n` +
+    `selected: ${state.selected ?? '—'}\n` +
+    `frames:   ${state.frames}`
+}
+stage.onHover(p => { state.hover = p?.title ?? null; draw() })
+stage.onSelect(p => { state.selected = p?.title ?? null; draw(); window.__selected = p?.id })
+stage.onFrame(() => { state.frames++ })
+draw()
+stage.start()
+
+// Expose for the test harness.
+window.__stage = stage
+window.__state = state
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
+</script>
+</body>
+</html>

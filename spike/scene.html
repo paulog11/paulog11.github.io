@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · full scene</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+<script type="module">
+import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStreet } from '../scene/street.js'
+import { createTowers } from '../scene/towers.js'
+import { createCrowd }  from '../scene/crowd.js'
+import { createAlley }  from '../scene/alley.js'
+
+const q = new URLSearchParams(location.search)
+const panX = Number(q.get('panx') ?? 0)
+
+const projects = ['Algorithm Lab', 'Flip 7', 'Machi Koro', 'Venue Search', 'Reading Buddy',
+  'Japan History Map', 'The Right Word', 'Japanese Learning', 'Bible Hymn']
+  .map((title, i) => ({ id: `p${i}`, title, url: `./p${i}`, status: 'live' }))
+
+await document.fonts.ready
+
+const stage = createStage(document.getElementById('c'))
+addNightLighting(stage.scene)
+stage.scene.add(createStreet({ length: 170, width: 26 }))
+stage.scene.add(createCrowd())
+stage.scene.add(createTowers())
+
+const { group, stalls } = createAlley(projects)
+stage.scene.add(group)
+for (const s of stalls) stage.addPickable(s.hit, s.project)
+
+// Drive the camera to a pan offset so the backdrop can be checked at the rails.
+if (panX) {
+  stage.controls.target.x += panX
+  stage.camera.position.x += panX
+  stage.controls.update()
+  stage.invalidate()
+}
+
+stage.start()
+window.__stage = stage
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
+</script>
+</body>
+</html>

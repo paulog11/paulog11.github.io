@@ -52,18 +52,30 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 Personal website hosted at GitHub Pages. Vue 3 landing page at root links to subprojects under `projects/`.
 
 ## Tech Stack
-- Vue 3 (Composition API, `<script setup>`), Vite 6, Tailwind CSS 3
-- Fonts: Shippori Mincho (display), DM Sans (body), DM Mono (mono)
+- Vue 3 (Composition API, `<script setup>`), Vite 6, Tailwind CSS 3, three.js
+- Fonts: Shippori Mincho (display **and** the Japanese signage drawn onto canvas textures), DM Sans (body), DM Mono (the departure board). All three are load-bearing — don't drop one because the DOM seems not to use it.
 - Base path: `./` (relative) for GitHub Pages compatibility
 
 ## Key Files
-- `App.vue` — main landing page, contains `apps` array defining all card entries
-- `components/AppCard.vue` — reusable card component (icon, title, tags, coming-soon state)
+- `App.vue` — owns the `apps` array (single source of truth for every project) and dispatches scene clicks
+- `components/ShinjukuScene.vue` — the Vue↔three boundary: builds the scene, registers pick targets, falls back on WebGL failure
+- `components/ProjectList.vue` — accessible `<ul>` fallback, rendered *inside* the `<canvas>`. This is what screen readers and crawlers see, so it is not a stub
+- `scene/` — the 3D scene, one module per concern: `renderer` (camera, bloom, picking, quality tier), `palette`, `signTexture`, `alley` (the 9 project stalls), `street`, `towers` (都庁 + Cocoon), `crowd`, `ambient`, `departureBoard`, `konbini`, `streetFurniture`, `props`
+- `spike/` — standalone harnesses the Playwright suites drive (`alley`, `board`, `stage`, `scene`, `perf`). Vite only builds `index.html`, so these never ship
 - `main.js` / `style.css` — Vue entry point and global Tailwind styles
 - `index.source.html` — permanent Vite entry template (references `./main.js`); never overwritten by deploy
 - `index.html` — at rest this is the built output for GitHub Pages; `predev`/`prebuild` hooks restore it from `index.source.html` before Vite runs
 - `vite.config.js` — Vite config with `base: './'`
-- `tailwind.config.js` — custom theme (ink/parchment/warm/muted/accent colors, fade-up animation)
+- `tailwind.config.js` — night palette (night/asphalt/lantern/kabuki/neon/paper), mirroring `scene/palette.js`
+
+## Scene Constraints (non-obvious, cost real time to learn)
+- **1 world unit = 1 metre** at street level. Backdrop towers use *compressed* geometry — an orthographic camera has no distance falloff, so a literal 243 m 都庁 would be nine times the screen height.
+- Screen position under this camera (azimuth 45°, elevation 22°) is `screenX = 0.707(x − z)`, `screenY = 0.927y − 0.265(x + z)`. **Depth pushes objects up the frame**, so anything far back is high on screen before its own height counts. Derive placement from these; don't fit constants to one camera position — the camera pans ±24 m.
+- **Emissive materials illuminate nothing** in three.js. Light spilling onto the street comes from real `PointLight`s on the shopfronts.
+- **A metallic material with no `scene.environment` renders pure black** — it has no diffuse and nothing to reflect.
+- A bloom pass runs downstream. Over-bright emissive plus bloom has destroyed the image several times; keep emissive restrained and verify by looking at a render.
+- `createSignTexture` takes a **string** colour. Canvas2D silently ignores an invalid `fillStyle`, so a palette number used to render black-on-black; the function now coerces, but prefer strings.
+- `prefers-reduced-motion` must produce a perceptually static frame — including CSS animations, which need `motion-safe:`.
 
 ## Commands
 - `npm run dev` — local dev server
@@ -74,12 +86,25 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 
 **Important:** `index.source.html` is the canonical Vite entry. The `predev`/`prebuild`/`deploy` scripts all restore `index.html` from it before Vite runs. Do NOT manually edit `index.html` — edit `index.source.html` instead.
 
-## Adding a New App Card
-Add an entry to the `apps` array in `App.vue`:
+## Adding a New Project
+Append to the `apps` array in `App.vue` — nothing else. The alley grows one stall,
+the departure board grows one row, and the fallback list grows one entry:
 ```js
-{ id: 'my-app', title: 'My App', subtitle: 'Description', description: '...', tags: ['Tag'], icon: 'emoji', url: './projects/my-app/dist/index.html', comingSoon: false }
+{
+  id: 'my-app', indexNumber: 10, title: 'My App',
+  tagline: 'short line under the title',
+  description: 'Longer sentence for the fallback list and SEO.',
+  category: 'games',            // language | games | maps | simulations | reading
+  year: '2026',
+  tools: ['vue', 'vite'],
+  status: 'live',               // live | WIP | coming-soon
+  url: './projects/my-app/dist/index.html',
+  github: '',
+}
 ```
-Card URLs should point to `./projects/<name>/dist/index.html` (relative paths for GitHub Pages).
+URLs are relative (`./projects/<name>/dist/index.html`) for GitHub Pages. Keep
+`title` short — it is rendered onto a neon sign roughly 3 m wide, and long titles
+shrink to fit rather than wrap.
 
 ## Subprojects
 - `projects/algo-lab/` — algorithm simulation lab ([CLAUDE.md](projects/algo-lab/CLAUDE.md))

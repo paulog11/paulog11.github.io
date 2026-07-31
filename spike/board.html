@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · departure board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+<script type="module">
+import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStreet } from '../scene/street.js'
+import { createAlley } from '../scene/alley.js'
+import { createDepartureBoard } from '../scene/departureBoard.js'
+
+const projects = [
+  ['Algorithm Lab', '2026', 'live'], ['Flip 7', '2026', 'live'],
+  ['Machi Koro', '2025', 'live'], ['Venue Search', '2025', 'WIP'],
+  ['Reading Buddy', '2025', 'live'], ['Japan History Map', '2025', 'live'],
+  ['The Right Word', '2025', 'WIP'], ['Japanese Learning', '2025', 'live'],
+  ['Bible Hymn Learning', '2024', 'WIP'],
+].map(([title, year, status], i) => ({ id: `p${i}`, title, year, status, url: `./p${i}` }))
+
+await document.fonts.ready
+
+const stage = createStage(document.getElementById('c'), { quality: 'high' })
+addNightLighting(stage.scene)
+stage.scene.add(createStreet({ length: 170, width: 26 }))
+
+const solo = new URLSearchParams(location.search).has('solo')
+if (!solo) {
+  const { group, stalls } = createAlley(projects)
+  stage.scene.add(group)
+  for (const s of stalls) stage.addPickable(s.hit, s.project)
+}
+
+const board = createDepartureBoard(projects)
+board.group.position.set(...(solo ? [4, 0, 4] : [-22, 0, 2]))
+stage.scene.add(board.group)
+
+// Same payload shape the real scene uses.
+let active = null
+for (const r of board.rows) {
+  stage.addPickable(r.hit, { kind: 'project', project: r.project, hover: r.setHover })
+}
+stage.onHover((p) => {
+  if (p === active) return
+  active?.hover?.(false)
+  p?.hover?.(true)
+  active = p
+  window.__hovered = p?.project?.id ?? null
+})
+stage.onSelect((p) => { window.__opened = p?.project?.id ?? null })
+
+// Force a row hover for the screenshot when asked.
+const hoverRow = new URLSearchParams(location.search).get('hover')
+if (hoverRow !== null) board.rows[Number(hoverRow)].setHover(true)
+
+stage.start()
+window.__stage = stage
+window.__rowScreenPos = (i) => {
+  const v = new THREE.Vector3()
+  board.rows[i].hit.getWorldPosition(v)
+  v.project(stage.camera)
+  const c = document.getElementById('c')
+  return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight }
+}
+import * as THREE from 'three'
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
+</script>
+</body>
+</html>

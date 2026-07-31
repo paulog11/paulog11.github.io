@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · alley</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three'
+import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStreet } from '../scene/street.js'
+import { createAlley } from '../scene/alley.js'
+
+// `?n=` overrides the project count so we can prove the alley scales.
+const n = Number(new URLSearchParams(location.search).get('n') ?? 9)
+const projects = Array.from({ length: n }, (_, i) => ({
+  id: `p${i}`,
+  title: ['Algorithm Lab', 'Flip 7', 'Machi Koro', 'Venue Search', 'Reading Buddy',
+          'Japan History Map', 'The Right Word', 'Japanese Learning', 'Bible Hymn',
+          'Tenth Project', 'Eleventh'][i] ?? `Project ${i}`,
+  url: `./projects/p${i}/index.html`,
+  status: 'live',
+}))
+
+await document.fonts.ready
+
+const stage = createStage(document.getElementById('c'))
+addNightLighting(stage.scene)
+stage.scene.add(createStreet({ length: 90, width: 26 }))
+
+const { group, stalls } = createAlley(projects)
+stage.scene.add(group)
+
+let active = null
+for (const s of stalls) stage.addPickable(s.hit, s.project)
+stage.onHover((p) => {
+  if (p === active) return
+  stalls.find(s => s.project === active)?.setHover(false)
+  stalls.find(s => s.project === p)?.setHover(true)
+  active = p
+})
+stage.onSelect((p) => { window.__opened.push(p.url) })
+stage.start()
+
+// ── Test surface ──────────────────────────────────────────────────────────
+window.__opened = []
+window.__stalls = stalls.map(s => s.project.id)
+window.__hovered = () => active?.id ?? null
+// Screen-space centre of a stall's shopfront, for precise synthetic clicks.
+window.__screenPos = (i) => {
+  const v = new THREE.Vector3()
+  stalls[i].group.getWorldPosition(v)
+  v.y += 2.2
+  v.z += 1.0
+  v.project(stage.camera)
+  const c = document.getElementById('c')
+  return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight }
+}
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
+</script>
+</body>
+</html>

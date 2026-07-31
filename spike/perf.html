@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · perf</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+<script type="module">
+import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStreet } from '../scene/street.js'
+import { createTowers } from '../scene/towers.js'
+import { createCrowd }  from '../scene/crowd.js'
+import { createAmbient } from '../scene/ambient.js'
+import { createAlley }  from '../scene/alley.js'
+
+const q = new URLSearchParams(location.search)
+const on = (k, d = 1) => Number(q.get(k) ?? d) !== 0
+
+const projects = Array.from({ length: 9 }, (_, i) => ({
+  id: `p${i}`, title: `Project ${i}`, url: `./p${i}`, status: 'live',
+}))
+
+const stage = createStage(document.getElementById('c'), {
+  quality: q.get('quality') ?? undefined,
+  bloom: on('bloom'),
+})
+addNightLighting(stage.scene)
+if (on('street')) stage.scene.add(createStreet({ length: 170, width: 26 }))
+if (on('crowd'))  stage.scene.add(createCrowd({ count: Number(q.get('crowdn') ?? 108) }))
+if (on('towers')) stage.scene.add(createTowers())
+
+let ambient = null
+if (on('alley')) {
+  const { group, stalls } = createAlley(projects, { lightEvery: Number(q.get('lightevery') ?? 1) })
+  stage.scene.add(group)
+  for (const s of stalls) stage.addPickable(s.hit, s.project)
+  if (on('ambient')) {
+    ambient = createAmbient({ reduceMotion: false, flickerMaterials: stalls.map(s => s.vertMat) })
+    stage.scene.add(ambient.group)
+    stage.onFrame((dt, t) => ambient.update(dt, t))
+  }
+}
+stage.start()
+
+// Measure real frame intervals off rAF, then report percentiles.
+const SAMPLES = 110
+const times = []
+let last = performance.now()
+requestAnimationFrame(function probe(t) {
+  times.push(t - last); last = t
+  if (times.length < SAMPLES) return requestAnimationFrame(probe)
+  const s = times.slice(20).sort((a, b) => a - b)   // drop warm-up
+  const at = (p) => s[Math.floor(s.length * p)]
+  window.__perf = {
+    median: +at(0.5).toFixed(2),
+    p90: +at(0.9).toFixed(2),
+    fps: +(1000 / at(0.5)).toFixed(1),
+    calls: stage.renderer.info.render.calls,
+    tris: stage.renderer.info.render.triangles,
+    quality: stage.quality,
+  }
+})
+window.__ready = true
+</script>
+</body>
+</html>
