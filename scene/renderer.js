@@ -38,6 +38,14 @@ const RES_SCALE = { high: 0.75, low: 0.55 }
 // scene is a static city — nothing in it needs to be smooth.
 const TARGET_FPS = 30
 
+// setAnimationLoop fires on the display's cadence — 16.67ms ticks at 60Hz. Two
+// ticks is 33.33ms, which is exactly 1000/30, so a naive `< 1000/TARGET_FPS`
+// test loses to timer jitter almost every time and the loop waits for a THIRD
+// tick: 50ms, i.e. an actual 20fps. Measured at a flat 49.9-50.1ms median
+// regardless of scene complexity, which is what proves it was the cap and not
+// GPU load. Half a tick of slack lets the 2-tick gap qualify.
+const FRAME_SLACK_MS = 8
+
 /**
  * The night sky, used as the visible background. Equirectangular, so canvas-Y
  * runs zenith -> horizon (mid) -> nadir. Tokyo's sky is never black: light
@@ -234,7 +242,7 @@ export function createStage(canvas, opts = {}) {
     // Everything else is capped rather than on-demand, because rain, the train,
     // steam and neon flicker all animate every frame — there is no idle state to
     // fall back to. The cap is where the saving comes from.
-    if (now - lastFrame < 1000 / TARGET_FPS) return
+    if (now - lastFrame < 1000 / TARGET_FPS - FRAME_SLACK_MS) return
     const dt = Math.min((now - lastFrame) / 1000, 0.1)
     lastFrame = now
 

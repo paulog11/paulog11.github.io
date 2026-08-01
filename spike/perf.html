@@ -3,68 +3,157 @@
 <head>
   <meta charset="UTF-8" />
   <title>Spike · perf</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
-    canvas { display: block; width: 100%; height: 100%; }
+    canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
   </style>
 </head>
 <body>
-  <canvas id="c"></canvas>
+  <canvas id="c" data-scene></canvas>
 <script type="module">
+// Frame-cost harness for the full city. Every layer is toggleable so a
+// regression can be bisected to one module: ?roads=0&goldengai=0 etc.
+//
+// NOTE: this file used to drive the old alley scene and carried a `bloom`
+// toggle. There is no bloom, no composer and no crowd any more — the material
+// policy in CLAUDE.md removed all three — so those knobs are gone rather than
+// silently ignored.
 import { createStage, addNightLighting } from '../scene/renderer.js'
-import { createStreet } from '../scene/street.js'
+import { createStreets } from '../scene/street.js'
+import { createBlocks } from '../scene/blocks.js'
+import { createStation } from '../scene/station.js'
 import { createTowers } from '../scene/towers.js'
-import { createCrowd }  from '../scene/crowd.js'
+import { createGoldenGaiBlock } from '../scene/alley.js'
+import { createKonbini } from '../scene/konbini.js'
+import { createVendingBank, createKoban } from '../scene/streetFurniture.js'
+import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
-import { createAlley }  from '../scene/alley.js'
+import { PROJECT_SITES, SCENERY_SITES, lotCenter } from '../scene/cityLayout.js'
 
 const q = new URLSearchParams(location.search)
 const on = (k, d = 1) => Number(q.get(k) ?? d) !== 0
 
-const projects = Array.from({ length: 9 }, (_, i) => ({
-  id: `p${i}`, title: `Project ${i}`, url: `./p${i}`, status: 'live',
-}))
+const TITLES = {
+  'algo-lab': 'Algorithm Lab',
+  'flip7': 'Flip 7',
+  'machi-koro': 'Machi Koro',
+  'venue-search': 'Venue Search',
+  'reading-buddy': 'Reading Buddy',
+  'japan-map': 'Japan History Map',
+  'right-word-japanese': 'The Right Word',
+  'japanese-dashboard': 'Japanese Learning',
+  'bible-hymn-kids': 'Bible Hymn Learning',
+}
+
+await document.fonts.ready
 
 const stage = createStage(document.getElementById('c'), {
   quality: q.get('quality') ?? undefined,
-  bloom: on('bloom'),
 })
 addNightLighting(stage.scene)
-if (on('street')) stage.scene.add(createStreet({ length: 170, width: 26 }))
-if (on('crowd'))  stage.scene.add(createCrowd({ count: Number(q.get('crowdn') ?? 108) }))
+
+if (on('roads'))  stage.scene.add(createStreets())
+if (on('blocks')) stage.scene.add(createBlocks())
 if (on('towers')) stage.scene.add(createTowers())
 
-let ambient = null
-if (on('alley')) {
-  const { group, stalls } = createAlley(projects, { lightEvery: Number(q.get('lightevery') ?? 1) })
-  stage.scene.add(group)
-  for (const s of stalls) stage.addPickable(s.hit, s.project)
-  if (on('ambient')) {
-    ambient = createAmbient({ reduceMotion: false, flickerMaterials: stalls.map(s => s.vertMat) })
-    stage.scene.add(ambient.group)
-    stage.onFrame((dt, t) => ambient.update(dt, t))
+let goldenGai = null
+if (on('goldengai')) {
+  goldenGai = createGoldenGaiBlock()
+  stage.scene.add(goldenGai.group)
+}
+
+if (on('scenery')) {
+  const SCENERY = { konbini: createKonbini, koban: createKoban, vending: createVendingBank }
+  for (const site of SCENERY_SITES) {
+    const make = SCENERY[site.id]
+    if (!make) continue
+    const { x, z } = lotCenter(site.cell, site.lot)
+    const { group } = make()
+    group.position.set(x, 0, z)
+    group.rotation.y = site.ry ?? 0
+    stage.scene.add(group)
   }
 }
+
+// The station owns the track height the train rides, so ambient depends on it.
+let station = null
+if (on('station')) {
+  station = createStation()
+  stage.scene.add(station.group)
+}
+
+if (on('projects')) {
+  for (const site of PROJECT_SITES) {
+    const project = {
+      id: site.id, title: TITLES[site.id] ?? site.id,
+      year: '2026', status: 'live', url: `./${site.id}`,
+    }
+    const b = createProjectBuilding(project, site)
+    stage.scene.add(b.group)
+    stage.addPickable(b.hit, { kind: 'project', project, hover: b.setHover })
+  }
+}
+
+let ambient = null
+if (on('ambient') && station) {
+  ambient = createAmbient({
+    reduceMotion: false,
+    flickerMaterials: goldenGai?.signMats ?? [],
+    trackY: station.trackY,
+  })
+  stage.scene.add(ambient.group)
+  stage.onFrame((dt, t) => ambient.update(dt, t))
+}
+
+if (Number(q.get('zoom') ?? 0)) stage.camera.zoom = Number(q.get('zoom'))
+stage.camera.updateProjectionMatrix()
+stage.controls.update()
 stage.start()
 
-// Measure real frame intervals off rAF, then report percentiles.
-const SAMPLES = 110
+// Draw-call counts need autoReset off: info.render is cleared on every
+// render() call, so a naive read reports only the last pass.
+stage.renderer.info.autoReset = false
+stage.renderer.info.reset()
+stage.renderer.render(stage.scene, stage.camera)
+const snapshot = {
+  calls: stage.renderer.info.render.calls,
+  tris: stage.renderer.info.render.triangles,
+  programs: stage.renderer.info.programs.length,
+  textures: stage.renderer.info.memory.textures,
+}
+stage.renderer.info.autoReset = true
+
+// Measure intervals between RENDERED frames, not rAF ticks.
+//
+// This is deliberately not `requestAnimationFrame`, which is what this file
+// used to do and what produced a misleading number. renderer.js caps rendering
+// to TARGET_FPS by early-returning out of its animation loop, but
+// setAnimationLoop still fires at display rate — so timing rAF reports ~16.7ms
+// / 60fps regardless of the cap, measuring the browser's refresh rate rather
+// than the scene's cost. stage.onFrame callbacks run only on frames that
+// actually render, so they see the real cadence (~33ms at a 30fps cap).
+const SAMPLES = 90
 const times = []
 let last = performance.now()
-requestAnimationFrame(function probe(t) {
-  times.push(t - last); last = t
-  if (times.length < SAMPLES) return requestAnimationFrame(probe)
-  const s = times.slice(20).sort((a, b) => a - b)   // drop warm-up
+stage.onFrame(() => {
+  const now = performance.now()
+  if (times.length < SAMPLES) { times.push(now - last); last = now; return }
+  if (window.__perf) return
+  const s = times.slice(15).sort((a, b) => a - b)   // drop warm-up
   const at = (p) => s[Math.floor(s.length * p)]
   window.__perf = {
-    median: +at(0.5).toFixed(2),
-    p90: +at(0.9).toFixed(2),
-    fps: +(1000 / at(0.5)).toFixed(1),
-    calls: stage.renderer.info.render.calls,
-    tris: stage.renderer.info.render.triangles,
+    medianMs: +at(0.5).toFixed(2),
+    p90Ms: +at(0.9).toFixed(2),
+    renderedFps: +(1000 / at(0.5)).toFixed(1),
+    ...snapshot,
     quality: stage.quality,
   }
 })
+
+window.__stage = stage
 window.__ready = true
 </script>
 </body>
