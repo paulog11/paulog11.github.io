@@ -39,6 +39,7 @@ import { createStage, addNightLighting } from '../scene/renderer.js'
 import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
+import { createTowers } from '../scene/towers.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
@@ -70,6 +71,10 @@ onMounted(() => {
 
   stage.scene.add(createStreets())
   stage.scene.add(createBlocks())
+
+  // 都庁 and the Cocoon. Backdrop, never clickable — they establish the place
+  // and give the skyline something taller than the filler to read against.
+  stage.scene.add(createTowers())
 
   const station = createStation()
   stage.scene.add(station.group)

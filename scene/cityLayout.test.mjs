@@ -8,7 +8,8 @@
 import assert from 'node:assert/strict'
 import {
   BLOCK, STREET, LOT, LOT_PITCH, MAP_HALF, blockCenter, lotOffset, lotCenter,
-  STREET_LINES, PROJECT_SITES, GOLDEN_GAI_CELL, STATION, fillerBuildings,
+  STREET_LINES, PROJECT_SITES, LANDMARK_SITES, lotGroupCenter,
+  GOLDEN_GAI_CELL, STATION, fillerBuildings,
 } from './cityLayout.js'
 
 const overlaps1D = (aC, aHalf, bC, bHalf) => aC - aHalf < bC + bHalf && aC + aHalf > bC - bHalf
@@ -42,13 +43,40 @@ for (const p of PROJECT_SITES) {
   assert.notEqual(String(p.cell), String(STATION.cell), `${p.id} is inside the station`)
 }
 
+// lotGroupCenter reduces to lotCenter for a single-lot group.
+assert.deepEqual(lotGroupCenter([1, 0], [[2, 1]]), lotCenter([1, 0], [2, 1]))
+
+// ── Landmark sites are well-formed and collide with nothing ─────────────────
+assert.equal(LANDMARK_SITES.length, 2)
+assert.equal(new Set(LANDMARK_SITES.map((s) => s.id)).size, 2, 'duplicate landmark id')
+
+const projectLotKeys = new Set(PROJECT_SITES.map((p) => `${p.cell}|${p.lot}`))
+const landmarkLotKeys = new Set()
+for (const s of LANDMARK_SITES) {
+  assert.notEqual(String(s.cell), String(GOLDEN_GAI_CELL),
+    `${s.id} is in the Golden Gai block`)
+  assert.notEqual(String(s.cell), String(STATION.cell), `${s.id} is inside the station`)
+  for (const lot of s.lots) {
+    const key = `${s.cell}|${lot}`
+    assert.ok(!projectLotKeys.has(key), `${s.id} lot ${lot} collides with a project`)
+    assert.ok(!landmarkLotKeys.has(key), `${s.id} lot ${lot} collides with another landmark`)
+    landmarkLotKeys.add(key)
+  }
+}
+
 // ── The filler generator behaves ─────────────────────────────────────────────
 const filler = fillerBuildings()
 const projectLots = new Set(
   PROJECT_SITES.map((p) => { const c = lotCenter(p.cell, p.lot); return `${c.x},${c.z}` }),
 )
+const landmarkLots = new Set(
+  LANDMARK_SITES.flatMap((s) => s.lots.map((lot) => {
+    const c = lotCenter(s.cell, lot); return `${c.x},${c.z}`
+  })),
+)
 for (const b of filler) {
   assert.ok(!projectLots.has(`${b.x},${b.z}`), 'filler building sits on a project lot')
+  assert.ok(!landmarkLots.has(`${b.x},${b.z}`), 'filler building sits on a landmark lot')
   assert.ok(Math.abs(b.x) + b.w / 2 <= MAP_HALF && Math.abs(b.z) + b.d / 2 <= MAP_HALF,
     'filler building escapes the map')
   for (const s of STREET_LINES) {
@@ -61,4 +89,4 @@ for (const b of filler) {
 // visual regressions mean nothing.
 assert.deepEqual(fillerBuildings(), filler, 'fillerBuildings() is not deterministic')
 
-console.log(`ok — ${filler.length} filler + ${PROJECT_SITES.length} project buildings`)
+console.log(`ok — ${filler.length} filler + ${PROJECT_SITES.length} project + ${LANDMARK_SITES.length} landmark buildings`)

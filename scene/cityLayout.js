@@ -83,6 +83,40 @@ export const PROJECT_SITES = [
   { id: 'bible-hymn-kids',     cell: [2, 0], lot: [0, 0], h: 20 },
 ]
 
+/** Centre of a GROUP of lots — the mean of each lot's own centre. Only needed
+ * for footprints too big for one lot (see LANDMARK_SITES below); a one-lot
+ * group reduces to lotCenter() exactly. */
+export function lotGroupCenter(cell, lots) {
+  const centers = lots.map((lot) => lotCenter(cell, lot))
+  return {
+    x: centers.reduce((s, c) => s + c.x, 0) / centers.length,
+    z: centers.reduce((s, c) => s + c.z, 0) / centers.length,
+  }
+}
+
+// ── Landmark sites ───────────────────────────────────────────────────────────
+// The two hero towers (都庁 and the Cocoon) — backdrop, never clickable.
+// Real 都庁 and Cocoon stand in 西新宿, west of the station: column 0 in this
+// grid. Both [0][0] and [1][0] are column 0, but [1][0] is the one labelled
+// 高層ビル (skyscraper district) in the header table above — the literal
+// high-rise district, and it sits at the station's own row, matching how the
+// real towers stand due west of Shinjuku Station rather than off to a corner.
+// [0][0] keeps its plain 西新宿 label and its existing filler/project mix.
+//
+// A ~35-45m compressed landmark has a footprint bigger than one 14m LOT (see
+// towers.js's TOCHO_SPIKE_H / COCOON_SPIKE_H scaling), so `lots` lists every
+// lot the building claims — plural, the way PROJECT_SITES' singular `lot`
+// can't express. fillerBuildings() below and cityLayout.test.mjs both key off
+// this list so nothing else is generated inside the footprint.
+export const LANDMARK_SITES = [
+  // 都庁: ~20m-square base at 40m compressed doesn't fit a 14m lot, so it
+  // claims a 2x2 group (avoiding lot [1,0], which venue-search already owns).
+  { id: 'tocho', cell: [1, 0], lots: [[0, 1], [0, 2], [1, 1], [1, 2]], h: 40 },
+  // Cocoon's base stays under 11m even at full compressed height, so one lot
+  // is enough — same footprint budget as an ordinary project building.
+  { id: 'cocoon', cell: [1, 0], lots: [[2, 1]], h: 34 },
+]
+
 // ── Block character ──────────────────────────────────────────────────────────
 // Drives the filler generator below. `fill` is the fraction of free lots that
 // get a building — leaving gaps reads as car parks and side lanes, and costs
@@ -119,6 +153,9 @@ export function fillerBuildings() {
   const claimed = new Set(
     PROJECT_SITES.map((p) => `${p.cell}|${p.lot}`),
   )
+  for (const site of LANDMARK_SITES) {
+    for (const lot of site.lots) claimed.add(`${site.cell}|${lot}`)
+  }
 
   for (const spec of BLOCK_SPECS) {
     if (String(spec.cell) === String(GOLDEN_GAI_CELL)) continue

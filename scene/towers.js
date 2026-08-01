@@ -1,19 +1,33 @@
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { LANDMARK_SITES, lotGroupCenter } from './cityLayout.js'
 
-// The two hero landmarks, built as BACKDROP. They establish the place; the
-// alley in front of them is what you actually click.
+// The two hero landmarks, built as BACKDROP inside the city grid. Position and
+// height are table-driven from cityLayout.js's LANDMARK_SITES — see that file
+// for why they stand at cell [1,0] — not hard-coded here.
 //
 // Both are modelled in "spike units" (1 unit = 5 m, matching spike/tocho.html)
-// and then the whole group is scaled down. An orthographic camera gives no
-// distance falloff, so a literally-scaled 243 m tower would be nine times the
-// screen height — the compression IS the forced perspective.
-// Height is bounded by the projection, not by taste. Screen height at azimuth
-// 45°/elevation 22° is 0.927y - 0.265(x+z), so an object 26 m back is already
-// ~7 m up-screen before its own height counts. With a 26 m vertical view and
-// the frame top at ~16.5, 13 m is what keeps the bifurcation — the whole point
-// of the silhouette — inside the frame.
-const S = 11 / 48.6    // 都庁's 48.6 spike-units become 11 scene-metres
-const S_COCOON = 8 / 40.8
+// at their real proportions, then the whole group is scaled by
+// LANDMARK_SITES[i].h / <real height in spike units>. An orthographic camera
+// gives no distance falloff, so a literally-scaled 243 m tower would be nine
+// times the screen height — the compression IS the forced perspective.
+//
+// Height ceiling, worked through the projection (not a taste number):
+//   screenY = 0.927y - 0.265(x+z)                         (CLAUDE.md / renderer.js)
+// tocho's site centres at x=-48, z=-8 (lotGroupCenter of its LANDMARK_SITES
+// lots), so its ground level projects to screenY = -0.265*(-48-8) = 14.8.
+// renderer.js's resize() computes frustum = max(CONTENT_H, CONTENT_W/aspect)
+// with CONTENT_H=145; the smallest that ever gets is 145 itself, on wide
+// screens where CONTENT_H binds — the worst case across every aspect ratio.
+// The frame is centred on CONTENT_CY=21.3, so the frame top sits at
+// 21.3 + 145/2 = 93.8. Headroom above tocho's own ground level is therefore
+// (93.8 - 14.8) / 0.927 = ~85 m — comfortably more than the 35-45 m target,
+// so LANDMARK_SITES' heights (40 m tocho, 34 m cocoon, matching the real
+// 243:204 ratio) are a legibility choice, not one forced by clipping. The
+// bifurcation (at 169/243 of tocho's height, unchanged by rescaling) and the
+// mast/warning-light apex above the roof both land far inside that margin.
+const TOCHO_SPIKE_H = 48.6    // 243 real metres / 5 metres-per-spike-unit
+const COCOON_SPIKE_H = 40.8   // 204 real metres / 5 metres-per-spike-unit
 
 let seed = 20260729
 const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296
@@ -111,24 +125,26 @@ function latticeTexture() {
   return { map: tex(c), emissiveMap: tex(e) }
 }
 
-function slab(w, h, d, opts = {}) {
+/** A facade texture sized to match a `w x h` slab, as a ready-to-use material. */
+function texturedSlabMaterial(w, h, opts = {}) {
   const { map, emissiveMap } = facade(
     Math.max(4, Math.round(w * 5 / 3.6)),
     Math.max(4, Math.round(h * 5 / 4.0)),
     opts,
   )
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshLambertMaterial({
-      map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.5,
-    }),
-  )
-  return mesh
+  return new THREE.MeshLambertMaterial({
+    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.5,
+  })
 }
 
-function place(mesh, x, yBottom, z) {
-  mesh.position.set(x, yBottom + mesh.geometry.parameters.height / 2, z)
-  return mesh
+/** Clones a geometry with a transform baked in, ready for mergeGeometries.
+ * Same idiom as station.js's posed()/mergedMesh(). */
+function posed(geo, { x = 0, y = 0, z = 0 } = {}) {
+  return geo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z))
+}
+
+function mergedMesh(geoms, material) {
+  return new THREE.Mesh(mergeGeometries(geoms), material)
 }
 
 /** Tokyo Metropolitan Government Building No.1 — 243 m, 48 floors. */
@@ -137,35 +153,58 @@ function createTocho() {
   const U = 1 / 5
   const PODIUM_H = 33 * U, SPLIT_Y = 169 * U, TOP_Y = 243 * U
 
-  g.add(place(slab(26, PODIUM_H, 22, { lit: 0.62 }), 0, 0, 0))
-  g.add(place(slab(15, SPLIT_Y - PODIUM_H, 15), 0, PODIUM_H, 0))
+  // Podium and spire base: unique footprints, so each stays its own mesh —
+  // nothing else shares their size to merge with.
+  const podium = new THREE.Mesh(
+    new THREE.BoxGeometry(26, PODIUM_H, 22),
+    texturedSlabMaterial(26, PODIUM_H, { lit: 0.62 }),
+  )
+  podium.position.set(0, PODIUM_H / 2, 0)
+  g.add(podium)
 
-  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-    g.add(place(slab(2.6, SPLIT_Y - PODIUM_H + 1.0, 2.6, { lit: 0.22 }),
-      sx * 6.3, PODIUM_H, sz * 6.3))
-  }
+  const spireH = SPLIT_Y - PODIUM_H
+  const spire = new THREE.Mesh(
+    new THREE.BoxGeometry(15, spireH, 15),
+    texturedSlabMaterial(15, spireH),
+  )
+  spire.position.set(0, PODIUM_H + spireH / 2, 0)
+  g.add(spire)
+
+  // Four corner mullions: identical geometry — one shared texture and one
+  // merged mesh instead of four separate draw calls.
+  const cornerH = spireH + 1.0
+  const cornerMat = texturedSlabMaterial(2.6, cornerH, { lit: 0.22 })
+  const cornerGeos = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) =>
+    posed(new THREE.BoxGeometry(2.6, cornerH, 2.6),
+      { x: sx * 6.3, y: PODIUM_H + cornerH / 2, z: sz * 6.3 }))
+  g.add(mergedMesh(cornerGeos, cornerMat))
 
   // The signature: one mass rising from the podium that bifurcates into twin
-  // towers at floor 33 of 48. This is what makes it identifiable.
-  for (const sx of [-1, 1]) {
-    g.add(place(slab(5.25, TOP_Y - SPLIT_Y, 12), sx * 4.9, SPLIT_Y, 0))
-    g.add(place(new THREE.Mesh(
-      new THREE.BoxGeometry(3.9, 1.6, 9),
-      new THREE.MeshLambertMaterial({ color: 0x6a7286 }),
-    ), sx * 4.9, TOP_Y, 0))
-    const mast = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.2, 6, 6),
-      new THREE.MeshLambertMaterial({ color: 0x7a8394 }),
-    )
-    mast.position.set(sx * 4.9, TOP_Y + 1.6 + 3, 0)
-    g.add(mast)
-    const warn = new THREE.Mesh(
-      new THREE.SphereGeometry(0.34, 10, 10),
-      new THREE.MeshBasicMaterial({ color: 0xff2b2b }),
-    )
-    warn.position.set(sx * 4.9, TOP_Y + 1.6 + 6.2, 0)
-    g.add(warn)
-  }
+  // towers at floor 33 of 48 — mirrored geometry, one shared texture, one
+  // merged mesh. This is what makes it identifiable.
+  const legH = TOP_Y - SPLIT_Y
+  const legMat = texturedSlabMaterial(5.25, legH)
+  const legGeos = [-1, 1].map((sx) =>
+    posed(new THREE.BoxGeometry(5.25, legH, 12), { x: sx * 4.9, y: SPLIT_Y + legH / 2, z: 0 }))
+  g.add(mergedMesh(legGeos, legMat))
+
+  // Roof caps: flat colour, identical geometry mirrored — one merged mesh.
+  const capMat = new THREE.MeshLambertMaterial({ color: 0x6a7286 })
+  const capGeos = [-1, 1].map((sx) =>
+    posed(new THREE.BoxGeometry(3.9, 1.6, 9), { x: sx * 4.9, y: TOP_Y + 0.8, z: 0 }))
+  g.add(mergedMesh(capGeos, capMat))
+
+  // Antenna masts: same treatment.
+  const mastMat = new THREE.MeshLambertMaterial({ color: 0x7a8394 })
+  const mastGeos = [-1, 1].map((sx) =>
+    posed(new THREE.CylinderGeometry(0.12, 0.2, 6, 6), { x: sx * 4.9, y: TOP_Y + 1.6 + 3, z: 0 }))
+  g.add(mergedMesh(mastGeos, mastMat))
+
+  // Aircraft-warning lights: unlit, self-lit red — merge the two spheres.
+  const warnMat = new THREE.MeshBasicMaterial({ color: 0xff2b2b })
+  const warnGeos = [-1, 1].map((sx) =>
+    posed(new THREE.SphereGeometry(0.34, 10, 10), { x: sx * 4.9, y: TOP_Y + 1.6 + 6.2, z: 0 }))
+  g.add(mergedMesh(warnGeos, warnMat))
 
   return g
 }
@@ -174,7 +213,7 @@ function createTocho() {
 function createCocoon() {
   const g = new THREE.Group()
   const H = 204 / 5          // spike units
-  const R = 6.6              // the real Cocoon is squat; too slim reads as a tube
+  const R = 6.6               // the real Cocoon is squat; too slim reads as a tube
 
   // Elliptical cocoon: narrow at the base, bulging at mid-height, tapering to
   // a rounded crown.
@@ -203,21 +242,22 @@ function createCocoon() {
   return g
 }
 
-/** Both landmarks, compressed and placed behind the alley. Positions in metres. */
+/** Both landmarks, table-driven from cityLayout.js's LANDMARK_SITES. */
 export function createTowers() {
   const group = new THREE.Group()
 
-  // Both sit right of centre: in this projection "directly behind and centred"
-  // means x ≈ z ≈ very negative, which pushes an object off the top of frame.
-  // The crowd-building field fills the left instead.
-  const tocho = createTocho()          // → 11 m, top lands just inside the frame
-  tocho.scale.setScalar(S)
-  tocho.position.set(2, 0, -21)
+  const tochoSite = LANDMARK_SITES.find((s) => s.id === 'tocho')
+  const tocho = createTocho()
+  tocho.scale.setScalar(tochoSite.h / TOCHO_SPIKE_H)
+  const tPos = lotGroupCenter(tochoSite.cell, tochoSite.lots)
+  tocho.position.set(tPos.x, 0, tPos.z)
   group.add(tocho)
 
-  const cocoon = createCocoon()        // → 8 m
-  cocoon.scale.setScalar(S_COCOON)
-  cocoon.position.set(-13, 0, -17)
+  const cocoonSite = LANDMARK_SITES.find((s) => s.id === 'cocoon')
+  const cocoon = createCocoon()
+  cocoon.scale.setScalar(cocoonSite.h / COCOON_SPIKE_H)
+  const cPos = lotGroupCenter(cocoonSite.cell, cocoonSite.lots)
+  cocoon.position.set(cPos.x, 0, cPos.z)
   group.add(cocoon)
 
   return group
