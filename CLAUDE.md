@@ -135,9 +135,15 @@ A project with no site simply doesn't get a building (it stays on the board and
 in the fallback list); a site with no matching `id` is skipped with a warning
 rather than rendering a nameless building.
 
-URLs are relative (`./projects/<name>/dist/index.html`) for GitHub Pages. Keep
-`title` short — it is rendered onto a neon sign that must stay readable at ~4.8
-px per metre, and long titles shrink to fit rather than wrap.
+URLs are relative (`./projects/<name>/dist/index.html`) for GitHub Pages.
+
+**Keep `title` short — one word or two.** It is rendered onto a neon sign, and
+a title over ~12 characters is *wrapped* onto two lines by `splitTitle`, not
+shrunk. Wrapping drops the glyphs from 70% to 55% of the sign canvas, i.e. from
+10.9 to 8.6 CSS px at zoom 1 — a 27% legibility cost. See the measured budget
+comment at the top of `projectBuilding.js` before changing anything about sign
+size; enlarging the sign is not the fix (the aspect is locked at 4:1, so a
+legible-at-zoom-1 sign would be 28 m wide on a 14 m lot).
 
 ## Subprojects
 - `projects/algo-lab/` — algorithm simulation lab ([CLAUDE.md](projects/algo-lab/CLAUDE.md))

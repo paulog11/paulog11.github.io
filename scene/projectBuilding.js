@@ -29,17 +29,31 @@ const STATUS_STYLE = {
 
 // Rooftop board, sized independently of the building footprint (real
 // Shinjuku signage routinely cantilevers past the building it's bolted to).
-// SIGN DESIGN BUDGET: at zoom 1 (whole map on screen) the frustum note in the
-// task gives ~4.8 px/metre. SIGN_W=14 at the sign's fixed 4:1 aspect is a
-// 3.5m-tall plane -> ~16.8px of screen height for the whole plane. Titles over
-// 12 characters are split across signTexture's main+sub lines (see
-// splitTitle) specifically to keep each line short enough that its
-// width-driven font-fit doesn't shrink below the plane's height budget —
-// short/split lines land an estimated ~11-13px cap height, which is the
-// stated legibility floor. I could not confirm actual Shippori Mincho glyph
-// metrics without a browser to run this in, so treat that as an estimate;
-// the zoom range (0.95-5) is the deliberate fallback for anything that reads
-// small at rest, per renderer.js's own "zoom IS the level of detail" framing.
+// SIGN DESIGN BUDGET — MEASURED, superseding the estimate that used to be here.
+//
+// SIGN_W=14 at the sign's fixed 4:1 aspect is a 3.5m-tall plane. Under an
+// orthographic camera that is the same on-screen height for every sign
+// regardless of title: 15.56 CSS px at zoom 1 on a 1280x720 viewport.
+//
+// The glyphs get only part of that. layoutText caps the main line at h*0.55
+// when a subtitle is present (h*0.7 without), and 7 of the 9 titles are long
+// enough that splitTitle wraps them onto two lines. Measured glyph heights:
+//
+//     wrapped titles (7 of 9)   176/320 of canvas ->  8.56 CSS px
+//     single-line ("Flip 7")    224/320 of canvas -> 10.89 CSS px
+//
+// Then renderer.js draws at RES_SCALE (0.75 high tier, 0.55 low) and the
+// browser hard-upscales with image-rendering: pixelated, so the real figure is
+// 6.4 device px high-tier and 4.7 low-tier. With antialias off, that is not
+// readable text.
+//
+// This is DELIBERATE and the gate was amended to match: at zoom 1 a sign's job
+// is to MARK a building, not to label it — the station's departure board is the
+// readable index at that zoom, which is its documented purpose. Titles become
+// legible from zoom ~1.9 of the 0.9-5.0 range.
+//
+// So: do not "fix" this by enlarging the sign. At 4:1, doubling glyph height
+// means a 28m-wide sign on a 14m lot.
 const SIGN_W = 14
 const W = 8.5, D = 8.5   // footprint — inside the 14m lot budget with margin to spare
 
