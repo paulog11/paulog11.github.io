@@ -62,7 +62,7 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 - `components/ProjectList.vue` — accessible `<ul>` fallback, rendered *inside* the `<canvas>`. This is what screen readers and crawlers see, so it is not a stub
 - `scene/cityLayout.js` — **the single source of truth for where everything stands.** Pure data + maths, imports nothing from three.js. A 3×3 lattice of blocks separated by streets; each block subdivides into a 3×3 lattice of lots; a building occupies one lot. Moving a building is a two-integer edit. Replace *this* file when real Shinjuku coordinates arrive — never hard-code positions in the geometry modules. `node scene/cityLayout.test.mjs` checks its invariants without a browser
 - `scene/` — the 3D scene, one module per concern: `renderer` (camera, picking, quality tier), `palette`, `signTexture`, `cityLayout`, `street` (the road network), `blocks` (filler buildings), `station` (新宿駅, the centrepiece), `projectBuilding` (the 9 clickable ones), `lightPool`, `towers` (都庁 + Cocoon), `alley` (Golden Gai scenery), `ambient`, `departureBoard`, `konbini`, `streetFurniture`, `props`
-- `spike/` — standalone harnesses the Playwright suites drive (`city`, `alley`, `board`, `stage`, `perf`). Vite only builds `index.html`, so these never ship
+- `spike/` — standalone harnesses. Vite only builds `index.html`, so these never ship. **Current state:** `city` ✅ and `perf` ✅ are up to date; `alley` ❌ and `board` ❌ still import the removed `createStreet`/`createAlley` and fail to load; `stage` loads but violates the material policy with two `MeshStandardMaterial`. There is **no committed Playwright suite** — browser testing has been ad-hoc scratchpad scripts every session
 - `main.js` / `style.css` — Vue entry point and global Tailwind styles
 - `index.source.html` — permanent Vite entry template (references `./main.js`); never overwritten by deploy
 - `index.html` — at rest this is the built output for GitHub Pages; `predev`/`prebuild` hooks restore it from `index.source.html` before Vite runs
@@ -93,12 +93,35 @@ the low-GPU look are the same thing. Breaking these puts the cost straight back.
 - **Emissive materials illuminate nothing** in three.js.
 - The renderer draws at a **fraction of CSS resolution** (`RES_SCALE`) and the browser upscales it; `canvas[data-scene] { image-rendering: pixelated }` in `style.css` is what turns that from "blurry" into the intended look. The two belong together.
 - The frame loop is **capped to 30 fps**, not on-demand — rain, the train, steam and flicker animate continuously, so there is no idle state. True on-demand rendering is the `prefers-reduced-motion` path only.
+- **The frame cap needs `FRAME_SLACK_MS`.** `setAnimationLoop` fires on the display's cadence (16.67 ms at 60 Hz). Two ticks is 33.33 ms — *exactly* `1000/30` — so a naive `now - lastFrame < 1000/TARGET_FPS` loses to jitter and waits a third tick, capping at **20 fps, not 30**. This shipped broken once. Don't "simplify" the slack away.
 - `createSignTexture` takes a **string** colour. Canvas2D silently ignores an invalid `fillStyle`, so a palette number used to render black-on-black; the function now coerces, but prefer strings.
 - `prefers-reduced-motion` must produce a perceptually static frame — including CSS animations, which need `motion-safe:`.
+
+## Measuring the Scene (both metrics are easy to get wrong)
+
+Two traps have each produced a confidently wrong number in this repo:
+
+- **Draw calls:** you MUST set `renderer.info.autoReset = false`, then `reset()`,
+  then `render()`, then read. `info.render` clears on *every* `render()` call, so
+  a naive read reports only the last pass.
+- **Frame rate:** do NOT time `requestAnimationFrame`. It fires at display rate
+  whether or not the frame renders, so it reports ~60 fps regardless of the cap —
+  this is exactly what hid the 20-fps bug above. Time `stage.onFrame` callbacks
+  instead; they run only on frames that actually render.
+- **Measure on `spike/perf.html`, not `spike/city.html`.** city.html omits scenery
+  and ambient and under-reports by ~92 draw calls.
+
+Current baseline for the full scene (regress against these):
+
+| Draw calls | Triangles | Programs | Textures | Frame median |
+|---:|---:|---:|---:|---:|
+| 254 | 18,520 | 19 | 63 | 33.3 ms (30 fps) |
 
 ## Commands
 - `npm run dev` — local dev server
 - `npm run deploy` — build + copy dist output to root for GitHub Pages
+- `node scene/cityLayout.test.mjs` — layout invariants, no browser needed. **This
+  is the only committed test in the repo.**
 
 ## Deploy Workflow
 `npm run deploy` does: restore `index.source.html` → `vite build` → clean old hashed assets → copy `dist/assets/*` to `assets/` → copy `dist/index.html` to root. Built assets are committed to git (no CI build step). Always use relative paths.
@@ -126,8 +149,23 @@ list grows an entry from this alone:
 ```
 
 **2. Add a site to `PROJECT_SITES` in `scene/cityLayout.js`** — where it *stands*.
+
+`cityLayout.js` owns **three** placement tables, all with the same lot-claiming
+contract, and `fillerBuildings()` skips every lot any of them claims:
+
+| Table | For | Shape |
+|---|---|---|
+| `PROJECT_SITES` | the 9 clickable buildings | one `lot` |
+| `LANDMARK_SITES` | 都庁, Cocoon | a `lots` **array** — a tower needs a 2×2 group |
+| `SCENERY_SITES` | konbini, kōban, vending | one `lot` + a `ry` yaw |
+
+Anything placed on the grid should claim a lot rather than take free-floating
+coordinates: the gap between the outermost filler footprint and a block edge is
+0.6 m, so "just inside the block edge" collides and needs re-checking on every
+layout change. A lot cannot collide, and the test enforces it.
+
 Pick a free lot; `node scene/cityLayout.test.mjs` fails if you collide with
-another project, the station, or Golden Gai:
+another project, a landmark, scenery, the station, or Golden Gai:
 ```js
 { id: 'my-app', cell: [0, 1], lot: [2, 0], h: 22 }
 ```
