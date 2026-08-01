@@ -117,6 +117,27 @@ export const LANDMARK_SITES = [
   { id: 'cocoon', cell: [1, 0], lots: [[2, 1]], h: 34 },
 ]
 
+// ── Street scenery ───────────────────────────────────────────────────────────
+// Konbini, kōban and vending banks. Scenery only — never clickable, even though
+// their modules still return a `hit` mesh from when they were interactive.
+//
+// These get LOTS rather than free-floating street coordinates, for the same
+// reason projects and landmarks do: a lot cannot collide with anything, whereas
+// "just inside the block edge" is a 0.6 m margin against the outermost filler
+// footprint and would need re-checking on every layout change. They sit on edge
+// lots so they read as street-facing, and each is far smaller than the 14 m lot
+// budget (konbini 7×5.5, kōban 4×4, a vending bank ~3.3×0.75).
+//
+// `ry` is a yaw in radians. The modules all build their frontage facing +Z, and
+// this camera (azimuth 45°) sees the +X and +Z faces, so ry: 0 keeps a shopfront
+// visible; -Math.PI/2 turns it to face +X for a corner.
+export const SCENERY_SITES = [
+  { id: 'konbini', cell: [1, 2], lot: [2, 0], ry: 0 },          // south edge, east block
+  { id: 'koban',   cell: [2, 1], lot: [0, 0], ry: 0 },          // by the station's south exit
+  { id: 'vending', cell: [0, 1], lot: [2, 2], ry: 0 },          // north of the station
+  { id: 'vending', cell: [2, 0], lot: [0, 2], ry: -Math.PI / 2 },
+]
+
 // ── Block character ──────────────────────────────────────────────────────────
 // Drives the filler generator below. `fill` is the fraction of free lots that
 // get a building — leaving gaps reads as car parks and side lanes, and costs
@@ -156,6 +177,7 @@ export function fillerBuildings() {
   for (const site of LANDMARK_SITES) {
     for (const lot of site.lots) claimed.add(`${site.cell}|${lot}`)
   }
+  for (const site of SCENERY_SITES) claimed.add(`${site.cell}|${site.lot}`)
 
   for (const spec of BLOCK_SPECS) {
     if (String(spec.cell) === String(GOLDEN_GAI_CELL)) continue

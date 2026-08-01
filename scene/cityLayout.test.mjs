@@ -8,7 +8,8 @@
 import assert from 'node:assert/strict'
 import {
   BLOCK, STREET, LOT, LOT_PITCH, MAP_HALF, blockCenter, lotOffset, lotCenter,
-  STREET_LINES, PROJECT_SITES, LANDMARK_SITES, lotGroupCenter,
+  STREET_LINES, PROJECT_SITES, LANDMARK_SITES,
+  SCENERY_SITES, lotGroupCenter,
   GOLDEN_GAI_CELL, STATION, fillerBuildings,
 } from './cityLayout.js'
 
@@ -64,6 +65,18 @@ for (const s of LANDMARK_SITES) {
   }
 }
 
+// ── Street scenery claims real lots and collides with nothing ────────────────
+const sceneryLotKeys = new Set()
+for (const s of SCENERY_SITES) {
+  assert.notEqual(String(s.cell), String(GOLDEN_GAI_CELL), `scenery ${s.id} is inside Golden Gai`)
+  assert.notEqual(String(s.cell), String(STATION.cell), `scenery ${s.id} is inside the station`)
+  const key = `${s.cell}|${s.lot}`
+  assert.ok(!projectLotKeys.has(key), `scenery ${s.id} lot ${s.lot} collides with a project`)
+  assert.ok(!landmarkLotKeys.has(key), `scenery ${s.id} lot ${s.lot} collides with a landmark`)
+  assert.ok(!sceneryLotKeys.has(key), `scenery ${s.id} lot ${s.lot} collides with other scenery`)
+  sceneryLotKeys.add(key)
+}
+
 // ── The filler generator behaves ─────────────────────────────────────────────
 const filler = fillerBuildings()
 const projectLots = new Set(
@@ -74,9 +87,13 @@ const landmarkLots = new Set(
     const c = lotCenter(s.cell, lot); return `${c.x},${c.z}`
   })),
 )
+const sceneryLots = new Set(
+  SCENERY_SITES.map((s) => { const c = lotCenter(s.cell, s.lot); return `${c.x},${c.z}` }),
+)
 for (const b of filler) {
   assert.ok(!projectLots.has(`${b.x},${b.z}`), 'filler building sits on a project lot')
   assert.ok(!landmarkLots.has(`${b.x},${b.z}`), 'filler building sits on a landmark lot')
+  assert.ok(!sceneryLots.has(`${b.x},${b.z}`), 'filler building sits on a scenery lot')
   assert.ok(Math.abs(b.x) + b.w / 2 <= MAP_HALF && Math.abs(b.z) + b.d / 2 <= MAP_HALF,
     'filler building escapes the map')
   for (const s of STREET_LINES) {
@@ -89,4 +106,4 @@ for (const b of filler) {
 // visual regressions mean nothing.
 assert.deepEqual(fillerBuildings(), filler, 'fillerBuildings() is not deterministic')
 
-console.log(`ok — ${filler.length} filler + ${PROJECT_SITES.length} project + ${LANDMARK_SITES.length} landmark buildings`)
+console.log(`ok — ${filler.length} filler + ${PROJECT_SITES.length} project + ${LANDMARK_SITES.length} landmark + ${SCENERY_SITES.length} scenery`)

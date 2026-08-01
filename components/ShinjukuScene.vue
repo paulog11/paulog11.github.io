@@ -41,10 +41,12 @@ import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
 import { createTowers } from '../scene/towers.js'
 import { createGoldenGaiBlock } from '../scene/alley.js'
+import { createKonbini } from '../scene/konbini.js'
+import { createVendingBank, createKoban } from '../scene/streetFurniture.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
-import { PROJECT_SITES } from '../scene/cityLayout.js'
+import { PROJECT_SITES, SCENERY_SITES, lotCenter } from '../scene/cityLayout.js'
 import ProjectList from './ProjectList.vue'
 
 const props = defineProps({
@@ -81,6 +83,22 @@ onMounted(() => {
   // its vertical signs join the flicker pool with the project signs below.
   const goldenGai = createGoldenGaiBlock()
   stage.scene.add(goldenGai.group)
+
+  // Konbini, kōban, vending. Scenery — their modules still return a `hit` mesh
+  // from when they were interactive, and it is deliberately not registered.
+  const SCENERY = { konbini: createKonbini, koban: createKoban, vending: createVendingBank }
+  for (const site of SCENERY_SITES) {
+    const make = SCENERY[site.id]
+    if (!make) {
+      console.warn(`cityLayout SCENERY_SITES references unknown scenery id "${site.id}"`)
+      continue
+    }
+    const { x, z } = lotCenter(site.cell, site.lot)
+    const { group } = make()
+    group.position.set(x, 0, z)
+    group.rotation.y = site.ry ?? 0
+    stage.scene.add(group)
+  }
 
   const station = createStation()
   stage.scene.add(station.group)
