@@ -19,6 +19,7 @@ import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
 import { createTowers } from '../scene/towers.js'
+import { createGoldenGaiBlock } from '../scene/alley.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { PROJECT_SITES } from '../scene/cityLayout.js'
 
@@ -28,7 +29,7 @@ const q = new URLSearchParams(location.search)
 const panX = Number(q.get('panx') ?? 0)
 const panZ = Number(q.get('panz') ?? 0)
 const zoom = Number(q.get('zoom') ?? 0)
-const only = q.get('only')          // 'roads' | 'blocks' | 'station' | 'projects' | 'towers'
+const only = q.get('only')          // 'roads' | 'blocks' | 'station' | 'projects' | 'towers' | 'goldengai'
 
 // Mirrors the shape App.vue's `apps` array provides. Titles are the real ones so
 // sign legibility measured here matches the real page.
@@ -56,6 +57,7 @@ if (show('roads'))   stage.scene.add(createStreets())
 if (show('blocks'))  stage.scene.add(createBlocks())
 if (show('station')) stage.scene.add(createStation().group)
 if (show('towers'))  stage.scene.add(createTowers())
+if (show('goldengai')) stage.scene.add(createGoldenGaiBlock().group)
 
 const built = []
 if (show('projects')) {

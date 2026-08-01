@@ -40,6 +40,7 @@ import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
 import { createTowers } from '../scene/towers.js'
+import { createGoldenGaiBlock } from '../scene/alley.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
@@ -76,6 +77,11 @@ onMounted(() => {
   // and give the skyline something taller than the filler to read against.
   stage.scene.add(createTowers())
 
+  // Golden Gai fills its own block. Scenery only — nothing in it is pickable;
+  // its vertical signs join the flicker pool with the project signs below.
+  const goldenGai = createGoldenGaiBlock()
+  stage.scene.add(goldenGai.group)
+
   const station = createStation()
   stage.scene.add(station.group)
 
@@ -87,7 +93,6 @@ onMounted(() => {
   // owns WHAT they are. A site whose id has no matching project is skipped
   // rather than rendering a nameless building.
   const byId = new Map(props.projects.map((p) => [p.id, p]))
-  const signMats = []
   for (const site of PROJECT_SITES) {
     const project = byId.get(site.id)
     if (!project) {
@@ -97,7 +102,6 @@ onMounted(() => {
     const building = createProjectBuilding(project, site)
     stage.scene.add(building.group)
     register(building.hit, { kind: 'project', project, hover: building.setHover })
-    if (building.signMat) signMats.push(building.signMat)
   }
 
   // The station's destination board: the one readable index in the scene, and
@@ -109,9 +113,15 @@ onMounted(() => {
     register(row.hit, { kind: 'project', project: row.project, hover: row.setHover })
   }
 
+  // Flicker is atmosphere, so it runs on Golden Gai's decorative signage and
+  // NOT on the project signs, which the plan originally targeted. Those signs
+  // are the only thing marking a project's position at zoom 1 — their titles
+  // are deliberately unreadable at that zoom (see projectBuilding.js's measured
+  // budget), so the marker is all you get. Stuttering it costs navigation and
+  // buys nothing the bar signs don't already give.
   ambient = createAmbient({
     reduceMotion: stage.reduceMotion,
-    flickerMaterials: signMats,
+    flickerMaterials: goldenGai.signMats,
     trackY: station.trackY,
   })
   stage.scene.add(ambient.group)

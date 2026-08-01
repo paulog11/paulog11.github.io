@@ -26,9 +26,14 @@ export function createLantern({ color = AMBER, size = 0.28 } = {}) {
   const h = size * 1.5
   const g = new THREE.Group()
 
+  // SEGMENT BUDGET: a lantern is ~0.4 m, i.e. ~2 px at zoom 1 and ~10 px at the
+  // closest zoom. Segment counts here were tuned for a scene with nine lanterns;
+  // Golden Gai now places 24, and the ribs alone were costing 12,000 triangles —
+  // over half that block — for hoops whose 1.4 cm tube renders at 0.07 px.
+  // These counts are the point where reducing further changes the silhouette.
   const profile = LANTERN_PROFILE.map(([xf, yf]) => new THREE.Vector2(xf * r, yf * h))
   const skin = new THREE.Mesh(
-    new THREE.LatheGeometry(profile, 10),
+    new THREE.LatheGeometry(profile, 8),
     new THREE.MeshBasicMaterial({
       color: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.3), side: THREE.DoubleSide,
     }),
@@ -37,17 +42,17 @@ export function createLantern({ color = AMBER, size = 0.28 } = {}) {
 
   // Ribs — dark bamboo hoops, one at each interior profile point.
   for (const [xf, yf] of LANTERN_PROFILE.slice(1, -1)) {
-    const rib = new THREE.Mesh(new THREE.TorusGeometry(xf * r, r * 0.035, 5, 10), matDark)
+    const rib = new THREE.Mesh(new THREE.TorusGeometry(xf * r, r * 0.035, 3, 6), matDark)
     rib.rotation.x = Math.PI / 2
     rib.position.y = yf * h
     g.add(rib)
   }
 
   const capH = h * 0.08
-  const capBottom = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.15, r * 0.2, capH, 8), matDark)
+  const capBottom = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.15, r * 0.2, capH, 6), matDark)
   capBottom.position.y = capH / 2
   g.add(capBottom)
-  const capTop = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.28, r * 0.22, capH, 8), matDark)
+  const capTop = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.28, r * 0.22, capH, 6), matDark)
   capTop.position.y = h + capH / 2
   g.add(capTop)
 
