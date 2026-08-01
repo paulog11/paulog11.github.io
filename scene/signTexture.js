@@ -114,37 +114,28 @@ function glowText(ctx, { text, x, y, size }, color) {
   ctx.shadowColor = 'transparent'
 }
 
-function neon(g, ge, w, h, text, sub, orientation, color) {
+function neon(g, w, h, text, sub, orientation, color) {
   g.fillStyle = '#0a0a0d'; g.fillRect(0, 0, w, h)
-  ge.fillStyle = '#000';   ge.fillRect(0, 0, w, h)
 
   const inset = h * 0.08
-  for (const ctx of [g, ge]) {
-    ctx.strokeStyle = color
-    ctx.lineWidth = Math.max(2, h * 0.015)
-    ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2)
-  }
+  g.strokeStyle = color
+  g.lineWidth = Math.max(2, h * 0.015)
+  g.strokeRect(inset, inset, w - inset * 2, h - inset * 2)
 
   const glyphs = layoutText(g, w, h, text, sub, orientation)
-  for (const glyph of glyphs) {
-    glowText(g, glyph, color)
-    glowText(ge, glyph, color)
-  }
+  for (const glyph of glyphs) glowText(g, glyph, color)
 }
 
-function lightbox(g, ge, w, h, text, sub, orientation, color) {
+function lightbox(g, w, h, text, sub, orientation, color) {
   g.fillStyle = color; g.fillRect(0, 0, w, h)
-  ge.fillStyle = color; ge.fillRect(0, 0, w, h)
 
   const glyphs = layoutText(g, w, h, text, sub, orientation)
-  for (const ctx of [g, ge]) {
-    ctx.fillStyle = '#000'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    for (const glyph of glyphs) {
-      ctx.font = `bold ${glyph.size}px ${FONT}`
-      ctx.fillText(glyph.text, glyph.x, glyph.y)
-    }
+  g.fillStyle = '#000'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  for (const glyph of glyphs) {
+    g.font = `bold ${glyph.size}px ${FONT}`
+    g.fillText(glyph.text, glyph.x, glyph.y)
   }
 }
 
@@ -156,9 +147,7 @@ function muteColor(hex) {
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`
 }
 
-function painted(g, ge, w, h, text, sub, orientation, color) {
-  ge.fillStyle = '#000'; ge.fillRect(0, 0, w, h) // painted signs don't self-illuminate
-
+function painted(g, w, h, text, sub, orientation, color) {
   g.fillStyle = muteColor(color); g.fillRect(0, 0, w, h)
 
   let seed = hashSeed(text)
@@ -190,7 +179,14 @@ function painted(g, ge, w, h, text, sub, orientation, color) {
 
 const STYLES = { neon, lightbox, painted }
 
-/** Returns { map, emissiveMap, aspect } — dual canvas textures for a signage mesh. */
+/**
+ * Returns { map, aspect } for a signage mesh.
+ *
+ * This used to return an `emissiveMap` from a second, identically-drawn canvas.
+ * Every sign in the scene is now a MeshBasicMaterial — unlit, where the map IS
+ * the output — so nothing ever read it, and each sign was allocating and
+ * painting a full duplicate canvas at startup for nothing.
+ */
 export function createSignTexture(opts) {
   const {
     text, sub = '', style = 'neon', orientation = 'horizontal',
@@ -203,15 +199,13 @@ export function createSignTexture(opts) {
   const w = Math.round(h * aspect)
 
   const map = document.createElement('canvas'); map.width = w; map.height = h
-  const emi = document.createElement('canvas'); emi.width = w; emi.height = h
   const g = map.getContext('2d')
-  const ge = emi.getContext('2d')
 
-  ;(STYLES[style] ?? neon)(g, ge, w, h, text, sub, orientation, color)
+  ;(STYLES[style] ?? neon)(g, w, h, text, sub, orientation, color)
 
-  const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
+  const tex = Object.assign(new THREE.CanvasTexture(map), {
     colorSpace: THREE.SRGBColorSpace,
     anisotropy: 8,
   })
-  return { map: tex(map), emissiveMap: tex(emi), aspect: w / h }
+  return { map: tex, aspect: w / h }
 }

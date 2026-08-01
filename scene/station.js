@@ -97,6 +97,138 @@ function concourseFacade(w, h) {
   return { map: tex(cMap), emissiveMap: tex(cEmi) }
 }
 
+// ── Roofs ───────────────────────────────────────────────────────────────────
+// Under this camera (azimuth 45°, elevation 22°) the roof is the single largest
+// visible surface of the station — the canopy alone is 24x42 m, about 115x200 px
+// at zoom 1. Left flat and untextured it is what made the centrepiece read as a
+// grey slab. Both roofs below are texture work, not geometry: at ~4.8 px per
+// metre nothing finer than ~3 m would survive as geometry anyway.
+
+/**
+ * Train-shed roof seen from above: standing-seam metal running parallel to the
+ * tracks, broken by glazing strips that let the platform light below read
+ * through. The glazing is the whole point — an opaque roof over a lit platform
+ * is indistinguishable from a warehouse.
+ *
+ * BoxGeometry's +Y face maps u across X and v along Z, so seams drawn as
+ * vertical lines in the canvas end up running along the track axis.
+ */
+function canopyRoofTexture(w, len) {
+  const PX = 12
+  const cw = Math.round(w * PX), ch = Math.round(len * PX)
+  const mk = () => {
+    const c = document.createElement('canvas')
+    c.width = cw; c.height = ch
+    return [c, c.getContext('2d')]
+  }
+  const [cMap, g] = mk()
+  const [cEmi, ge] = mk()
+
+  g.fillStyle = '#1a2230'; g.fillRect(0, 0, cw, ch)
+  ge.fillStyle = '#000';   ge.fillRect(0, 0, cw, ch)
+
+  const uOf = (x) => ((x + w / 2) / w) * cw
+
+  // Standing seams every 1.2 m, the pitch that reads as a shed rather than a slab.
+  g.strokeStyle = 'rgba(0,0,0,0.55)'
+  g.lineWidth = 1.5
+  for (let x = -w / 2; x <= w / 2; x += 1.2) {
+    g.beginPath(); g.moveTo(uOf(x), 0); g.lineTo(uOf(x), ch); g.stroke()
+  }
+  g.strokeStyle = 'rgba(255,255,255,0.05)'
+  for (let x = -w / 2 + 0.6; x <= w / 2; x += 1.2) {
+    g.beginPath(); g.moveTo(uOf(x), 0); g.lineTo(uOf(x), ch); g.stroke()
+  }
+
+  // Glazing over the gaps between track pairs. Warm, because what shows through
+  // is the platform lighting — the same WARM the concourse windows use.
+  const GLAZE_W = 2.0
+  for (const cx of [-6.4, 0, 6.4]) {
+    const x0 = uOf(cx - GLAZE_W / 2), x1 = uOf(cx + GLAZE_W / 2)
+    for (const [ctx, base] of [[g, hex(WARM)], [ge, hex(WARM)]]) {
+      ctx.fillStyle = base
+      // Broken into bays with mullions between, so it reads as glazing rather
+      // than a light bar.
+      for (let y = 0; y < ch; y += PX * 3) {
+        ctx.fillRect(x0, y + PX * 0.35, x1 - x0, PX * 3 - PX * 0.7)
+      }
+    }
+  }
+
+  // Cross ribs every 8 m, matching the column bays underneath.
+  g.fillStyle = 'rgba(0,0,0,0.4)'
+  for (let z = 0; z <= len; z += 8) g.fillRect(0, (z / len) * ch, cw, 2)
+
+  const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
+    colorSpace: THREE.SRGBColorSpace, anisotropy: 8,
+  })
+  return { map: tex(cMap), emissiveMap: tex(cEmi) }
+}
+
+/**
+ * The concourse roof deck. Only the two ~10 m strips either side of the canopy
+ * are actually visible, but those are ~48x210 px each — big enough that the
+ * facade texture leaking onto a horizontal surface was reading as noise.
+ * Plant, ducting and parapet, all painted.
+ */
+function podiumRoofTexture(size) {
+  const PX = 6
+  const n = Math.round(size * PX)
+  const c = document.createElement('canvas')
+  c.width = n; c.height = n
+  const g = c.getContext('2d')
+
+  g.fillStyle = '#12141a'; g.fillRect(0, 0, n, n)
+
+  // Membrane seams — wide, flat, low contrast. Roofs are not tiled.
+  g.strokeStyle = 'rgba(255,255,255,0.035)'
+  g.lineWidth = 1
+  for (let i = 0; i < n; i += PX * 3) {
+    g.beginPath(); g.moveTo(0, i); g.lineTo(n, i); g.stroke()
+  }
+
+  const rng = makeRng(20260801)
+  // Rooftop plant: AC banks and vent stacks. Drawn as plan-view boxes with a
+  // single offset shadow, which is all the depth cue this camera can resolve.
+  for (let i = 0; i < 26; i++) {
+    const bw = (2 + rng() * 4) * PX
+    const bh = (2 + rng() * 3) * PX
+    const x = rng() * (n - bw), y = rng() * (n - bh)
+    g.fillStyle = 'rgba(0,0,0,0.45)'
+    g.fillRect(x + 3, y + 3, bw, bh)
+    g.fillStyle = rng() > 0.7 ? '#2c313c' : '#1e222b'
+    g.fillRect(x, y, bw, bh)
+    g.strokeStyle = 'rgba(255,255,255,0.08)'
+    g.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1)
+  }
+
+  // Parapet: a bright-ish inner edge is what tells you the roof has a lip.
+  g.strokeStyle = '#2a2f3a'
+  g.lineWidth = PX * 0.8
+  g.strokeRect(PX * 0.4, PX * 0.4, n - PX * 0.8, n - PX * 0.8)
+
+  return Object.assign(new THREE.CanvasTexture(c), {
+    colorSpace: THREE.SRGBColorSpace, anisotropy: 8,
+  })
+}
+
+/**
+ * Warm strips along the platform edges, in the 3 m band between the deck and
+ * the canopy underside. Without them that band is solid black and the station
+ * reads as unoccupied — this is the cheapest possible "there are people in
+ * there" cue, and it is what the glazing above is meant to be leaking.
+ */
+function buildPlatformGlow() {
+  const geos = []
+  for (const cx of [-6.4, 0, 6.4]) {
+    geos.push(posed(
+      new THREE.BoxGeometry(2.0, 0.12, CANOPY_LEN - 4),
+      { x: cx, y: DECK_TOP + 0.9, z: 0 },
+    ))
+  }
+  return mergedMesh(geos, new THREE.MeshBasicMaterial({ color: WARM }))
+}
+
 // side 'z' -> opening faces +/-Z (north/south); side 'x' -> faces +/-X (east/west).
 // insetFromEdge is measured from the wall's outer surface to the box's centre.
 function portalPose(side, sign, w, h, insetFromEdge) {
@@ -200,8 +332,10 @@ function buildPiers() {
 // just inside the platform edges. Ribs and columns share a material, so they
 // merge into a single mesh — the "don't emit one mesh per rib" budget.
 function buildCanopy() {
+  const roofTex = canopyRoofTexture(DECK_WIDTH + 2, CANOPY_LEN)
   const roofMat = new THREE.MeshLambertMaterial({
-    color: 0x1a2230, emissive: 0x22354a, emissiveIntensity: 0.25,
+    map: roofTex.map, emissiveMap: roofTex.emissiveMap,
+    emissive: 0xffffff, emissiveIntensity: 0.55,
   })
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(DECK_WIDTH + 2, ROOF_THICK, CANOPY_LEN),
@@ -239,6 +373,17 @@ export function createStation() {
   podium.position.set(0, PODIUM_H / 2, 0)
   group.add(podium)
 
+  // A separate plane rather than a per-face material array on the box: a
+  // multi-material BoxGeometry renders one draw call per face group (six),
+  // whereas this costs exactly one and gives the roof its own UV space.
+  const roofDeck = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, D),
+    new THREE.MeshLambertMaterial({ map: podiumRoofTexture(W) }),
+  )
+  roofDeck.rotation.x = -Math.PI / 2
+  roofDeck.position.y = PODIUM_H + 0.02
+  group.add(roofDeck)
+
   const [frames, glows] = buildPortals()
   group.add(frames, glows)
   group.add(...buildLightPools())
@@ -249,6 +394,7 @@ export function createStation() {
 
   const { roof, structure } = buildCanopy()
   group.add(roof, structure)
+  group.add(buildPlatformGlow())
 
   // Station nameplate, mounted above the south entrance — the facade that
   // faces the camera most directly (azimuth 45° makes +X and +Z equally
