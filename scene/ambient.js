@@ -2,24 +2,29 @@
 // Everything here is derived from `elapsed` as a closed-form function — no
 // per-particle timers to drift, no per-frame allocation, fully deterministic.
 import * as THREE from 'three'
-import { NIGHT, WARM, CYAN, AMBER, RED } from './palette.js'
+import { WARM, CYAN, AMBER, RED } from './palette.js'
+import { MAP_HALF, GOLDEN_GAI_CELL, blockCenter } from './cityLayout.js'
 
 function makeRng(seed) {
   let s = seed
   return () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296
 }
 
-const RAIN_COUNT = 420
-const RAIN_Y_MAX = 26
+// Rain covers the whole map, not a corridor: the camera pans anywhere, so any
+// bounded patch would visibly run out at the edges. Points is one draw call
+// whatever the count, so the only real cost here is the per-frame write loop.
+const RAIN_COUNT = 1400
+const RAIN_Y_MAX = 52     // must start above the landmark towers, or it rains from mid-tower
 
-const TRAIN_CYCLE  = 16  // seconds per full loop
-const TRAIN_TRAVEL = 6   // seconds the train is on screen
-const TRAIN_START_X = -55
-const TRAIN_END_X   = 55
+// The train runs on the STATION's tracks — cityLayout puts them along Z, so the
+// route is the full map depth plus enough overshoot to enter and leave unseen.
+const TRAIN_CYCLE  = 20  // seconds per full loop
+const TRAIN_TRAVEL = 11  // seconds on screen; ~19 m/s, matching the old pace over a longer route
+const TRAIN_START_Z =  (MAP_HALF + 16)
+const TRAIN_END_Z   = -(MAP_HALF + 16)
+const TRAIN_TRACK_X = -4.8   // one of station.js's six track centres
 const CARRIAGE_LEN = 3.2, CARRIAGE_H = 1.5, CARRIAGE_D = 1.3, CARRIAGE_GAP = 0.15
 const CARRIAGES = 4
-const VIADUCT_Z = -22
-const VIADUCT_DECK_Y = 9
 
 const PUFF_COUNT = 3
 const PUFF_RISE = 8
@@ -62,8 +67,8 @@ function createRain(rng) {
   const speeds = new Float32Array(RAIN_COUNT)
   const phases = new Float32Array(RAIN_COUNT)
   for (let i = 0; i < RAIN_COUNT; i++) {
-    positions[i * 3]     = -45 + rng() * 90
-    positions[i * 3 + 2] = -30 + rng() * 42
+    positions[i * 3]     = -MAP_HALF + rng() * MAP_HALF * 2
+    positions[i * 3 + 2] = -MAP_HALF + rng() * MAP_HALF * 2
     speeds[i] = 7 + rng() * 5
     phases[i] = rng() * RAIN_Y_MAX
   }
@@ -117,34 +122,16 @@ function createFlicker(materials, rng) {
   return { update, reset }
 }
 
-// Raised beam + pillars, background-modest. Static — safe to show under
-// reduced motion since it doesn't rely on the frame loop to look right.
-function createViaduct() {
-  const group = new THREE.Group()
-  // At z=-22 the scene fog (start 90, end 260) blends most of the lit colour
-  // toward the sky before it reaches the camera — a plain dark albedo turned
-  // out functionally invisible. A small emissive floor keeps the silhouette
-  // readable through the haze without turning it into a light source.
-  const structColor = new THREE.Color(NIGHT).lerp(new THREE.Color(0x8a94b0), 0.35)
-  const structMat = new THREE.MeshLambertMaterial({
-    color: structColor,
-    emissive: structColor, emissiveIntensity: 0.4,
-  })
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(110, 0.6, 3), structMat)
-  deck.position.set(0, VIADUCT_DECK_Y - 0.3, VIADUCT_Z)
-  group.add(deck)
-  const pillarH = VIADUCT_DECK_Y - 0.6
-  for (let x = -45; x <= 45; x += 22.5) {
-    const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.2, pillarH, 1.2), structMat)
-    pillar.position.set(x, pillarH / 2, VIADUCT_Z)
-    group.add(pillar)
-  }
-  return group
-}
+// NOTE: this module used to build its own viaduct at z = -22. station.js now
+// builds the real elevated deck, running along Z across the whole map, and the
+// two were drawing on top of each other at right angles. The station's deck is
+// the only one; the train rides it.
 
-// Carriages ride the viaduct deck. Position is a pure function of elapsed —
+// Carriages ride the station's deck. Position is a pure function of elapsed —
 // travels once per TRAIN_CYCLE, hidden while waiting for the next pass.
-function createTrain() {
+// Built along local +X and yawed onto the Z-axis route, so the carriage layout
+// maths stays one-dimensional.
+function createTrain(trackY) {
   const group = new THREE.Group()
   const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1b1e26 })
   const winMat = new THREE.MeshLambertMaterial({ color: 0x1a1206, emissive: WARM, emissiveIntensity: 0.7 })
@@ -165,7 +152,14 @@ function createTrain() {
   const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, CARRIAGE_D * 0.5), tailMat)
   tail.position.set(-totalLen / 2 - 0.02, -CARRIAGE_H * 0.25, 0)
   group.add(tail)
-  group.position.set(TRAIN_START_X, VIADUCT_DECK_Y + CARRIAGE_H / 2, VIADUCT_Z)
+  // Yaw onto the Z-axis route. Rotating +90° about Y sends local +X to world
+  // -Z, which is the direction of travel — so the tail light (built at local
+  // -X) correctly ends up at the rear, and the windows (local +Z) end up facing
+  // world +X, the side this camera sees.
+  group.rotation.y = Math.PI / 2
+  // 0.14 is station.js's rail height: the carriages sit on the railheads, not
+  // sunk into the deck.
+  group.position.set(TRAIN_TRACK_X, trackY + 0.14 + CARRIAGE_H / 2, TRAIN_START_Z)
   return group
 }
 
@@ -173,13 +167,19 @@ function updateTrain(group, elapsed) {
   const t = elapsed % TRAIN_CYCLE
   if (t >= TRAIN_TRAVEL) { group.visible = false; return }
   group.visible = true
-  group.position.x = TRAIN_START_X + (TRAIN_END_X - TRAIN_START_X) * (t / TRAIN_TRAVEL)
+  group.position.z = TRAIN_START_Z + (TRAIN_END_Z - TRAIN_START_Z) * (t / TRAIN_TRAVEL)
 }
 
-// Slow-rising translucent puffs near the alley — kitchen exhaust / vent haze.
+// Slow-rising translucent puffs over Golden Gai — kitchen exhaust / vent haze.
+// That block is the only one dense with tiny bars, so it is the only place the
+// haze has a reason to be; it follows GOLDEN_GAI_CELL rather than sitting on
+// the coordinates of the alley this scene used to be.
 function createSteam(rng) {
   const map = puffTexture()
   const tint = new THREE.Color(AMBER).lerp(new THREE.Color(0x9099ab), 0.75)
+  // lotCenter's convention: cell is [row, col]; col drives x, row drives z.
+  const ggX = blockCenter(GOLDEN_GAI_CELL[1])
+  const ggZ = blockCenter(GOLDEN_GAI_CELL[0])
   const group = new THREE.Group()
   const sprites = []
   const bases = []
@@ -189,7 +189,12 @@ function createSteam(rng) {
     const sprite = new THREE.Sprite(material)
     const scale = 1.6 + rng() * 0.8
     sprite.scale.set(scale, scale, 1)
-    bases.push({ x: -18 + rng() * 36, y: 5.5 + rng() * 1.5, z: -3 + rng() * 3 })
+    // Golden Gai roofs top out around 9 m; puffs start just above them.
+    bases.push({
+      x: ggX + (rng() - 0.5) * 30,
+      y: 9 + rng() * 1.5,
+      z: ggZ + (rng() - 0.5) * 30,
+    })
     phases.push(rng() * PUFF_DURATION)
     sprites.push(sprite)
     group.add(sprite)
@@ -206,11 +211,15 @@ function createSteam(rng) {
   return { group, update }
 }
 
-export function createAmbient({ reduceMotion = false, flickerMaterials = [] } = {}) {
+// `trackY` is the station's deck height (station.trackY). It is required rather
+// than defaulted: the train riding at the wrong height is a silent, purely
+// visual bug, and a default would hide a wiring mistake instead of surfacing it.
+export function createAmbient({ reduceMotion = false, flickerMaterials = [], trackY } = {}) {
+  if (typeof trackY !== 'number') {
+    throw new Error('createAmbient needs trackY (pass station.trackY) — the train rides the station deck')
+  }
   const group = new THREE.Group()
   const rng = makeRng(31337)
-
-  group.add(createViaduct())
 
   // Same dispose path for both modes: whatever ended up in `group` gets torn
   // down, mirroring renderer.js's own traversal-based dispose.
@@ -233,7 +242,7 @@ export function createAmbient({ reduceMotion = false, flickerMaterials = [] } = 
   const rain = createRain(rng)
   group.add(rain.points)
 
-  const train = createTrain()
+  const train = createTrain(trackY)
   group.add(train)
 
   const steam = createSteam(rng)
