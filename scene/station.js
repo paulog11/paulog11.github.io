@@ -70,7 +70,10 @@ function concourseFacade(w, h) {
   }
   const [cMap, g] = mk()
   const [cEmi, ge] = mk()
-  g.fillStyle = '#14161d'; g.fillRect(0, 0, cw, ch)
+  // 8% luminance was near-indistinguishable from the sky, so the largest
+  // structure on the map had no silhouette. Bays here were already sized in
+  // world metres (2.6m, below), so albedo was this facade's only real defect.
+  g.fillStyle = '#404857'; g.fillRect(0, 0, cw, ch)
   ge.fillStyle = '#000';   ge.fillRect(0, 0, cw, ch)
 
   const rng = makeRng(20260731)
@@ -84,9 +87,13 @@ function concourseFacade(w, h) {
       g.fillRect(x, 0, bayW * 0.35, ch)
       continue
     }
-    if (rng() > 0.55) continue // not every bay is lit — real buildings are patchy at night
-    const col = rng() > 0.3 ? hex(WARM) : '#a8cfe8'
     const wy = ch * 0.18, wh = ch * 0.64
+    if (rng() > 0.55) {        // not every bay is lit — real buildings are patchy at night
+      g.fillStyle = 'rgba(0,0,0,0.22)'   // but an unlit bay still shows the glazing
+      g.fillRect(x + bayW * 0.15, wy, bayW * 0.7, wh)
+      continue
+    }
+    const col = rng() > 0.3 ? hex(WARM) : '#a8cfe8'
     g.fillStyle = col;  g.fillRect(x + bayW * 0.15, wy, bayW * 0.7, wh)
     ge.fillStyle = col; ge.fillRect(x + bayW * 0.15, wy, bayW * 0.7, wh)
   }
@@ -178,7 +185,10 @@ function podiumRoofTexture(size) {
   c.width = n; c.height = n
   const g = c.getContext('2d')
 
-  g.fillStyle = '#12141a'; g.fillRect(0, 0, n, n)
+  // Kept well below the facades — a roof has no windows lighting it from
+  // inside — but off sky-black, or the podium's top face vanishes and the
+  // station reads as a wall with nothing on top of it.
+  g.fillStyle = '#252b36'; g.fillRect(0, 0, n, n)
 
   // Membrane seams — wide, flat, low contrast. Roofs are not tiled.
   g.strokeStyle = 'rgba(255,255,255,0.035)'
@@ -196,7 +206,7 @@ function podiumRoofTexture(size) {
     const x = rng() * (n - bw), y = rng() * (n - bh)
     g.fillStyle = 'rgba(0,0,0,0.45)'
     g.fillRect(x + 3, y + 3, bw, bh)
-    g.fillStyle = rng() > 0.7 ? '#2c313c' : '#1e222b'
+    g.fillStyle = rng() > 0.7 ? '#3a4150' : '#2e3441'   // tracks the lifted roof base
     g.fillRect(x, y, bw, bh)
     g.strokeStyle = 'rgba(255,255,255,0.08)'
     g.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1)
@@ -417,8 +427,21 @@ export function createStation() {
 
   // Where the departure board hangs. Local +Z already matches this facade's
   // outward normal, so no rotation is needed — just parent the board here.
+  //
+  // The height is load-bearing, not taste. At ground level the board sat BEHIND
+  // the elevated deck from this camera's angle: the sightline runs +x/+y/+z at
+  // ~0.572 rise per metre of x, so a row below y≈6.8 climbed into the deck's
+  // 7.7-8.5 band while still inside its x-span and was hidden. Six of nine rows
+  // were occluded at every zoom — and since renderer.js now rejects clicks
+  // through opaque geometry, hidden rows were also unclickable, which broke the
+  // board's whole job as the second route to every project.
+  //
+  // Mounting above DECK_TOP is the only fix that keeps the board's width, and
+  // width is what makes it readable — the texture's aspect is fixed, so
+  // narrowing it to squeeze past the deck shrinks the type instead.
+  const BOARD_BASE = 2.6                     // departureBoard.js's own bottom offset
   const boardAnchor = new THREE.Object3D()
-  boardAnchor.position.set(-14, 0, D / 2 + 0.3)
+  boardAnchor.position.set(-14, DECK_TOP + 0.3 - BOARD_BASE, D / 2 + 0.3)
   group.add(boardAnchor)
 
   return { group, boardAnchor, trackY: DECK_TOP }

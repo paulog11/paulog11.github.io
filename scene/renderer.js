@@ -29,6 +29,30 @@ const DRAG_SLOP = 5          // px of pointer travel that still counts as a clic
 const CLOSEST_VIEW = 30
 const MIN_ZOOM = 0.9
 
+/**
+ * The zoom the scene OPENS at, derived from the aspect ratio.
+ *
+ * On a 16:9 desktop the frustum is height-bound and zoom 1 frames the city
+ * exactly. On a 375px portrait phone width binds instead: the frustum inflates
+ * to 475 to fit a 267-unit-wide map, and the 145-unit-tall city then occupies
+ * 31% of the viewport height — the whole map is visible, but as a postage stamp
+ * with ~270px of empty sky above it.
+ *
+ * A phone cannot both fit 267 units of width AND fill 145 units of height; the
+ * two are ~3.3x apart. So the default splits the difference geometrically:
+ *
+ *     zoom = sqrt(frustum / CONTENT_H)
+ *
+ * The square root is what makes it a split rather than a preference — the city
+ * ends up occupying the SAME fraction of both axes. At 375x667 that is 55% of
+ * the height and 55% of the width, versus 31% and 100%. Desktop is unaffected
+ * (1.02), because there the ratio inside the root is already ~1.
+ *
+ * This changes where you START, not where you can GO: minZoom is still 0.9, so
+ * pinching out to see the entire map remains available on every device.
+ */
+const defaultZoom = (frustum) => Math.sqrt(frustum / CONTENT_H)
+
 // Render resolution as a fraction of CSS pixels. Below 1 this is a large,
 // near-linear fragment-cost saving, and paired with `image-rendering: pixelated`
 // on the canvas it is not a compromise but the actual 90s look.
@@ -136,6 +160,8 @@ export function createStage(canvas, opts = {}) {
   controls.update()
 
   // ── Sizing ────────────────────────────────────────────────────────────────
+  let zoomed = false            // has the aspect-derived default zoom been applied?
+
   function resize() {
     const { clientWidth: w, clientHeight: h } = canvas
     if (!w || !h) return
@@ -153,6 +179,17 @@ export function createStage(canvas, opts = {}) {
     // Zoom range follows the frustum so every device can reach the same closest
     // view, rather than phones being stuck further out.
     controls.maxZoom = Math.max(MIN_ZOOM + 0.1, frustum / CLOSEST_VIEW)
+
+    // Applied on the first sizing only. resize() also runs on every window
+    // resize and on device rotation, and re-deriving the zoom there would
+    // silently throw away wherever the user had zoomed to.
+    if (!zoomed) {
+      zoomed = true
+      const z = THREE.MathUtils.clamp(defaultZoom(frustum), MIN_ZOOM, controls.maxZoom)
+      camera.zoom = z
+      controls.zoom0 = z          // so controls.reset() returns here, not to 1
+      camera.updateProjectionMatrix()
+    }
     // updateStyle=false: the backing store shrinks by the pixel ratio while the
     // canvas keeps its CSS size, so the browser upscales it.
     renderer.setSize(w, h, false)
@@ -170,12 +207,39 @@ export function createStage(canvas, opts = {}) {
   let hovered = null
   let downAt = null
 
+  // Project hit boxes are as tall as their buildings (~35-40m), which under an
+  // orthographic isometric camera is a ~190px screen column. Raycasting ONLY the
+  // registered targets means nothing else can occlude them — so a click that
+  // visually lands on a filler building standing in front of a tall project
+  // still selects that project. Measured at zoom 1 on a 1280x720 frame: 26.4% of
+  // the total clickable area was such a phantom, and for `venue-search` and
+  // `japan-map` it was 52.8% and 47.3% — more than half of each one's clickable
+  // area was somewhere else on screen.
+  //
+  // So a hit is only real if nothing opaque sits in front of it. Transparent
+  // meshes are skipped deliberately: the halos, light-pool decals and rain are
+  // additive atmosphere you are meant to click straight through.
+  function occluded(hit) {
+    // Clamping `far` to the hit is what makes this cheap — everything behind the
+    // candidate is rejected on its bounding volume before any triangle is tested.
+    const far = raycaster.far
+    raycaster.far = hit.distance - 0.01
+    const blocked = raycaster
+      .intersectObject(scene, true)
+      .some((i) => i.object.visible && !targets.includes(i.object) &&
+                   ![i.object.material].flat().some((m) => m?.transparent))
+    raycaster.far = far
+    return blocked
+  }
+
   function hitTest(ev) {
     const r = canvas.getBoundingClientRect()
     pointer.x =  ((ev.clientX - r.left) / r.width)  * 2 - 1
     pointer.y = -((ev.clientY - r.top)  / r.height) * 2 + 1
     raycaster.setFromCamera(pointer, camera)
-    return raycaster.intersectObjects(targets, false)[0]?.object ?? null
+    const hit = raycaster.intersectObjects(targets, false)[0]
+    if (!hit) return null
+    return occluded(hit) ? null : hit.object
   }
 
   function onPointerMove(ev) {

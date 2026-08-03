@@ -103,11 +103,11 @@ export function createDepartureBoard(projects) {
   hood.position.set(0, DECK + H + 0.32, 0.22)
   group.add(hood)
 
-  for (const sx of [-1, 1]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, DECK, 0.3), bezelMat)
-    post.position.set(sx * (W / 2 - 0.6), DECK / 2, 0)
-    group.add(post)
-  }
+  // No support posts. The board now mounts above the station's elevated deck
+  // (see station.js's boardAnchor), and a post dropped from either end would
+  // pass straight through that deck slab — the right-hand one unavoidably, at
+  // any board position that still fits on the facade. The bezel and hood already
+  // give it physical presence, and wall-mounted is what it now is.
 
   // Row highlight, parked off-board until a row is hovered.
   const highlight = new THREE.Mesh(

@@ -8,6 +8,7 @@
     "prebuild": "cp index.source.html index.html",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "node scene/cityLayout.test.mjs && node --test test/*.test.mjs",
     "deploy": "cp index.source.html index.html && vite build && rm -f assets/index-*.js assets/index-*.css && cp dist/assets/* assets/ && cp dist/index.html index.html"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.0",
     "autoprefixer": "^10.4.20",
+    "playwright": "^1.62.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.15",
     "vite": "^6.0.0"

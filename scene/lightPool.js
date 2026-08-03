@@ -8,7 +8,7 @@ let sharedTexture = null
 
 /** Opaque centre fading to transparent edge. Colour comes from material.color,
  * so every pool reuses this one canvas instead of drawing its own. */
-function sharedGradientTexture() {
+export function sharedGradientTexture() {
   if (sharedTexture) return sharedTexture
   const size = 128
   const c = document.createElement('canvas')

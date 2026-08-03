@@ -1,6 +1,7 @@
 // Diegetic navigation widgets: a vending machine bank (résumé download) and a
 // kōban (contact links). Both read as ordinary Golden Gai street furniture.
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { createVendingMachine } from './props.js'
 import { createSignTexture } from './signTexture.js'
 import { RED, AMBER, CYAN, WARM, GRANITE } from './palette.js'
@@ -8,6 +9,20 @@ import { RED, AMBER, CYAN, WARM, GRANITE } from './palette.js'
 // signTexture.js hands its `color` straight to Canvas2D's fillStyle, which
 // needs a CSS string — the palette's numbers silently fail that assignment.
 const hex = (n) => '#' + n.toString(16).padStart(6, '0')
+
+/** Clones a geometry with a transform baked in, ready for mergeGeometries. Same idiom as station.js/alley.js/towers.js. */
+function posed(geo, { x = 0, y = 0, z = 0, ry = 0, rz = 0 } = {}) {
+  const m = new THREE.Matrix4().compose(
+    new THREE.Vector3(x, y, z),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, rz)),
+    new THREE.Vector3(1, 1, 1),
+  )
+  return geo.applyMatrix4(m)
+}
+
+function mergedMesh(geoms, material) {
+  return new THREE.Mesh(mergeGeometries(geoms), material)
+}
 
 // ── Vending bank ──────────────────────────────────────────────────────────
 
@@ -62,20 +77,52 @@ export function createVendingBank() {
   plinth.position.set(0, plinthH / 2, 0)
   group.add(plinth)
 
+  // Decomposed instead of adding each machine's group whole: createVendingMachine()
+  // always builds [body, glow, header, panel] in that order (see props.js).
+  // body and panel are flat Lambert and never hover-touched — merged into one
+  // draw call apiece across all three machines. header is Basic but its base
+  // colour ignores the `color` arg (always RED-derived, see props.js), so all
+  // three headers are visually identical and merge too. Only glow is both
+  // Basic *and* genuinely different per machine (it's the one part that uses
+  // `color`), so it's the sole part that must stay hover-mutable and separate.
+  // None of these parts carry any rotation, so plain position arithmetic (no
+  // matrix bake) is enough.
+  const bodyGeos = [], panelGeos = []
+  let bodyMat, panelMat, headerMat
+  const headerGeos = []
   const glowMats = []
   MACHINE_COLORS.forEach((color, i) => {
     const machine = createVendingMachine({ color })
-    // props.js shares its body/panel materials across every instance in the
-    // scene (AC units too) — clone before this bank's hover touches anything.
-    machine.traverse((o) => {
-      if (!o.material) return
-      o.material = o.material.clone()
-      if (o.material.isMeshBasicMaterial) glowMats.push(o.material)
-    })
-    machine.position.set((i - (n - 1) / 2) * (MW + GAP), plinthH, 0)
-    group.add(machine)
+    const mx = (i - (n - 1) / 2) * (MW + GAP), my = plinthH, mz = 0
+    const [mBody, mGlow, mHeader, mPanel] = machine.children
+
+    bodyGeos.push(posed(mBody.geometry.clone(), { x: mx + mBody.position.x, y: my + mBody.position.y, z: mz + mBody.position.z }))
+    bodyMat ??= mBody.material
+    panelGeos.push(posed(mPanel.geometry.clone(), { x: mx + mPanel.position.x, y: my + mPanel.position.y, z: mz + mPanel.position.z }))
+    panelMat ??= mPanel.material
+    headerGeos.push(posed(mHeader.geometry.clone(), { x: mx + mHeader.position.x, y: my + mHeader.position.y, z: mz + mHeader.position.z }))
+    headerMat ??= mHeader.material
+
+    // Glow keeps its own mesh + material — per-machine colour, and the hover
+    // target. props.js hands back a fresh MeshBasicMaterial per call (not a
+    // module-shared one), so mutating it directly in setHover is safe with no
+    // clone needed — same as konbini.js's vending machine.
+    const glowMat = mGlow.material
+    const glowMesh = new THREE.Mesh(mGlow.geometry, glowMat)
+    glowMesh.position.set(mx + mGlow.position.x, my + mGlow.position.y, mz + mGlow.position.z)
+    group.add(glowMesh)
+    glowMats.push(glowMat)
   })
   const glowBase = glowMats.map((m) => m.color.clone())
+
+  group.add(mergedMesh(bodyGeos, bodyMat))
+  group.add(mergedMesh(panelGeos, panelMat))
+  group.add(mergedMesh(headerGeos, headerMat))
+  // header is also a hover target (it's Basic, same as glow) — since every
+  // machine's header is visually identical, the one merged material stands
+  // in for all three and mutates exactly like the old per-header materials did.
+  glowMats.push(headerMat)
+  glowBase.push(headerMat.color.clone())
 
   // Résumé sign, mounted above the centre machine — the legible one.
   const sign = createSignTexture({
@@ -117,18 +164,15 @@ const KW = 4, KD = 4, KH = 5.5
 const FRONT_Z = KD / 2
 
 /** Pane + frame, no mullion — simpler than alley.js's glazing since these
- * windows are smaller and don't need to sell a divided sash. */
-function glazing(w, h, material, x, y, z) {
-  const g = new THREE.Group()
-  g.add(new THREE.Mesh(new THREE.PlaneGeometry(w, h), material))
-  const frame = new THREE.Mesh(
-    new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.04),
-    new THREE.MeshLambertMaterial({ color: 0x14171f }),
-  )
-  frame.position.z = -0.025
-  g.add(frame)
-  g.position.set(x, y, z)
-  return g
+ * windows are smaller and don't need to sell a divided sash. The frame is
+ * always trim-coloured and never hover-touched, so it's baked straight into
+ * `trimGeos` instead of coming back as its own mesh — only the pane itself
+ * needs to stay a real mesh (some panes are hover-lit, some aren't). */
+function glazing(trimGeos, w, h, material, x, y, z) {
+  const pane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material)
+  pane.position.set(x, y, z)
+  trimGeos.push(posed(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.04), { x, y, z: z - 0.025 }))
+  return pane
 }
 
 /** A kōban: red lamp over the door, lit counter window, 交番 sign, notice board. */
@@ -142,14 +186,13 @@ export function createKoban() {
   body.position.y = KH / 2
   group.add(body)
 
+  // Structural darks — roof, belt course, and both window frames — never
+  // hover-touched, so they bake into one merged mesh instead of four meshes.
   const trimMat = new THREE.MeshLambertMaterial({ color: 0x14171f })
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(KW + 0.3, 0.2, KD + 0.3), trimMat)
-  roof.position.y = KH + 0.1
-  group.add(roof)
+  const trimGeos = []
+  trimGeos.push(posed(new THREE.BoxGeometry(KW + 0.3, 0.2, KD + 0.3), { x: 0, y: KH + 0.1, z: 0 }))
   // Belt course at mid-height — cheapest possible cue that this is two storeys.
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(KW + 0.06, 0.12, KD + 0.06), trimMat)
-  belt.position.y = KH / 2
-  group.add(belt)
+  trimGeos.push(posed(new THREE.BoxGeometry(KW + 0.06, 0.12, KD + 0.06), { x: 0, y: KH / 2, z: 0 }))
 
   const doorW = 1.3, doorH = 2.3
   const doorMat = new THREE.MeshLambertMaterial({
@@ -163,7 +206,7 @@ export function createKoban() {
   const windowMat = new THREE.MeshLambertMaterial({
     color: 0x1c1408, emissive: WARM, emissiveIntensity: 0.8,
   })
-  group.add(glazing(1.1, 1.0, windowMat, 1.1, 1.1, FRONT_Z + 0.02))
+  group.add(glazing(trimGeos, 1.1, 1.0, windowMat, 1.1, 1.1, FRONT_Z + 0.02))
   // Counter, just inside the glass — its silhouette against the lit window is
   // the "counter visible" cue; there's no modelled interior beyond it.
   const counter = new THREE.Mesh(
@@ -174,7 +217,7 @@ export function createKoban() {
   group.add(counter)
 
   // Dim upper-floor window — sells the two-storey read without a second lit box.
-  group.add(glazing(0.9, 0.8, new THREE.MeshLambertMaterial({ color: 0x0d1017 }),
+  group.add(glazing(trimGeos, 0.9, 0.8, new THREE.MeshLambertMaterial({ color: 0x0d1017 }),
     -0.6, KH - 1.3, FRONT_Z + 0.02))
 
   // ── Red lamp — the single strongest kōban cue ──────────────────────────
@@ -219,7 +262,9 @@ export function createKoban() {
   contactSignMesh.position.set(-1.1, 1.75, FRONT_Z + 0.02)
   group.add(contactSignMesh)
 
-  // Notice board with a few pinned papers.
+  // Notice board with a few pinned papers. The papers share one material and
+  // are never hover-touched, so their (rotated) geometry merges into a single
+  // draw call.
   const board = new THREE.Mesh(
     new THREE.BoxGeometry(0.7, 0.55, 0.04),
     new THREE.MeshLambertMaterial({ color: 0x3b2a1c }),
@@ -227,12 +272,14 @@ export function createKoban() {
   board.position.set(-1.1, 0.85, FRONT_Z + 0.04)
   group.add(board)
   const paperMat = new THREE.MeshLambertMaterial({ color: 0xf2ede0 })
-  for (const [dx, dy, rot] of [[-0.12, 0.09, 0.12], [0.1, -0.03, -0.1], [-0.02, -0.13, 0.05]]) {
-    const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.26), paperMat)
-    paper.position.set(board.position.x + dx, board.position.y + dy, board.position.z + 0.03)
-    paper.rotation.z = rot
-    group.add(paper)
-  }
+  const paperGeos = [[-0.12, 0.09, 0.12], [0.1, -0.03, -0.1], [-0.02, -0.13, 0.05]].map(([dx, dy, rot]) =>
+    posed(new THREE.PlaneGeometry(0.2, 0.26), {
+      x: board.position.x + dx, y: board.position.y + dy, z: board.position.z + 0.03, rz: rot,
+    }))
+  group.add(mergedMesh(paperGeos, paperMat))
+
+  // Every structural-dark part collected above merges into one mesh.
+  group.add(mergedMesh(trimGeos, trimMat))
 
   const hit = new THREE.Mesh(
     new THREE.BoxGeometry(KW + 1.2, KH + 1.2, KD + 1.4),

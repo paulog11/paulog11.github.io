@@ -109,9 +109,12 @@ export function lotGroupCenter(cell, lots) {
 // can't express. fillerBuildings() below and cityLayout.test.mjs both key off
 // this list so nothing else is generated inside the footprint.
 export const LANDMARK_SITES = [
-  // 都庁: ~20m-square base at 40m compressed doesn't fit a 14m lot, so it
-  // claims a 2x2 group (avoiding lot [1,0], which venue-search already owns).
-  { id: 'tocho', cell: [1, 0], lots: [[0, 1], [0, 2], [1, 1], [1, 2]], h: 40 },
+  // 都庁 is a complex, not one tower: No.1 (twin-tower), No.2, and the low
+  // Assembly Building need room for three distinct masses around a plaza, so
+  // this claims an L-shaped 5-lot group (the full north sub-row [0,0]-[0,2]
+  // plus [1,1]-[1,2] of the middle sub-row, avoiding lot [1,0], which
+  // venue-search already owns).
+  { id: 'tocho', cell: [1, 0], lots: [[0, 0], [0, 1], [0, 2], [1, 1], [1, 2]], h: 40 },
   // Cocoon's base stays under 11m even at full compressed height, so one lot
   // is enough — same footprint budget as an ordinary project building.
   { id: 'cocoon', cell: [1, 0], lots: [[2, 1]], h: 34 },

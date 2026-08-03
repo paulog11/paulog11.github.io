@@ -21,6 +21,7 @@ import { createStation } from '../scene/station.js'
 import { createTowers } from '../scene/towers.js'
 import { createGoldenGaiBlock } from '../scene/alley.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
+import { createOutlines } from '../scene/outline.js'
 import { PROJECT_SITES } from '../scene/cityLayout.js'
 
 // Query params let the Playwright suites drive the camera without reaching into
@@ -75,6 +76,10 @@ if (show('projects')) {
     built.push(b)
   }
 }
+
+// Must run last, after every stage.scene.add above — see outline.js. No
+// ambient layer in this harness, so nothing to skip.
+stage.scene.add(createOutlines(stage.scene))
 
 if (panX || panZ) {
   stage.controls.target.x += panX

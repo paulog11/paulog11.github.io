@@ -62,7 +62,8 @@ Personal website hosted at GitHub Pages. Vue 3 landing page at root links to sub
 - `components/ProjectList.vue` — accessible `<ul>` fallback, rendered *inside* the `<canvas>`. This is what screen readers and crawlers see, so it is not a stub
 - `scene/cityLayout.js` — **the single source of truth for where everything stands.** Pure data + maths, imports nothing from three.js. A 3×3 lattice of blocks separated by streets; each block subdivides into a 3×3 lattice of lots; a building occupies one lot. Moving a building is a two-integer edit. Replace *this* file when real Shinjuku coordinates arrive — never hard-code positions in the geometry modules. `node scene/cityLayout.test.mjs` checks its invariants without a browser
 - `scene/` — the 3D scene, one module per concern: `renderer` (camera, picking, quality tier), `palette`, `signTexture`, `cityLayout`, `street` (the road network), `blocks` (filler buildings), `station` (新宿駅, the centrepiece), `projectBuilding` (the 9 clickable ones), `lightPool`, `towers` (都庁 + Cocoon), `alley` (Golden Gai scenery), `ambient`, `departureBoard`, `konbini`, `streetFurniture`, `props`
-- `spike/` — standalone harnesses. Vite only builds `index.html`, so these never ship. **Current state:** `city` ✅ and `perf` ✅ are up to date; `alley` ❌ and `board` ❌ still import the removed `createStreet`/`createAlley` and fail to load; `stage` loads but violates the material policy with two `MeshStandardMaterial`. There is **no committed Playwright suite** — browser testing has been ad-hoc scratchpad scripts every session
+- `spike/` — standalone harnesses. Vite only builds `index.html`, so these never ship. `city`, `perf`, `board` and `stage` all load clean; `alley` was deleted (superseded by `city`). Each sets `window.__ready`, and `city`/`perf`/`board` expose `window.__stage`
+- `test/scene.test.mjs` — the committed browser suite (`npm test`). Plain `node:test` + `playwright`, no `@playwright/test` and no config file; it spawns and tears down its own dev server and restores `index.html` afterwards
 - `main.js` / `style.css` — Vue entry point and global Tailwind styles
 - `index.source.html` — permanent Vite entry template (references `./main.js`); never overwritten by deploy
 - `index.html` — at rest this is the built output for GitHub Pages; `predev`/`prebuild` hooks restore it from `index.source.html` before Vite runs
@@ -91,6 +92,14 @@ the low-GPU look are the same thing. Breaking these puts the cost straight back.
 - **`FRUSTUM = 145`** is not a taste value — it is what makes all four map corners fit at zoom 1. Detail comes from the zoom range (0.95–5), which is the scene's only LOD mechanism.
 - At zoom 1 there are **~4.8 px per metre** on a 700 px-tall viewport. Anything finer than ~3 m is invisible — put that detail in a texture, not in geometry.
 - **Emissive materials illuminate nothing** in three.js.
+- **Picking is occlusion-aware.** `hitTest` rejects a hit when an opaque mesh is
+  nearer, so putting any opaque geometry in front of a pick target silently makes
+  it unclickable — this is how 6 of the departure board's 9 rows died behind the
+  station's own deck. Transparent meshes are skipped on purpose (halos, light
+  pools, rain are meant to be clicked through), so a new decal must be
+  `transparent: true` or it will start blocking clicks. Without this the reverse
+  bug applies: hit boxes are as tall as their buildings, and 26% of the frame's
+  clickable area used to select a project you could not see.
 - The renderer draws at a **fraction of CSS resolution** (`RES_SCALE`) and the browser upscales it; `canvas[data-scene] { image-rendering: pixelated }` in `style.css` is what turns that from "blurry" into the intended look. The two belong together.
 - The frame loop is **capped to 30 fps**, not on-demand — rain, the train, steam and flicker animate continuously, so there is no idle state. True on-demand rendering is the `prefers-reduced-motion` path only.
 - **The frame cap needs `FRAME_SLACK_MS`.** `setAnimationLoop` fires on the display's cadence (16.67 ms at 60 Hz). Two ticks is 33.33 ms — *exactly* `1000/30` — so a naive `now - lastFrame < 1000/TARGET_FPS` loses to jitter and waits a third tick, capping at **20 fps, not 30**. This shipped broken once. Don't "simplify" the slack away.
@@ -110,18 +119,36 @@ Two traps have each produced a confidently wrong number in this repo:
   instead; they run only on frames that actually render.
 - **Measure on `spike/perf.html`, not `spike/city.html`.** city.html omits scenery
   and ambient and under-reports by ~92 draw calls.
+- **Looking at anything near ground level is not a matter of aiming the camera
+  down.** `clampPan()` pins `controls.target.y` to `TARGET_Y` (~23 m) on *every*
+  tick, so a pivot you set at a low object's own height is silently reverted
+  before the next frame. Pan in x/z only, and to centre something low, aim along
+  the sightline through it at the height clampPan will force: any point on that
+  ray projects to the same screen position under an orthographic camera. Two
+  separate sessions have lost time rediscovering this.
 
 Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 254 | 18,520 | 19 | 63 | 33.3 ms (30 fps) |
+| 239 | 10,974 | 20 | 65 | 33.3 ms (30 fps) |
+
+**This baseline includes the departure board; earlier figures did not.**
+`spike/perf.html` never built the board, so every draw-call number recorded
+before this line understated the scene. Do not compare across that boundary — the
+older "254 / 18,520" was a *bigger* scene measured *without* the board.
+
+`npm test` asserts these as ceilings with headroom. Come in far under and you
+should ratchet `BUDGET` in `test/scene.test.mjs` down; there is no value in slack
+a regression can hide inside.
 
 ## Commands
 - `npm run dev` — local dev server
+- `npm test` — layout invariants + the browser suite (`test/scene.test.mjs`).
+  Spawns its own dev server on port 5199 and restores `index.html` when done, so
+  it leaves the working tree clean
 - `npm run deploy` — build + copy dist output to root for GitHub Pages
-- `node scene/cityLayout.test.mjs` — layout invariants, no browser needed. **This
-  is the only committed test in the repo.**
+- `node scene/cityLayout.test.mjs` — layout invariants alone, no browser needed
 
 ## Deploy Workflow
 `npm run deploy` does: restore `index.source.html` → `vite build` → clean old hashed assets → copy `dist/assets/*` to `assets/` → copy `dist/index.html` to root. Built assets are committed to git (no CI build step). Always use relative paths.

@@ -28,7 +28,7 @@ addNightLighting(stage.scene)
 
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(800, 800),
-  new THREE.MeshStandardMaterial({ color: ASPHALT, roughness: 0.35, metalness: 0.35 }),
+  new THREE.MeshLambertMaterial({ color: ASPHALT }),
 )
 ground.rotation.x = -Math.PI / 2
 stage.scene.add(ground)
@@ -42,7 +42,7 @@ const fixtures = [
 fixtures.forEach((f, i) => {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(8, 12, 8),
-    new THREE.MeshStandardMaterial({ color: f.color, emissive: f.color, emissiveIntensity: 0.35 }),
+    new THREE.MeshLambertMaterial({ color: f.color, emissive: f.color, emissiveIntensity: 0.35 }),
   )
   mesh.position.set((i - 1) * 14, 6, 0)
   stage.scene.add(mesh)

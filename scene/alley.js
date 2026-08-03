@@ -6,7 +6,8 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { createSignTexture } from './signTexture.js'
-import { createLantern, createNoren, createAcUnit } from './props.js'
+import { createNoren, createAcUnit } from './props.js'
+import { sharedGradientTexture } from './lightPool.js'
 import { RED, AMBER, WARM } from './palette.js'
 import { GOLDEN_GAI_CELL, BLOCK, blockCenter } from './cityLayout.js'
 
@@ -36,6 +37,11 @@ const LANE = 2.0
 const STALL_DEPTH = D + 0.7                    // roof overhang — the deepest element
 const STALL_MID = FRONT_Z - D / 2 + 0.35        // roof's Z centre, local to one stall
 const ROW_PITCH = STALL_DEPTH + LANE            // 7.7
+
+// Billboard size: matches the old lathe's own footprint (max profile radius
+// 1.05 * r, total height h + two capH) so the swap is a drop-in, not a resize.
+const LANTERN_W = 0.42, LANTERN_H = 0.65
+const POOL_R = 3.0                        // light-spill radius on the lane, metres
 
 const ACCENTS = ['#FF2D55', '#FFB347', '#00E5FF', '#FF6FA8', '#7CE7C4']
 // Decorative Japanese signage — pure atmosphere, never the legible thing
@@ -108,7 +114,11 @@ function buildStall(i, x, z, buckets, acPlasticMat) {
   const height = H_MIN + rnd() * (H_MAX - H_MIN)
 
   // ── Body ── subtle per-stall tint, vertex-baked (see `tint`).
-  const shellV = 0.05 + rnd() * 0.06
+  // 0.05-0.11 was so close to black that the stalls read as a void rather than
+  // as a dense low-rise mass; the two lights in the scene have almost nothing to
+  // pick up off a Lambert surface that dark. Still the darkest bodies in the
+  // city — the point is that the block reads as buildings, not a hole.
+  const shellV = 0.09 + rnd() * 0.07
   const bodyColor = new THREE.Color(shellV, shellV * 0.95, shellV * 1.15)
   const body = new THREE.BoxGeometry(W - 0.12, height, D)
   body.translate(0, height / 2, FRONT_Z - D / 2)
@@ -148,22 +158,35 @@ function buildStall(i, x, z, buckets, acPlasticMat) {
   // so the row doesn't read as a uniformly lit strip.
   addGlazing(buckets, 1.3, 0.9, -0.4, height - 1.5, i % 3 === 1 ? 'dark' : 'warm', x, z)
 
-  // Lantern: skin colour varies per stall (vertex-tinted bucket, Basic — it's
-  // the only MeshBasicMaterial createLantern hands back); ribs and caps are
-  // props.js's shared matDark, which is exactly the "no per-instance colour"
-  // trim bucket already collecting roofs and window frames.
-  const lantern = createLantern({ color: i % 3 === 0 ? AMBER : RED, size: 0.4 })
-  lantern.position.set(-1.65, 1.85, FRONT_Z + 0.42)
-  lantern.updateMatrix()
-  for (const child of lantern.children) {
-    child.updateMatrix()
-    const geo = child.geometry.clone().applyMatrix4(child.matrix).applyMatrix4(lantern.matrix)
-    if (child.material.isMeshBasicMaterial) {
-      buckets.lantern.push(tint(posed(geo, { x, z }), child.material.color))
-    } else {
-      buckets.dark.push(posed(geo, { x, z }))
-    }
-  }
+  // Lantern: a single billboard quad, not a lathe+5 toruses (see buildLanternTexture
+  // for why — at ~0.4m wide/~2px on screen, the geometry was pure overdraw). The
+  // ribbing and caps are baked into the shared texture; only the paper's own glow
+  // colour still varies per stall, via the same vertex-tint idiom as everywhere
+  // else in this file. -1.65/1.85/+0.42 are the old lantern group's local offset.
+  // Lerp toward white for the paper's lit look, then push past 1 — Basic has no
+  // emissive, so brightness lives entirely in the tint, and NoToneMapping means
+  // the hottest part of the paper clips to a white core exactly like a real
+  // over-exposed lantern. The dark ribs survive it: near-black times 1.35 is
+  // still near-black.
+  const lanternColor = new THREE.Color(i % 3 === 0 ? AMBER : RED)
+    .lerp(new THREE.Color(0xffffff), 0.25).multiplyScalar(1.35)
+  const lantern = new THREE.PlaneGeometry(LANTERN_W, LANTERN_H)
+  lantern.translate(-1.65, 1.85 + LANTERN_H / 2, FRONT_Z + 0.42)
+  buckets.lantern.push(tint(posed(lantern, { x, z }), lanternColor))
+
+  // Light spill on the lane in front of the stall. Every street in the city has
+  // pooled light under its signage and this block had none, so the alley floor
+  // was the only pure black surface in frame and the stalls read as pasted onto
+  // it. Merged like everything else here: 24 quads, one draw call, the shared
+  // gradient canvas from lightPool.js — brightness is baked into the vertex
+  // tint rather than material opacity, because additive blending multiplies
+  // rgb by alpha and there is only one material for the whole block.
+  const poolColor = new THREE.Color(ACCENTS[i % ACCENTS.length])
+    .lerp(new THREE.Color(WARM), 0.4).multiplyScalar(0.95)
+  const pool = new THREE.PlaneGeometry(POOL_R * 2, POOL_R * 2)
+  pool.rotateX(-Math.PI / 2)
+  pool.translate(-0.55, 0.05, FRONT_Z + POOL_R * 0.45)
+  buckets.pool.push(tint(posed(pool, { x, z }), poolColor))
 
   // AC unit: fixed colours on every stall (no tint needed) — just split by
   // which of props.js's two materials each part carries. Neither material
@@ -198,10 +221,78 @@ function buildSignVariants() {
       px: 256,
     })
     const mat = new THREE.MeshBasicMaterial({ map: tex.map, side: THREE.DoubleSide })
-    mat.color.setScalar(0.6)
+    // Full strength. The old 0.6 was a bloom-era value: a pass that re-inflated
+    // bright pixels made dimming the source sensible, and with the pass gone it
+    // just left the block's signature neon as the darkest signage in the city.
+    // Basic + NoToneMapping means this IS the output — 1.0 is the texture as
+    // drawn, and the texture is already drawn bright.
+    mat.color.setScalar(1.0)
     variants.push({ mat, aspect: tex.aspect })
   }
   return variants
+}
+
+// Bakes the paper-lantern look ONCE — warm-lit gradient body, dark ribbing
+// bands where the torus rings used to sit, dark caps top and bottom — onto a
+// single canvas, alpha 0 outside the chōchin silhouette. Every lantern in the
+// block shares this one texture (and one material); only the vertex-baked
+// tint varies per stall. Multiplying vertexColors against the texture is safe
+// for the dark ribs/caps too: a near-black pixel times any tint is still
+// near-black, so they read as dark trim regardless of the paper's own colour.
+function buildLanternTexture() {
+  const h = 160
+  const w = Math.round(h * (LANTERN_W / LANTERN_H))
+  const canvas = document.createElement('canvas')
+  canvas.width = w; canvas.height = h
+  const g = canvas.getContext('2d')
+
+  // Same bulge profile LANTERN_PROFILE in props.js used to trace as a lathe.
+  const PROFILE = [
+    [0.22, 0], [0.75, 0.08], [1.0, 0.30], [1.05, 0.55], [0.95, 0.78], [0.6, 0.94], [0.22, 1.0],
+  ]
+  const capH = h * 0.08
+  const bodyTop = capH, bodyH = h - capH * 2
+  const cx = w / 2, maxR = w / 2 - 1
+  const pt = (xf, yf) => [cx + xf * maxR, bodyTop + yf * bodyH]
+  const tracePath = () => {
+    g.beginPath()
+    PROFILE.forEach(([xf, yf], i) => {
+      const [x, y] = pt(xf, yf)
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y)
+    })
+    for (let i = PROFILE.length - 2; i >= 0; i--) {
+      const [x, y] = pt(-PROFILE[i][0], PROFILE[i][1])
+      g.lineTo(x, y)
+    }
+    g.closePath()
+  }
+
+  g.save()
+  tracePath()
+  g.clip()
+  const grad = g.createLinearGradient(0, bodyTop, 0, bodyTop + bodyH)
+  grad.addColorStop(0, '#8a8a8a')
+  grad.addColorStop(0.45, '#ffffff')
+  grad.addColorStop(1, '#8a8a8a')
+  g.fillStyle = grad
+  g.fillRect(0, 0, w, h)
+
+  g.strokeStyle = 'rgba(15,10,8,0.55)'
+  g.lineWidth = h * 0.02
+  for (const [, yf] of PROFILE.slice(1, -1)) {
+    const y = bodyTop + yf * bodyH
+    g.beginPath()
+    g.moveTo(0, y)
+    g.lineTo(w, y)
+    g.stroke()
+  }
+  g.restore()
+
+  g.fillStyle = '#14100c'
+  g.fillRect(cx - w * 0.11, 0, w * 0.22, capH)
+  g.fillRect(cx - w * 0.14, h - capH, w * 0.28, capH)
+
+  return Object.assign(new THREE.CanvasTexture(canvas), { colorSpace: THREE.SRGBColorSpace })
 }
 
 /**
@@ -216,7 +307,7 @@ export function createGoldenGaiBlock() {
     throw new Error('Golden Gai stalls reach past the block edge into a street')
   }
 
-  const buckets = { dark: [], warm: [], plastic: [], body: [], lantern: [], noren: [] }
+  const buckets = { dark: [], warm: [], plastic: [], body: [], lantern: [], noren: [], pool: [] }
 
   // Both AC materials are fixed (no per-stall colour), so identifying which
   // is the plastic casing only needs doing once, not once per stall.
@@ -224,7 +315,11 @@ export function createGoldenGaiBlock() {
   const acPlasticMat = acProbe.children[0].material
 
   const variants = buildSignVariants()
-  const vertH = 1.8
+  // 1.8m was below this scene's own visibility floor — CLAUDE.md puts it at
+  // ~3m, and a 1.8m sign is ~8.6px at zoom 1. The block's signature signage was
+  // therefore geometry nobody could see. 3.2m still reads as a shopfront sign on
+  // a 6-9m stall, and is the height at which it actually marks the block.
+  const vertH = 3.2
   const signGeo = new THREE.PlaneGeometry(vertH * variants[0].aspect, vertH)
   const signInstances = variants.map(() => [])
 
@@ -241,14 +336,33 @@ export function createGoldenGaiBlock() {
   }
 
   const group = new THREE.Group()
-  group.add(mergedMesh(buckets.dark, new THREE.MeshLambertMaterial({ color: 0x14171f })))
+  // Roofs, trim and rods. Under this camera the stall ROOFS are most of what you
+  // actually see of the block — the lanes between rows are hidden by the row in
+  // front — so at 0x14171f the block read as a hole in the map rather than as
+  // low-rise mass. Lifted just enough to catch the two lights; still the darkest
+  // roofline in the city, because a warren of dark roofs is what Golden Gai is.
+  group.add(mergedMesh(buckets.dark, new THREE.MeshLambertMaterial({ color: 0x232732 })))
+  // Doorways and lit windows — the interior spill that should make the alley
+  // read as occupied. Same bloom-era halving as the signs above.
   group.add(mergedMesh(buckets.warm, new THREE.MeshLambertMaterial({
-    color: 0x1b1408, emissive: WARM, emissiveIntensity: 0.6,
+    color: 0x2a1f0c, emissive: WARM, emissiveIntensity: 1.15,
   })))
   group.add(mergedMesh(buckets.plastic, new THREE.MeshLambertMaterial({ color: 0xcac7ba })))
   group.add(mergedMesh(buckets.body, new THREE.MeshLambertMaterial({ vertexColors: true })))
-  group.add(mergedMesh(buckets.lantern, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })))
+  // Cutout, not blended: transparent stays false and alphaTest does the
+  // silhouette clip, so this renders in the opaque pass with normal depth
+  // writes/testing — no back-to-front sort against the stalls to get wrong.
+  group.add(mergedMesh(buckets.lantern, new THREE.MeshBasicMaterial({
+    map: buildLanternTexture(), vertexColors: true, side: THREE.DoubleSide, alphaTest: 0.5,
+  })))
   group.add(mergedMesh(buckets.noren, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })))
+  // Additive and depthWrite:false, exactly like lightPool.js's own decals — and
+  // transparent, which also keeps them out of renderer.js's occlusion test so
+  // they never block a click.
+  group.add(mergedMesh(buckets.pool, new THREE.MeshBasicMaterial({
+    map: sharedGradientTexture(), vertexColors: true,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  })))
 
   // One InstancedMesh per sign variant — SIGN_VARIANTS draw calls instead of
   // one mesh per stall, and genuinely separate materials (not one shared

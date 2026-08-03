@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { createSignTexture } from './signTexture.js'
 import { createLightPool } from './lightPool.js'
 import { lotCenter } from './cityLayout.js'
-import { NIGHT, GRANITE, WARM, AMBER, CYAN } from './palette.js'
+import { WARM, AMBER, CYAN } from './palette.js'
 
 const hex = (n) => '#' + n.toString(16).padStart(6, '0')
 
@@ -75,7 +75,11 @@ function splitTitle(title) {
 function heroFacade(seed, accent, bright) {
   let s = seed
   const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296
-  const cols = 9, rows = 30, pxCol = 14, pxRow = 10
+  // Bays sized in world metres, same rule as blocks.js/towers.js: a project lot
+  // is ~12m wide and these run ~22m tall, so 9x30 gave 1.3m bays and 0.7m
+  // floors — both far under CLAUDE.md's ~3m floor, which is why these read as
+  // striped rather than windowed. 4x7 is ~3m per bay in both axes.
+  const cols = 4, rows = 7, pxCol = 30, pxRow = 34
   const w = cols * pxCol, h = rows * pxRow
   const mk = () => {
     const c = document.createElement('canvas')
@@ -84,27 +88,35 @@ function heroFacade(seed, accent, bright) {
   }
   const [cMap, g] = mk()
   const [cEmi, ge] = mk()
-  g.fillStyle = hex(NIGHT); g.fillRect(0, 0, w, h)
-  ge.fillStyle = '#000';    ge.fillRect(0, 0, w, h)
+  // Was palette NIGHT — i.e. the sky colour, so an unlit face was pixel-
+  // identical to the background. A touch lighter than blocks.js's filler
+  // (#3d4553) because these nine are the ones that must be found.
+  g.fillStyle = '#454e5e'; g.fillRect(0, 0, w, h)
+  ge.fillStyle = '#000';   ge.fillRect(0, 0, w, h)
 
   const colors = [WARM, AMBER, CYAN, accent]   // the project's own neon colour bleeds into its own windows
   for (let i = 0; i < cols; i++) {
     const x = i * pxCol
-    if (i % 3 === 0) {
-      g.fillStyle = hex(GRANITE)
+    if (i % 4 === 0) {      // one pier in four; i % 3 was 33% piers at 9 columns
+      // Same clipping ceiling as blocks.js PIER — see the note there.
+      g.fillStyle = '#4d5566'
       g.fillRect(x, 0, pxCol, h)
       continue
     }
     for (let j = 0; j < rows; j++) {
       const y = j * pxRow
-      if (rnd() > 0.6 * bright) continue        // dimmer statuses read as a mostly-dark building
+      if (rnd() > 0.6 * bright) {              // dimmer statuses read as a mostly-dark building
+        g.fillStyle = 'rgba(0,0,0,0.22)'       // unlit windows still show the grid
+        g.fillRect(x + 3, y + 2, pxCol - 6, pxRow - 5)
+        continue
+      }
       const c = hex(colors[Math.floor(rnd() * colors.length)])
-      g.fillStyle = c;  g.fillRect(x + 2, y + 1, pxCol - 4, pxRow - 3)
-      ge.fillStyle = c; ge.fillRect(x + 2, y + 1, pxCol - 4, pxRow - 3)
+      g.fillStyle = c;  g.fillRect(x + 3, y + 2, pxCol - 6, pxRow - 5)
+      ge.fillStyle = c; ge.fillRect(x + 3, y + 2, pxCol - 6, pxRow - 5)
     }
   }
   g.fillStyle = 'rgba(0,0,0,0.4)'
-  for (let j = 0; j < rows; j++) g.fillRect(0, j * pxRow, w, 1)
+  for (let j = 0; j < rows; j++) g.fillRect(0, j * pxRow, w, 2)
 
   const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
     colorSpace: THREE.SRGBColorSpace, anisotropy: 8,

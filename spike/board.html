@@ -8,16 +8,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
-    canvas { display: block; width: 100%; height: 100%; }
+    canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
   </style>
 </head>
 <body>
-  <canvas id="c"></canvas>
+  <canvas id="c" data-scene></canvas>
 <script type="module">
+// Harness for the departure board: the scene's one readable index at zoom 1.
+// Mounts it on the real station facade the same way ShinjukuScene.vue does
+// (station.boardAnchor.add(board.group)), rather than floating it in
+// isolation, so row layout and picking match production.
+import * as THREE from 'three'
 import { createStage, addNightLighting } from '../scene/renderer.js'
-import { createStreet } from '../scene/street.js'
-import { createAlley } from '../scene/alley.js'
+import { createStation } from '../scene/station.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
+import { createOutlines } from '../scene/outline.js'
 
 const projects = [
   ['Algorithm Lab', '2026', 'live'], ['Flip 7', '2026', 'live'],
@@ -27,51 +32,56 @@ const projects = [
   ['Bible Hymn Learning', '2024', 'WIP'],
 ].map(([title, year, status], i) => ({ id: `p${i}`, title, year, status, url: `./p${i}` }))
 
+const q = new URLSearchParams(location.search)
+
 await document.fonts.ready
 
 const stage = createStage(document.getElementById('c'), { quality: 'high' })
 addNightLighting(stage.scene)
-stage.scene.add(createStreet({ length: 170, width: 26 }))
 
-const solo = new URLSearchParams(location.search).has('solo')
-if (!solo) {
-  const { group, stalls } = createAlley(projects)
-  stage.scene.add(group)
-  for (const s of stalls) stage.addPickable(s.hit, s.project)
-}
+const station = createStation()
+stage.scene.add(station.group)
 
 const board = createDepartureBoard(projects)
-board.group.position.set(...(solo ? [4, 0, 4] : [-22, 0, 2]))
-stage.scene.add(board.group)
-
-// Same payload shape the real scene uses.
-let active = null
-for (const r of board.rows) {
-  stage.addPickable(r.hit, { kind: 'project', project: r.project, hover: r.setHover })
+station.boardAnchor.add(board.group)
+for (const row of board.rows) {
+  stage.addPickable(row.hit, { kind: 'project', project: row.project, hover: row.setHover })
 }
-stage.onHover((p) => {
-  if (p === active) return
-  active?.hover?.(false)
-  p?.hover?.(true)
-  active = p
-  window.__hovered = p?.project?.id ?? null
-})
-stage.onSelect((p) => { window.__opened = p?.project?.id ?? null })
 
-// Force a row hover for the screenshot when asked.
-const hoverRow = new URLSearchParams(location.search).get('hover')
-if (hoverRow !== null) board.rows[Number(hoverRow)].setHover(true)
+// Must run last, after every stage.scene.add above — see outline.js. No
+// ambient layer in this harness, so nothing to skip.
+stage.scene.add(createOutlines(stage.scene))
+
+// The board sits on the station's south facade, well off-centre from the
+// zoom-1 framing that shows the whole 178m map. renderer.js's clampPan() pins
+// controls.target.y to TARGET_Y on every tick, so the pivot can't sit at the
+// board's own (much lower) height — instead aim along the sightline through
+// the board's centre at the height clampPan will force it back to. Any point
+// on that ray projects to the same screen position under this orthographic
+// camera, so the board still lands dead centre.
+const midRow = board.rows[Math.floor(board.rows.length / 2)]
+const boardCenter = new THREE.Vector3()
+midRow.hit.getWorldPosition(boardCenter)
+
+const forward = stage.controls.target.clone().sub(stage.camera.position).normalize()
+const targetY = stage.controls.target.y
+const aim = boardCenter.clone().addScaledVector(forward, (targetY - boardCenter.y) / forward.y)
+
+const dx = aim.x - stage.controls.target.x
+const dz = aim.z - stage.controls.target.z
+stage.controls.target.x += dx
+stage.controls.target.z += dz
+stage.camera.position.x += dx
+stage.camera.position.z += dz
+
+const DEFAULT_ZOOM = 4
+stage.camera.zoom = Number(q.get('zoom') ?? 0) || DEFAULT_ZOOM
+stage.camera.updateProjectionMatrix()
+stage.controls.update()
 
 stage.start()
 window.__stage = stage
-window.__rowScreenPos = (i) => {
-  const v = new THREE.Vector3()
-  board.rows[i].hit.getWorldPosition(v)
-  v.project(stage.camera)
-  const c = document.getElementById('c')
-  return { x: (v.x * 0.5 + 0.5) * c.clientWidth, y: (-v.y * 0.5 + 0.5) * c.clientHeight }
-}
-import * as THREE from 'three'
+window.__rows = board.rows      // so a test can check each row's visibility/picking
 requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
 </script>
 </body>

@@ -31,6 +31,8 @@ import { createKonbini } from '../scene/konbini.js'
 import { createVendingBank, createKoban } from '../scene/streetFurniture.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
+import { createDepartureBoard } from '../scene/departureBoard.js'
+import { createOutlines } from '../scene/outline.js'
 import { PROJECT_SITES, SCENERY_SITES, lotCenter } from '../scene/cityLayout.js'
 
 const q = new URLSearchParams(location.search)
@@ -85,6 +87,21 @@ if (on('station')) {
   stage.scene.add(station.group)
 }
 
+// The board mounts on the station and is a real cost centre (a canvas texture,
+// a bezel, a hood and 9 row hit boxes). It was missing here, so every draw-call
+// figure this harness has ever reported understated the real scene.
+if (on('board') && station) {
+  const board = createDepartureBoard(
+    Object.entries(TITLES).map(([id, title]) => ({
+      id, title, year: '2026', status: 'live', url: `./${id}`,
+    })),
+  )
+  station.boardAnchor.add(board.group)
+  for (const row of board.rows) {
+    stage.addPickable(row.hit, { kind: 'project', project: row.project, hover: row.setHover })
+  }
+}
+
 if (on('projects')) {
   for (const site of PROJECT_SITES) {
     const project = {
@@ -107,6 +124,10 @@ if (on('ambient') && station) {
   stage.scene.add(ambient.group)
   stage.onFrame((dt, t) => ambient.update(dt, t))
 }
+
+// Must run last — see outline.js/ShinjukuScene.vue. Skips ambient.group when
+// it exists so its animated rain/train/steam don't get a baked static ghost.
+stage.scene.add(createOutlines(stage.scene, { skip: ambient ? [ambient.group] : [] }))
 
 if (Number(q.get('zoom') ?? 0)) stage.camera.zoom = Number(q.get('zoom'))
 stage.camera.updateProjectionMatrix()

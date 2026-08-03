@@ -46,6 +46,7 @@ import { createVendingBank, createKoban } from '../scene/streetFurniture.js'
 import { createProjectBuilding } from '../scene/projectBuilding.js'
 import { createAmbient } from '../scene/ambient.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
+import { createOutlines } from '../scene/outline.js'
 import { PROJECT_SITES, SCENERY_SITES, lotCenter } from '../scene/cityLayout.js'
 import ProjectList from './ProjectList.vue'
 
@@ -144,6 +145,13 @@ onMounted(() => {
   })
   stage.scene.add(ambient.group)
   stage.onFrame((dt, elapsed) => ambient.update(dt, elapsed))
+
+  // Cartoon contour pass — must run LAST: it walks the finished graph once
+  // and bakes world-space edges, so anything added to the scene after this
+  // point has no outline. ambient.group is skipped because its rain/train/
+  // steam animate every frame and a baked-in-world-space outline of a moving
+  // object would be a stationary ghost.
+  stage.scene.add(createOutlines(stage.scene, { skip: [ambient.group] }))
 
   // Only one thing is lit at a time, so the scene reads as a single focus.
   let active = null
