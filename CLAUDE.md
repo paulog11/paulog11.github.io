@@ -119,6 +119,26 @@ Two traps have each produced a confidently wrong number in this repo:
   instead; they run only on frames that actually render.
 - **Measure on `spike/perf.html`, not `spike/city.html`.** city.html omits scenery
   and ambient and under-reports by ~92 draw calls.
+- **The camera only ever sees a building's +X and +Z faces**, because its
+  azimuth is fixed at 45°. So ground detail is visible SOUTH and EAST of a mass
+  and permanently hidden north and west of it. A plaza was once built around
+  都庁's "open border" — which was its north and west edges — and measured
+  afterwards at 1.3 m visible to the east, 0.0 m to the south, and 16.4 m
+  hidden. Six lamp posts and a painted plaza rendered every frame and not one
+  pixel of any of it could be seen. Check which side of the building the ground
+  is on before detailing it.
+- **A landmark's height must be reckoned from the building, not from its group
+  anchor.** `lotGroupCenter()` gives the anchor; per-building offsets (towers.js's
+  `NO1_DX/DZ`) then push the mass away from it, and since `screenY` falls as
+  `x+z` rises, doing the sum at the anchor overstates height by ~1.7 screen
+  units. That error once "proved" a height that shipped level with the filler it
+  was meant to clear.
+- **Adding a lot to a landmark's `lots` moves the whole landmark**, because
+  `lotGroupCenter()` is the mean of the claimed lots. 都庁 claims six and
+  subtracts the resulting anchor shift back out of its local offsets
+  (`ANCHOR_DX/DZ`) so the buildings stay put. Claiming a lot also skips its
+  `rng()` call in `fillerBuildings()`, which reshuffles every filler after it —
+  the layout stays deterministic, but it is not the same layout.
 - **Looking at anything near ground level is not a matter of aiming the camera
   down.** `clampPan()` pins `controls.target.y` to `TARGET_Y` (~23 m) on *every*
   tick, so a pivot you set at a low object's own height is silently reverted
@@ -131,7 +151,13 @@ Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 239 | 10,974 | 20 | 65 | 33.3 ms (30 fps) |
+| 244 | 10,954 | 22 | 68 | 33.3 ms (30 fps) |
+
+**`transparent: true` costs a shader program.** It is part of three.js's program
+cache key, so the plaza (`towers.js`) — the scene's only transparent *mapped
+Lambert* — compiles its own. Flipping that one flag moves the scene between 21
+and 22 programs with nothing else changed. It can't be dropped: the transparency
+is what makes `hitTest` click through the decal and `outline.js` skip it.
 
 **This baseline includes the departure board; earlier figures did not.**
 `spike/perf.html` never built the board, so every draw-call number recorded
@@ -183,7 +209,7 @@ contract, and `fillerBuildings()` skips every lot any of them claims:
 | Table | For | Shape |
 |---|---|---|
 | `PROJECT_SITES` | the 9 clickable buildings | one `lot` |
-| `LANDMARK_SITES` | 都庁, Cocoon | a `lots` **array** — a tower needs a 2×2 group |
+| `LANDMARK_SITES` | 都庁, Cocoon | a `lots` **array** — a complex needs several |
 | `SCENERY_SITES` | konbini, kōban, vending | one `lot` + a `ry` yaw |
 
 Anything placed on the grid should claim a lot rather than take free-floating

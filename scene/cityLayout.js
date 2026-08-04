@@ -108,15 +108,47 @@ export function lotGroupCenter(cell, lots) {
 // lot the building claims — plural, the way PROJECT_SITES' singular `lot`
 // can't express. fillerBuildings() below and cityLayout.test.mjs both key off
 // this list so nothing else is generated inside the footprint.
+//
+// `h` is the ROOFLINE HEIGHT ONLY. It does not set the footprint: towers.js
+// scales 都庁 non-uniformly, freezing the plan at its own TOCHO_PLAN_H so the
+// podium keeps the width that was verified to clear venue-search. Raising `h`
+// here therefore cannot reintroduce a collision — see towers.js's header.
 export const LANDMARK_SITES = [
   // 都庁 is a complex, not one tower: No.1 (twin-tower), No.2, and the low
   // Assembly Building need room for three distinct masses around a plaza, so
-  // this claims an L-shaped 5-lot group (the full north sub-row [0,0]-[0,2]
-  // plus [1,1]-[1,2] of the middle sub-row, avoiding lot [1,0], which
-  // venue-search already owns).
-  { id: 'tocho', cell: [1, 0], lots: [[0, 0], [0, 1], [0, 2], [1, 1], [1, 2]], h: 40 },
+  // this claims a 6-lot group (the full north sub-row [0,0]-[0,2], plus
+  // [1,1]-[1,2] of the middle sub-row avoiding lot [1,0] which venue-search
+  // already owns, plus [2,2]).
+  //
+  // [2,2] was added to fix a real bug, not for room. The Assembly Building is
+  // positioned by a hard-coded local offset in towers.js that lands it at world
+  // (-40, 15) — on lot [2,2], which nothing claimed — so fillerBuildings() had
+  // generated a 38.3m filler tower at (-40, 16), standing INSIDE the Assembly
+  // Building. The test below could not catch it because the Assembly took
+  // free-floating coordinates instead of claiming a lot, which is exactly the
+  // failure mode this file's header warns about. Claiming the lot both evicts
+  // the filler and extends the plaza onto the only side of the complex the
+  // camera can actually see (see towers.js's createPlaza).
+  //
+  // NOTE: `lots` also feeds lotGroupCenter(), so adding one moved 都庁's anchor
+  // by (+2.13, +4.27). towers.js subtracts exactly that from its local offsets,
+  // so every world position is unchanged — if you add another lot here, do the
+  // same there or the whole complex will slide.
+  //
+  // 67m, not the 40m this used to be, because at 40m 都庁 was NOT the tallest
+  // thing on screen — BLOCK_SPECS below gives filler towers up to 44m, and
+  // depth pushes objects up the frame, so the tallest of them (h=43.1 at
+  // -72,-72) projects to screenY 78.1 while 都庁's mast tip reached 75.7. A
+  // hero landmark the skyline hides is not a hero landmark. See towers.js's
+  // header for the full derivation and why 55m and 60m both fail it.
+  { id: 'tocho', cell: [1, 0], lots: [[0, 0], [0, 1], [0, 2], [1, 1], [1, 2], [2, 2]], h: 67 },
   // Cocoon's base stays under 11m even at full compressed height, so one lot
   // is enough — same footprint budget as an ordinary project building.
+  //
+  // Left at 34m when 都庁 went to 60m, so the pair no longer holds the real
+  // 243:204 height ratio (that would want ~50m here) and the Cocoon reads
+  // squatter than life. Deliberate: only 都庁 was in scope. Restoring the
+  // ratio is this one number.
   { id: 'cocoon', cell: [1, 0], lots: [[2, 1]], h: 34 },
 ]
 
