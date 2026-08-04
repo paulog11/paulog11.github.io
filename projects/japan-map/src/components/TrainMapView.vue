@@ -43,6 +43,9 @@ function buildStationPopup(station) {
       return `<li style="color:${line.color};"><span style="color:#333;">${lineName}</span></li>`
     })
     .join('')
+  const historyHtml = station.history
+    ? `<div class="station-history"><strong>History:</strong> <p>${station.history}</p></div>`
+    : ''
 
   return `
     <div class="station-popup">
@@ -54,6 +57,7 @@ function buildStationPopup(station) {
         <strong>Lines:</strong>
         <ul>${lineList}</ul>
       </div>
+      ${historyHtml}
     </div>
   `
 }
@@ -176,5 +180,18 @@ watch(() => props.mapLang, (lang) => {
 .station-lines li {
   margin-bottom: 2px;
   font-size: 12px;
+}
+
+.station-history {
+  margin-top: 8px;
+  border-top: 1px solid #e8e8e8;
+  padding-top: 8px;
+  font-size: 12px;
+  color: #444;
+}
+
+.station-history p {
+  margin-top: 4px;
+  line-height: 1.5;
 }
 </style>

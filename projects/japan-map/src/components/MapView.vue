@@ -25,6 +25,10 @@ const props = defineProps({
   historyMode: {
     type: String,
     required: true
+  },
+  timelineYear: {
+    type: Number,
+    required: true
   }
 })
 
@@ -101,25 +105,61 @@ function buildEventPopup(event) {
   `
 }
 
+function formatYear(y) {
+  return y < 0 ? `${-y} BCE` : `${y} CE`
+}
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+function nearbyEvents(city, n = 4) {
+  return events
+    .map(event => ({ event, dist: distanceKm(city.lat, city.lng, event.lat, event.lng) }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, n)
+}
+
 function buildCityPopup(city) {
   const historicalNote = city.historicalName
     ? ` <span class="historical-name">(formerly ${city.historicalName})</span>`
     : ''
   const paragraphs = city.description.map(p => `<p class="city-para">${p}</p>`).join('')
+  const nearby = nearbyEvents(city)
+  const nearbyHtml = nearby.length
+    ? `<div class="nearby-events">
+        <strong>Nearby events:</strong>
+        <ul>${nearby.map(({ event }) => `<li class="nearby-event-link" data-event-id="${event.id}">${event.name} (${formatYear(event.year)})</li>`).join('')}</ul>
+      </div>`
+    : ''
   return `
     <div class="city-popup">
       <h3>${city.name}${historicalNote}</h3>
       <div class="city-body">${paragraphs}</div>
+      ${nearbyHtml}
     </div>
   `
 }
 
-function updateMarkers(era, mode) {
+function jumpToEvent(id) {
+  const hit = eventMarkers.value.find(m => m.event.id === Number(id))
+  if (!hit) return
+  hit.marker.addTo(map)
+  map.flyTo([hit.event.lat, hit.event.lng], 13)
+  hit.marker.openPopup()
+}
+
+function updateMarkers(era, mode, year) {
   const showEvents = mode === 'events'
   const cats = activeCategories.value
 
   eventMarkers.value.forEach(({ marker, event }) => {
-    const visible = showEvents && (era === 'all' || event.era === era) && cats.includes(event.category)
+    const visible = showEvents && (era === 'all' || event.era === era) && cats.includes(event.category) && event.year <= year
     if (visible) marker.addTo(map)
     else marker.remove()
   })
@@ -156,13 +196,19 @@ onMounted(() => {
     const marker = L.marker([city.lat, city.lng], { icon: makeCityIcon() })
       .bindPopup(buildCityPopup(city), { maxWidth: popupMaxWidth(400) })
       .bindTooltip(city.name, { direction: 'top', offset: [0, -18] })
+    marker.on('popupopen', e => {
+      e.popup.getElement().querySelectorAll('.nearby-event-link').forEach(el => {
+        el.addEventListener('click', () => jumpToEvent(el.dataset.eventId))
+      })
+    })
     return { marker, city }
   })
 })
 
-watch(() => props.activeEra, era => updateMarkers(era, props.historyMode))
-watch(() => props.historyMode, mode => updateMarkers(props.activeEra, mode))
-watch(activeCategories, () => updateMarkers(props.activeEra, props.historyMode))
+watch(() => props.activeEra, era => updateMarkers(era, props.historyMode, props.timelineYear))
+watch(() => props.historyMode, mode => updateMarkers(props.activeEra, mode, props.timelineYear))
+watch(activeCategories, () => updateMarkers(props.activeEra, props.historyMode, props.timelineYear))
+watch(() => props.timelineYear, year => updateMarkers(props.activeEra, props.historyMode, year))
 watch(() => props.mapLang, swapTileLayer)
 </script>
 
@@ -283,5 +329,27 @@ watch(() => props.mapLang, swapTileLayer)
 
 .city-para:last-child {
   margin-bottom: 0;
+}
+
+.nearby-events {
+  font-size: 12px;
+  color: #444;
+  border-top: 1px solid #e8e8e8;
+  padding-top: 8px;
+  line-height: 1.6;
+}
+
+.nearby-events ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.nearby-event-link {
+  color: #2980b9;
+  cursor: pointer;
+}
+
+.nearby-event-link:hover {
+  text-decoration: underline;
 }
 </style>

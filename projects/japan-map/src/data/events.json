@@ -886,5 +886,125 @@
       "name": "Imperial Palace, Tokyo",
       "query": "Imperial Palace Tokyo Japan"
     }
+  },
+  {
+    "id": 61,
+    "name": "Jogan Sanriku Earthquake and Tsunami",
+    "year": 869,
+    "era": "classical",
+    "period": "Heian",
+    "category": "disaster",
+    "description": "A massive earthquake off the Sanriku coast sent a tsunami surging across the Sendai plain near the provincial capital of Tagajo, killing roughly 1,000 people according to the chronicle Nihon Sandai Jitsuroku. Sediment deposits from this flood proved eerily similar in scale to the 2011 Tohoku tsunami, over a millennium later.",
+    "lat": 38.3037,
+    "lng": 140.9821,
+    "contemporarySite": {
+      "name": "Tagajo Castle Ruins",
+      "query": "Tagajo Castle Ruins Miyagi Japan"
+    }
+  },
+  {
+    "id": 62,
+    "name": "Hoei Earthquake",
+    "year": 1707,
+    "era": "edo",
+    "period": "Edo",
+    "category": "disaster",
+    "description": "One of the largest earthquakes ever recorded in Japan, the magnitude-8.6 Hoei earthquake ruptured nearly the full length of the Nankai Trough and sent tsunamis into coastal towns from Kyushu to the Izu peninsula. An estimated 5,000 people died, and 49 days later the shock is believed to have triggered the last eruption of Mount Fuji.",
+    "lat": 33.4508,
+    "lng": 135.7719,
+    "contemporarySite": {
+      "name": "Cape Shionomisaki",
+      "query": "Cape Shionomisaki Wakayama Japan"
+    }
+  },
+  {
+    "id": 63,
+    "name": "Tenmei Eruption of Mount Asama",
+    "year": 1783,
+    "era": "edo",
+    "period": "Edo",
+    "category": "disaster",
+    "description": "Mount Asama erupted for weeks before a catastrophic debris avalanche and pyroclastic flow buried the village of Kanbara, killing most of its residents. The eruption's ashfall blanketed the Kanto region and helped trigger the Tenmei famine, one of the deadliest in Edo-period Japan; roughly 1,400 people died in total.",
+    "lat": 36.4061,
+    "lng": 138.5236,
+    "contemporarySite": {
+      "name": "Onioshidashi Park (Asama lava field)",
+      "query": "Onioshidashi Park Gunma Japan"
+    }
+  },
+  {
+    "id": 64,
+    "name": "Ansei Tokai and Nankai Earthquakes",
+    "year": 1854,
+    "era": "edo",
+    "period": "Late Edo",
+    "category": "disaster",
+    "description": "Two great earthquakes, each estimated above magnitude 8, struck the Tokai and Nankai coasts roughly a day apart, sending tsunamis along hundreds of kilometers of shoreline. The tsunami at Shimoda wrecked the visiting Russian frigate Diana, and the combined disasters killed several thousand people across central and western Japan.",
+    "lat": 34.6773,
+    "lng": 138.9436,
+    "contemporarySite": {
+      "name": "Shimoda Park",
+      "query": "Shimoda Park Izu Shizuoka Japan"
+    }
+  },
+  {
+    "id": 65,
+    "name": "Meiji Sanriku Earthquake and Tsunami",
+    "year": 1896,
+    "era": "modern",
+    "period": "Meiji",
+    "category": "disaster",
+    "description": "An offshore magnitude-8.5 earthquake generated a tsunami with run-up heights exceeding 38 meters at Ryori Bay, among the highest ever recorded worldwide. Roughly 22,000 people died along the Sanriku coast, making it one of the deadliest tsunamis in Japanese history.",
+    "lat": 39.0086,
+    "lng": 141.7761,
+    "contemporarySite": {
+      "name": "Ryori Bay",
+      "query": "Ryori Bay Ofunato Iwate Japan"
+    }
+  },
+  {
+    "id": 66,
+    "name": "Muroto Typhoon",
+    "year": 1934,
+    "era": "modern",
+    "period": "Showa",
+    "category": "disaster",
+    "description": "One of the most intense typhoons ever to strike Japan made landfall near Cape Muroto with a central pressure of 911.6 hPa, among the lowest ever measured at Japanese landfall. Fierce winds and storm surge killed roughly 3,000 people, with Osaka suffering severe flooding and widespread building collapse.",
+    "lat": 33.2504,
+    "lng": 134.1758,
+    "contemporarySite": {
+      "name": "Cape Muroto",
+      "query": "Cape Muroto Kochi Japan"
+    }
+  },
+  {
+    "id": 67,
+    "name": "Fukui Earthquake",
+    "year": 1948,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "disaster",
+    "description": "A magnitude-7.1 earthquake struck the Fukui Plain with almost no warning, leveling much of Fukui City and killing an estimated 3,700 people. Its severity exposed the limits of Japan's seismic intensity scale and led the Japan Meteorological Agency to later add a shindo 7 category above the previous maximum.",
+    "lat": 36.0641,
+    "lng": 136.2194,
+    "contemporarySite": {
+      "name": "Fukui Castle Ruins",
+      "query": "Fukui Castle Ruins Fukui Japan"
+    }
+  },
+  {
+    "id": 68,
+    "name": "Typhoon Vera (Isewan Typhoon)",
+    "year": 1959,
+    "era": "postwar",
+    "period": "Showa",
+    "category": "disaster",
+    "description": "Typhoon Vera made landfall near Cape Shionomisaki and drove a storm surge into Ise Bay that overwhelmed levees around Nagoya, killing more than 5,000 people. It remains the deadliest typhoon in modern Japanese history and prompted a nationwide overhaul of Japan's disaster relief and flood-control laws.",
+    "lat": 35.0940,
+    "lng": 136.8815,
+    "contemporarySite": {
+      "name": "Nagoya Port",
+      "query": "Nagoya Port Aichi Japan"
+    }
   }
 ]

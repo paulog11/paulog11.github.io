@@ -18,9 +18,9 @@
         {{ mapLang === 'ja' ? 'EN' : '日本語' }}
       </button>
     </header>
-    <EraFilter v-if="activeView === 'history'" v-model:activeEra="activeEra" v-model:historyMode="historyMode" />
+    <EraFilter v-if="activeView === 'history'" v-model:activeEra="activeEra" v-model:historyMode="historyMode" v-model:timelineYear="timelineYear" />
     <LineFilter v-if="activeView === 'trains'" v-model:activeOperator="activeOperator" />
-    <MapView v-if="activeView === 'history'" :activeEra="activeEra" :mapLang="mapLang" :historyMode="historyMode" />
+    <MapView v-if="activeView === 'history'" :activeEra="activeEra" :mapLang="mapLang" :historyMode="historyMode" :timelineYear="timelineYear" />
     <TrainMapView v-if="activeView === 'trains'" :activeOperator="activeOperator" :mapLang="mapLang" />
   </div>
 </template>
@@ -37,6 +37,7 @@ const activeEra = ref('all')
 const historyMode = ref('events')
 const activeOperator = ref('all')
 const mapLang = ref('ja')
+const timelineYear = ref(2019)
 
 function toggleLang() {
   mapLang.value = mapLang.value === 'ja' ? 'en' : 'ja'
@@ -48,7 +49,8 @@ function serializeState() {
     era: activeEra.value,
     mode: historyMode.value,
     operator: activeOperator.value,
-    lang: mapLang.value
+    lang: mapLang.value,
+    year: String(timelineYear.value)
   }).toString()
 }
 
@@ -60,11 +62,16 @@ function applyState(params) {
   const mode = p.get('mode')
   const operator = p.get('operator')
   const lang = p.get('lang')
+  const year = p.get('year')
   if (view && ['history', 'trains'].includes(view)) activeView.value = view
   if (era) activeEra.value = era
   if (mode && ['events', 'cities'].includes(mode)) historyMode.value = mode
   if (operator) activeOperator.value = operator
   if (lang && ['ja', 'en'].includes(lang)) mapLang.value = lang
+  if (year !== null) {
+    const y = Number(year)
+    if (!Number.isNaN(y) && y >= -3000 && y <= 2019) timelineYear.value = y
+  }
 }
 
 function persistState() {
@@ -83,7 +90,7 @@ onMounted(() => {
   }
 })
 
-watch([activeView, activeEra, historyMode, activeOperator, mapLang], persistState)
+watch([activeView, activeEra, historyMode, activeOperator, mapLang, timelineYear], persistState)
 
 window.addEventListener('hashchange', () => {
   applyState(location.hash.slice(1))

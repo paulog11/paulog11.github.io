@@ -22,6 +22,16 @@
       >
         {{ option.label }}
       </button>
+      <div class="divider" />
+      <span class="era-label">Year: {{ formatYear(timelineYear) }}</span>
+      <input
+        type="range"
+        class="year-slider"
+        min="-3000"
+        max="2019"
+        :value="timelineYear"
+        @input="$emit('update:timelineYear', Number($event.target.value))"
+      />
     </template>
   </div>
 </template>
@@ -35,10 +45,18 @@ defineProps({
   historyMode: {
     type: String,
     required: true
+  },
+  timelineYear: {
+    type: Number,
+    required: true
   }
 })
 
-defineEmits(['update:activeEra', 'update:historyMode'])
+defineEmits(['update:activeEra', 'update:historyMode', 'update:timelineYear'])
+
+function formatYear(y) {
+  return y < 0 ? `${-y} BCE` : `${y} CE`
+}
 
 const options = [
   { value: 'all', label: 'All' },
@@ -136,5 +154,11 @@ const options = [
   border-color: #c0392b;
   color: #fff;
   font-weight: 600;
+}
+
+.year-slider {
+  width: 140px;
+  flex-shrink: 0;
+  accent-color: #6c5ce7;
 }
 </style>
