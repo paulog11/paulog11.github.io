@@ -1,52 +1,3 @@
-1. Think Before Coding
-Don't assume. Don't hide confusion. Surface tradeoffs.
-
-Before implementing:
-
-State your assumptions explicitly. If uncertain, ask.
-If multiple interpretations exist, present them - don't pick silently.
-If a simpler approach exists, say so. Push back when warranted.
-If something is unclear, stop. Name what's confusing. Ask.
-2. Simplicity First
-Minimum code that solves the problem. Nothing speculative.
-
-No features beyond what was asked.
-No abstractions for single-use code.
-No "flexibility" or "configurability" that wasn't requested.
-No error handling for impossible scenarios.
-If you write 200 lines and it could be 50, rewrite it.
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-3. Surgical Changes
-Touch only what you must. Clean up only your own mess.
-
-When editing existing code:
-
-Don't "improve" adjacent code, comments, or formatting.
-Don't refactor things that aren't broken.
-Match existing style, even if you'd do it differently.
-If you notice unrelated dead code, mention it - don't delete it.
-When your changes create orphans:
-
-Remove imports/variables/functions that YOUR changes made unused.
-Don't remove pre-existing dead code unless asked.
-The test: Every changed line should trace directly to the user's request.
-
-4. Goal-Driven Execution
-Define success criteria. Loop until verified.
-
-Transform tasks into verifiable goals:
-
-"Add validation" → "Write tests for invalid inputs, then make them pass"
-"Fix the bug" → "Write a test that reproduces it, then make it pass"
-"Refactor X" → "Ensure tests pass before and after"
-For multi-step tasks, state a brief plan:
-
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
 # Paulo's GitHub Pages Site
 
 Personal website hosted at GitHub Pages. Vue 3 landing page at root links to subprojects under `projects/`.
@@ -151,7 +102,35 @@ Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 244 | 10,954 | 22 | 68 | 33.3 ms (30 fps) |
+| 161 | 10,656 | 21 | 65 | 33.4 ms (30 fps) |
+
+**The scene is daytime, not night.** It was converted from a fixed night
+setting: `renderer.js`'s `addNightLighting` (blue moonlight) became
+`addDaylight` (warm sun + sky ambient), the equirect sky/fog went from black
+to blue, `palette.js`'s `ASPHALT` and `street.js`'s `GROUND_COLOR` went from
+dark/wet to dry daytime tones, and rain and the Golden Gai neon-flicker
+(`ambient.js`) are gone entirely — both are night tropes with no daytime
+equivalent. Ground light pools — the fake light-spill decals in
+`street.js` (`scatterPools`), `station.js` (`buildLightPools`) and
+`towers.js`'s plaza texture — are gone too, which is most of why the baseline
+above dropped so far below the old 244/10,820/22/66 figure; that old number
+was a different (night) scene and is not a regression target. Neon signage
+(the 9 project signs, departure board, Golden Gai lanterns, konbini/kōban
+signage) stays lit — real signage runs in daylight too — but office-window
+and facade emissive glow (`station.js`, `towers.js`, `blocks.js`) was dimmed
+well below its night values so buildings don't look like they're glowing at
+noon. If night ever comes back, it needs its own pass across all of these,
+not just the sky.
+
+**The station was rebuilt from a podium-on-a-viaduct to an at-grade rail
+corridor** (barrel-vault canopies, 3 cross-decks, catenary, 2 standing trains —
+see `station.js`'s header). `STATION.cell` (a single block) became
+`STATION.cells` (the whole centre column, 3 blocks) in `cityLayout.js`; the old
+`STATION.viaductY` is gone along with the 8.5m viaduct it named. This landed
+within a few draw calls of the prior baseline (244/10,954/22/68) by coincidence,
+not because little changed — the deletions (podium, roof deck, portals, piers,
+the flat canopy) funded the additions almost exactly. Do not treat that
+near-equality as license to skip re-measuring after touching `station.js`.
 
 **`transparent: true` costs a shader program.** It is part of three.js's program
 cache key, so the plaza (`towers.js`) — the scene's only transparent *mapped

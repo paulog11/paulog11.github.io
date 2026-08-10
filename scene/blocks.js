@@ -18,27 +18,11 @@ const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 42949672
 const PANEL_PX_W = 120
 const IMG_H = 240
 
-// Filler facade mass. This used to be palette NIGHT — which is the SKY colour
-// (#070a12), so a filler building's unlit face was pixel-identical to the
-// background: you weren't seeing dark buildings, you were seeing lit windows
-// floating on nothing, and no outline or silhouette was possible. Kept below
-// towers.js's 都庁 (#565f70) so the landmark still reads as the lightest mass.
-const FACADE = '#3d4553'
-// Softer than palette GRANITE (#b9c0cc, 75% luminance). Against the old 3.9%
-// base that jump was the single biggest source of the barcode look; 都庁 keeps
-// real granite because it is actually stone-clad and should out-value filler.
-//
-// The ceiling here is CLIPPING, not taste. renderer.js lights this scene with
-// AmbientLight(0x4a5578, 2.2) + DirectionalLight(0xc2d2f0, 1.8) under
-// NoToneMapping, so a lit face is multiplied by roughly (1.6, 1.8, 2.2) and
-// anything above ~0.45 in blue saturates to white instead of rolling off.
-// #6b7383 blew the piers out into solid pale bars that read as the loudest
-// thing on every facade — louder than the lit windows. #575e6b was not enough
-// of a cut to fix it. Measured by stripping the emissive and sampling the
-// render: the usable headroom above FACADE here is tiny, so the pier is now
-// only a shade lighter. The vertical structure it used to provide comes from
-// outline.js instead, which costs nothing and cannot clip.
-const PIER = '#464e5d'
+// Filler facade mass. Daytime concrete/glass — light enough to read as a lit
+// building under the sun, not the old night-silhouette colour that sat
+// pixel-identical to the (then-black) sky.
+const FACADE = '#9aa1ad'
+const PIER = '#747c88'
 // Desaturated on purpose. Palette CYAN (#00e5ff) at full saturation across ~40
 // filler buildings competed with the project signs, which are the one thing on
 // this map that must win. Saturated neon is reserved for signage now.
@@ -198,7 +182,7 @@ export function createBlocks() {
 
   const { map, emissiveMap, panelCount } = buildAtlas()
   const material = new THREE.MeshLambertMaterial({
-    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.4,
+    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.12,
   })
   patchAtlasUv(material, panelCount)
 

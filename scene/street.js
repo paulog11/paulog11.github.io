@@ -1,10 +1,9 @@
-// The road network for the 3x3 block grid. Ground, roads, kerbs and light
-// pools all live here; the buildings and station are other modules' concern.
+// The road network for the 3x3 block grid. Ground, roads and kerbs all live
+// here; the buildings and station are other modules' concern.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES } from './cityLayout.js'
-import { ASPHALT, RED, CYAN, AMBER, WARM } from './palette.js'
-import { createLightPool } from './lightPool.js'
+import { BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES, CORRIDOR_W } from './cityLayout.js'
+import { ASPHALT } from './palette.js'
 
 // Canvas2D wants a CSS string; palette values are hex numbers.
 const hex = (n) => '#' + n.toString(16).padStart(6, '0')
@@ -96,23 +95,8 @@ function buildRoadAtlas() {
     paintCrossing(g, ((s + MAP_HALF) / (2 * MAP_HALF)) * BAND_H)
   }
 
-  // Neon reflection streaks. MeshStandardMaterial's wet-asphalt gloss is
-  // banned along with metalness/roughness, so the colour has to live here as
-  // an emissiveMap instead of as a material response to the shopfront lights.
-  const NEON = [RED, CYAN, AMBER, WARM]
-  for (let i = 0; i < 26; i++) {
-    const x = rnd() * ATLAS_W, y = rnd() * ATLAS_H
-    const w = 10 + rnd() * 26, h = 30 + rnd() * 90
-    const grad = ge.createLinearGradient(x, y, x, y + h)
-    grad.addColorStop(0, hex(NEON[Math.floor(rnd() * NEON.length)]))
-    grad.addColorStop(1, 'rgba(0,0,0,0)')
-    ge.fillStyle = grad
-    ge.globalAlpha = 0.3 + rnd() * 0.3
-    ge.filter = `blur(${w * 0.3}px)`
-    ge.fillRect(x - w / 2, y, w, h)
-  }
-  ge.filter = 'none'; ge.globalAlpha = 1
-
+  // Dry daytime road: no wet-asphalt neon reflections. emi stays a plain
+  // black canvas, so the road material's emissiveMap contributes nothing.
   const tex = (c) => Object.assign(new THREE.CanvasTexture(c), {
     colorSpace: THREE.SRGBColorSpace, anisotropy: 8,
   })
@@ -175,10 +159,29 @@ function buildRoadNetwork() {
 const GROUND_SIZE = 4 * MAP_HALF   // reaches well past the map edge so the
                                     // backdrop towers and crowd have ground
                                     // under them instead of floating in void
-const GROUND_COLOR = 0x080b13
+const GROUND_COLOR = 0x6b6a5f
 
 function buildGround() {
-  const geo = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE)
+  // The rail corridor (station.js) sits below this plane in a trench, so cut
+  // a corridor-shaped hole rather than papering over it — a plain
+  // PlaneGeometry can't have a hole, hence Shape+Path triangulated via
+  // ShapeGeometry (same rotateX(-PI/2) convention as roadSlab() below).
+  const outer = new THREE.Shape()
+  outer.moveTo(-GROUND_SIZE / 2, -GROUND_SIZE / 2)
+  outer.lineTo(GROUND_SIZE / 2, -GROUND_SIZE / 2)
+  outer.lineTo(GROUND_SIZE / 2, GROUND_SIZE / 2)
+  outer.lineTo(-GROUND_SIZE / 2, GROUND_SIZE / 2)
+  outer.closePath()
+  const hole = new THREE.Path()
+  const hw = CORRIDOR_W / 2, hl = MAP_HALF   // hole spans the corridor, full map length
+  hole.moveTo(-hw, -hl)
+  hole.lineTo(hw, -hl)
+  hole.lineTo(hw, hl)
+  hole.lineTo(-hw, hl)
+  hole.closePath()
+  outer.holes.push(hole)
+
+  const geo = new THREE.ShapeGeometry(outer)
   geo.rotateX(-Math.PI / 2)
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: GROUND_COLOR }))
   mesh.position.y = -0.04   // strictly under the road slab — coplanar at y=0
@@ -195,11 +198,16 @@ function buildKerbs() {
     for (const col of [0, 1, 2]) {
       const bx = blockCenter(col), bz = blockCenter(row)
       const half = BLOCK / 2
+      // col 1 is the station's column (STATION.cells are [0,1],[1,1],[2,1]):
+      // its east/west edges now overhang the open rail corridor, so skip
+      // them there. North/south still sit on solid ground for every block.
       const edges = [
         [BLOCK, KERB_T, bx, bz - half],   // north
         [BLOCK, KERB_T, bx, bz + half],   // south
-        [KERB_T, BLOCK, bx - half, bz],   // west
-        [KERB_T, BLOCK, bx + half, bz],   // east
+        ...(col === 1 ? [] : [
+          [KERB_T, BLOCK, bx - half, bz],   // west
+          [KERB_T, BLOCK, bx + half, bz],   // east
+        ]),
       ]
       for (const [w, d, x, z] of edges) {
         const geo = new THREE.BoxGeometry(w, KERB_H, d)
@@ -215,45 +223,13 @@ function buildKerbs() {
   return new THREE.Mesh(geometry, material)
 }
 
-// ── Light pools ──────────────────────────────────────────────────────────────
-// What actually sells the street as lit, now that the shopfront PointLights
-// are gone. Scattered along every street line in both directions so no
-// stretch of road reads as dead.
-const POOL_COLORS = [RED, CYAN, AMBER, WARM]
-const POOL_STEP = 18       // metres between pools along a line, jittered
-const POOL_MARGIN = 6      // keep clear of the map edge
-
-function addPool(group, x, z) {
-  const color = POOL_COLORS[Math.floor(rnd() * POOL_COLORS.length)]
-  const radius = 4 + rnd() * 5
-  const intensity = 0.5 + rnd() * 0.4
-  const pool = createLightPool({ color, radius, intensity })
-  pool.position.set(x, 0.03, z)   // just above the road so it never
-                                  // depth-fights the flat slab beneath it
-  group.add(pool)
-}
-
-function scatterPools(group) {
-  const along = []
-  for (let p = -MAP_HALF + POOL_MARGIN; p <= MAP_HALF - POOL_MARGIN; p += POOL_STEP) {
-    along.push(p)
-  }
-  for (const line of STREET_LINES) {
-    for (const p of along) {
-      // x-direction street: line is its X, p walks its length along Z
-      addPool(group, line + (rnd() - 0.5) * 3, p + (rnd() - 0.5) * (POOL_STEP * 0.4))
-      // z-direction street: line is its Z, p walks its length along X
-      addPool(group, p + (rnd() - 0.5) * (POOL_STEP * 0.4), line + (rnd() - 0.5) * 3)
-    }
-  }
-}
-
-/** Returns a THREE.Group: ground, roads, kerbs and light pools for the whole map. */
+/** Returns a THREE.Group: ground, roads and kerbs for the whole map. Ground
+ * light pools (fake street-lamp/neon spill) are a night-only effect and don't
+ * run in this daytime scene. */
 export function createStreets() {
   const group = new THREE.Group()
   group.add(buildGround())
   group.add(buildRoadNetwork())
   group.add(buildKerbs())
-  scatterPools(group)
   return group
 }

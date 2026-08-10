@@ -88,10 +88,9 @@ function heroFacade(seed, accent, bright) {
   }
   const [cMap, g] = mk()
   const [cEmi, ge] = mk()
-  // Was palette NIGHT — i.e. the sky colour, so an unlit face was pixel-
-  // identical to the background. A touch lighter than blocks.js's filler
-  // (#3d4553) because these nine are the ones that must be found.
-  g.fillStyle = '#454e5e'; g.fillRect(0, 0, w, h)
+  // Daytime facade, a touch lighter than blocks.js's filler (#9aa1ad) because
+  // these nine are the ones that must be found.
+  g.fillStyle = '#a9b1bd'; g.fillRect(0, 0, w, h)
   ge.fillStyle = '#000';   ge.fillRect(0, 0, w, h)
 
   const colors = [WARM, AMBER, CYAN, accent]   // the project's own neon colour bleeds into its own windows
@@ -140,7 +139,9 @@ export function createProjectBuilding(project, site) {
 
   // ── Facade — Lambert because it needs emissive/emissiveMap for the hover pulse ──
   const { map, emissiveMap } = heroFacade(hashSeed(project.id), accent, cfg.bright)
-  const baseEmissive = 1.1 * cfg.bright
+  // Daytime: windows read as coloured glass, not a night glow — well below the
+  // old 1.1 that was tuned against a black night sky.
+  const baseEmissive = 0.35 * cfg.bright
   const facadeMat = new THREE.MeshLambertMaterial({
     map, emissiveMap, emissive: 0xffffff, emissiveIntensity: baseEmissive,
   })

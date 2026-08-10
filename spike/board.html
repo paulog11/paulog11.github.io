@@ -19,7 +19,7 @@
 // (station.boardAnchor.add(board.group)), rather than floating it in
 // isolation, so row layout and picking match production.
 import * as THREE from 'three'
-import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStage, addDaylight } from '../scene/renderer.js'
 import { createStation } from '../scene/station.js'
 import { createDepartureBoard } from '../scene/departureBoard.js'
 import { createOutlines } from '../scene/outline.js'
@@ -37,7 +37,7 @@ const q = new URLSearchParams(location.search)
 await document.fonts.ready
 
 const stage = createStage(document.getElementById('c'), { quality: 'high' })
-addNightLighting(stage.scene)
+addDaylight(stage.scene)
 
 const station = createStation()
 stage.scene.add(station.group)

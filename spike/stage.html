@@ -19,12 +19,12 @@
   <div id="out">booting…</div>
 <script type="module">
 import * as THREE from 'three'
-import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStage, addDaylight } from '../scene/renderer.js'
 import { ASPHALT, RED, CYAN, AMBER } from '../scene/palette.js'
 
 const out = document.getElementById('out')
 const stage = createStage(document.getElementById('c'))
-addNightLighting(stage.scene)
+addDaylight(stage.scene)
 
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(800, 800),

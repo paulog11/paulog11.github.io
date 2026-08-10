@@ -10,9 +10,9 @@
 // imitating, and it means "move a building" is a two-integer edit.
 //
 //        col 0        col 1        col 2
-//   row 0 [西新宿]   [北口広場]    [歌舞伎町]
-//   row 1 [高層ビル]  ** STATION ** [伊勢丹]
-//   row 2 [南新宿]   [サザン]      [ゴールデン街]
+//   row 0 [西新宿]   ** STATION **  [歌舞伎町]     (north pedestrian deck)
+//   row 1 [高層ビル]  ** STATION ** [伊勢丹]        (main concourse)
+//   row 2 [南新宿]   ** STATION **  [ゴールデン街]  (Southern Terrace)
 //
 // Everything is in scene metres, centred on the station at the origin.
 // NOTE: the district assignments above are COMPRESSED and partly invented.
@@ -47,18 +47,54 @@ export function lotCenter([row, col], [lotRow, lotCol]) {
 export const STREET_LINES = [-1, 0, 1, 2].map((i) => i * BLOCK_PITCH - BLOCK_PITCH / 2)
 
 // ── The station ──────────────────────────────────────────────────────────────
-// Occupies the whole centre block. The tracks run north-south (along Z) across
-// the entire map and pass through it, which is what makes the station read as a
-// station rather than a big shed — and gives ambient.js's train a real route.
+// Occupies the WHOLE CENTRE COLUMN — cells [0,1], [1,1], [2,1] — not just the
+// middle block. This is the elongated-along-the-tracks arrangement the real
+// station has; STATION.cells replaces the old single STATION.cell.
+//
+// The tracks run north-south (along Z) in an open CORRIDOR at grade, not on a
+// viaduct: RAIL_Y is the railhead height, and the four E-W streets (which sit
+// at y=0, see street.js) become road bridges over the corridor for free.
+// Concourse buildings are cross-decks bridging the corridor, not a podium
+// standing IN it — see station.js's header for why the old podium had to go.
 export const STATION = {
-  cell: [1, 1],
-  w: BLOCK - 2,          // 44 — sits inside its block, roads pass either side
-  d: BLOCK - 2,
-  h: 13,                 // concourse roof height
+  cells: [[0, 1], [1, 1], [2, 1]],
   trackAxis: 'z',
   trackCount: 6,
-  viaductY: 8.5,         // deck height; streets pass under
 }
+
+// Corridor: the centre column's width (BLOCK) less a 2m retaining wall each
+// side. Verified against the lot lattice: lotOffset(±1) = ±16, LOT = 14, so
+// the outermost lots span [-23,-9] and [9,23] — CORRIDOR_W/2 = 21 consumes
+// them exactly.
+export const CORRIDOR_W = BLOCK - 4   // 42
+
+// Vertical stack, all independent constants — none derived from another, so a
+// mistake in one can't silently propagate the way the old viaductY math did
+// through station.js's PODIUM_H/DECK_TOP chain.
+export const TRENCH_FLOOR_Y = -1.0
+export const RAIL_Y = -0.8            // railhead; ambient.js's train rides this
+export const PLATFORM_Y = 0.3         // platform top — ABOVE grade on purpose,
+                                       // so the canopy vaults spring above the
+                                       // ground plane rather than out of a hole
+
+// Six tracks, three islands — reusing the exact spacing the old viaduct used
+// (TRACK_SPACING 3.2, centred), so every gap between adjacent tracks is 3.2m.
+// Islands sit in three of the five gaps; the other two are through-gaps with
+// no platform. Envelope is 16m wide, well inside the 42m corridor.
+export const TRACK_SPACING = 3.2
+export const PLATFORM_XS = [-6.4, 0, 6.4]     // island centres
+export const PLATFORM_W = 2.4
+
+// Cross-decks bridging the corridor. z-spans are all inside their own block
+// (STREET_LINES sit at z=±28,±84 with STREET=10, so a block's usable z-range
+// stops 2m short of ±23/±79) and reach up to y=14 — taller than the old 13m
+// roofline, so the complex keeps its silhouette even though the vaults
+// themselves (see station.js) are much lower.
+export const CROSS_DECKS = [
+  { id: 'north',    z: [-58, -46], y: [6, 9] },
+  { id: 'concourse', z: [6, 21],   y: [6, 14] },
+  { id: 'southern', z: [36, 58],   y: [6, 12] },
+]
 
 // ── Project sites ────────────────────────────────────────────────────────────
 // The nine clickable buildings. Chosen ONCE and written down — never randomised
@@ -69,16 +105,23 @@ export const STATION = {
 // of truth for titles, URLs and status. If an id here has no match there, the
 // site is skipped rather than rendering a nameless building.
 //
-// Spread over 7 of the 8 non-station blocks. [2][2] is Golden Gai — scenery
-// only, deliberately not clickable.
+// Spread over the 6 non-station, non-Golden-Gai blocks. [2][2] is Golden
+// Gai — scenery only, deliberately not clickable.
+//
+// `flip7` and `right-word-japanese` used to stand at [0,1] and [2,1] — the
+// station now occupies the whole centre COLUMN (STATION.cells), so both were
+// evicted and relocated below to free lots elsewhere. `right-word-japanese`
+// specifically took [1,2]'s OUTER lot (col 2, away from the corridor) rather
+// than an inner one, on purpose — it leaves [1,2]'s whole inner column free
+// for the flank buildings STATION_FLANK_SITES claims below.
 export const PROJECT_SITES = [
   { id: 'algo-lab',            cell: [0, 0], lot: [1, 1], h: 30 },
-  { id: 'flip7',               cell: [0, 1], lot: [0, 1], h: 22 },
+  { id: 'flip7',               cell: [0, 2], lot: [0, 0], h: 22 },
   { id: 'machi-koro',          cell: [0, 2], lot: [1, 2], h: 20 },
   { id: 'venue-search',        cell: [1, 0], lot: [1, 0], h: 34 },
   { id: 'reading-buddy',       cell: [1, 2], lot: [1, 2], h: 24 },
   { id: 'japan-map',           cell: [2, 0], lot: [1, 1], h: 26 },
-  { id: 'right-word-japanese', cell: [2, 1], lot: [2, 1], h: 18 },
+  { id: 'right-word-japanese', cell: [1, 2], lot: [2, 2], h: 18 },
   { id: 'japanese-dashboard',  cell: [0, 0], lot: [2, 2], h: 24 },
   { id: 'bible-hymn-kids',     cell: [2, 0], lot: [0, 0], h: 20 },
 ]
@@ -166,25 +209,46 @@ export const LANDMARK_SITES = [
 // `ry` is a yaw in radians. The modules all build their frontage facing +Z, and
 // this camera (azimuth 45°) sees the +X and +Z faces, so ry: 0 keeps a shopfront
 // visible; -Math.PI/2 turns it to face +X for a corner.
+// `koban` and the first `vending` used to stand at [2,1] and [0,1] — both now
+// inside STATION.cells — and were relocated to free lots.
 export const SCENERY_SITES = [
   { id: 'konbini', cell: [1, 2], lot: [2, 0], ry: 0 },          // south edge, east block
-  { id: 'koban',   cell: [2, 1], lot: [0, 0], ry: 0 },          // by the station's south exit
-  { id: 'vending', cell: [0, 1], lot: [2, 2], ry: 0 },          // north of the station
+  { id: 'koban',   cell: [2, 0], lot: [2, 1], ry: 0 },
+  { id: 'vending', cell: [0, 2], lot: [2, 2], ry: 0 },
   { id: 'vending', cell: [2, 0], lot: [0, 2], ry: -Math.PI / 2 },
+]
+
+// ── Station flank buildings ──────────────────────────────────────────────────
+// Retail slabs hard against the corridor's east edge — [1,2]'s inner lot
+// column (col 0), left free by right-word-japanese taking the outer lot
+// instead (see PROJECT_SITES). Only 2 of that column's 3 lots are actually
+// free: konbini (SCENERY_SITES) already owns [2,0]. There is no equivalent
+// room on the WEST flank either: 都庁 (LANDMARK_SITES below) already claims
+// [1,0]'s entire inner column plus two more lots, leaving that block exactly
+// one free lot, on its OUTER edge — nowhere near the corridor. So this is
+// deliberately east-only, and deliberately 2 buildings, not 3.
+//
+// Rendered by fillerBuildings() below (same InstancedMesh as ordinary filler,
+// zero extra draw calls) rather than through PROJECT_SITES/SCENERY_SITES,
+// since these are plain scenery with no id-lookup or interactivity story.
+export const STATION_FLANK_SITES = [
+  { cell: [1, 2], lot: [0, 0], w: 11, d: 8, h: 20 },
+  { cell: [1, 2], lot: [1, 0], w: 11, d: 8, h: 22 },
 ]
 
 // ── Block character ──────────────────────────────────────────────────────────
 // Drives the filler generator below. `fill` is the fraction of free lots that
 // get a building — leaving gaps reads as car parks and side lanes, and costs
 // nothing to render.
+// [0,1] and [2,1] used to be plain midrise blocks; both are now inside
+// STATION.cells (the station occupies the whole centre column) and have no
+// entry here, so fillerBuildings() below generates nothing on them.
 const BLOCK_SPECS = [
   { cell: [0, 0], kind: 'tower',   height: [28, 44], fill: 0.7 },
-  { cell: [0, 1], kind: 'midrise', height: [14, 24], fill: 0.6 },
   { cell: [0, 2], kind: 'midrise', height: [16, 28], fill: 0.9 },  // Kabukichō: dense
   { cell: [1, 0], kind: 'tower',   height: [26, 42], fill: 0.7 },
   { cell: [1, 2], kind: 'midrise', height: [18, 30], fill: 0.8 },
   { cell: [2, 0], kind: 'midrise', height: [16, 26], fill: 0.6 },
-  { cell: [2, 1], kind: 'midrise', height: [14, 22], fill: 0.6 },
   { cell: [2, 2], kind: 'goldengai', height: [6, 9], fill: 1.0 }, // scenery block
 ]
 
@@ -213,6 +277,16 @@ export function fillerBuildings() {
     for (const lot of site.lots) claimed.add(`${site.cell}|${lot}`)
   }
   for (const site of SCENERY_SITES) claimed.add(`${site.cell}|${site.lot}`)
+  for (const site of STATION_FLANK_SITES) claimed.add(`${site.cell}|${site.lot}`)
+
+  // Flank buildings are hand-placed, not RNG'd — deterministic like every
+  // other named site, and claiming their lots above still reshuffles the RNG
+  // draw for every ordinary filler lot after them, exactly as claiming any
+  // other site's lot does.
+  for (const site of STATION_FLANK_SITES) {
+    const { x, z } = lotCenter(site.cell, site.lot)
+    out.push({ x, z, w: site.w, d: site.d, h: site.h, kind: 'midrise', ry: 0 })
+  }
 
   for (const spec of BLOCK_SPECS) {
     if (String(spec.cell) === String(GOLDEN_GAI_CELL)) continue

@@ -37,24 +37,17 @@ const ORIGIN = `http://localhost:${PORT}`
 // baseline with headroom; a change that blows past one is a regression worth a
 // human look, and a change that comes in far under should RATCHET THESE DOWN.
 //
-// Measured baseline: 244 calls / 10,954 tris / 22 programs / 68 textures.
-// Note this INCLUDES the departure board, which spike/perf.html omitted for a
-// while — so it is not comparable to the 254 figure in older notes, which was a
-// bigger scene measured without the board. Like for like, the scenery merge and
-// the lantern billboards took 254 -> 226 and 18,520 -> 10,790.
-//
-// The 都庁 fidelity pass added the observatory crowns, the plaza and its lamps
-// for +5 calls, paying for part of that by merging three near-identical
-// flat-colour stone materials into one mesh.
-//
-// programs 22 -> 23: the plaza is the scene's only TRANSPARENT mapped Lambert,
-// and `transparent` is part of three.js's program cache key, so it compiles its
-// own. Verified by flipping that one flag, which moves the scene between 21 and
-// 22 with nothing else changed. It cannot come off — CLAUDE.md requires
-// `transparent: true` on ground decals so hitTest clicks through them and the
-// contour pass skips them. The old ceiling of 22 left the suite sitting exactly
-// on its limit, which is a tripwire for the next person, not a budget.
-const BUDGET = { calls: 255, triangles: 12500, programs: 23 }
+// Measured baseline: 161 calls / 10,656 tris / 21 programs / 65 textures.
+// This is the night -> day conversion: ground light pools (street.js's
+// scatterPools, station.js's buildLightPools, towers.js's plaza lamp-spill
+// texture) were the single biggest cost and are gone outright — daylight
+// doesn't need faked ground glow. Rain (ambient.js) and the Golden Gai neon
+// flicker (both night tropes) are gone too. programs dropped 22 -> 21 because
+// the light pools' additive-blended Basic material was its own shader
+// variant. The old 244/10,820/22/66 baseline predates this and should not be
+// compared against — that was a different scene (lit at night), not a
+// regression measured against this one.
+const BUDGET = { calls: 180, triangles: 11500, programs: 22 }
 
 // The 30fps cap means a rendered frame lands ~33.3ms apart. The ceiling catches
 // the cap regressing to 20fps (50ms), which is exactly what happened once.

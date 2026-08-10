@@ -1,20 +1,14 @@
-// Atmosphere layer: rain, flickering neon, a passing JR train, vent haze.
+// Atmosphere layer: flickering neon, a passing JR train, vent haze.
 // Everything here is derived from `elapsed` as a closed-form function — no
 // per-particle timers to drift, no per-frame allocation, fully deterministic.
 import * as THREE from 'three'
-import { WARM, CYAN, AMBER, RED } from './palette.js'
+import { WARM, AMBER, RED } from './palette.js'
 import { MAP_HALF, GOLDEN_GAI_CELL, blockCenter } from './cityLayout.js'
 
 function makeRng(seed) {
   let s = seed
   return () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296
 }
-
-// Rain covers the whole map, not a corridor: the camera pans anywhere, so any
-// bounded patch would visibly run out at the edges. Points is one draw call
-// whatever the count, so the only real cost here is the per-frame write loop.
-const RAIN_COUNT = 1400
-const RAIN_Y_MAX = 52     // must start above the landmark towers, or it rains from mid-tower
 
 // The train runs on the STATION's tracks — cityLayout puts them along Z, so the
 // route is the full map depth plus enough overshoot to enter and leave unseen.
@@ -32,22 +26,6 @@ const PUFF_DURATION = 9
 
 const FLICKER_DIM = 0.15
 
-// Soft vertical streak — a narrow gradient column on a SQUARE canvas. Points
-// sprites are always square quads, so a non-square source (e.g. tall-narrow)
-// gets squashed back to square and a "vertical" streak reads as horizontal.
-function rainStreakTexture() {
-  const c = document.createElement('canvas')
-  c.width = 16; c.height = 16
-  const ctx = c.getContext('2d')
-  const grad = ctx.createLinearGradient(0, 0, 0, 16)
-  grad.addColorStop(0,   'rgba(255,255,255,0)')
-  grad.addColorStop(0.5, 'rgba(255,255,255,0.9)')
-  grad.addColorStop(1,   'rgba(255,255,255,0)')
-  ctx.fillStyle = grad
-  ctx.fillRect(6, 0, 4, 16)
-  return new THREE.CanvasTexture(c)
-}
-
 function puffTexture() {
   const c = document.createElement('canvas')
   c.width = 64; c.height = 64
@@ -58,42 +36,6 @@ function puffTexture() {
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, 64, 64)
   return new THREE.CanvasTexture(c)
-}
-
-// y(elapsed) is a sawtooth per particle — falls then wraps to the top.
-// Recycling is implicit in the modulo, so there's no reset branch to get wrong.
-function createRain(rng) {
-  const positions = new Float32Array(RAIN_COUNT * 3)
-  const speeds = new Float32Array(RAIN_COUNT)
-  const phases = new Float32Array(RAIN_COUNT)
-  for (let i = 0; i < RAIN_COUNT; i++) {
-    positions[i * 3]     = -MAP_HALF + rng() * MAP_HALF * 2
-    positions[i * 3 + 2] = -MAP_HALF + rng() * MAP_HALF * 2
-    speeds[i] = 7 + rng() * 5
-    phases[i] = rng() * RAIN_Y_MAX
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  const map = rainStreakTexture()
-  const tint = new THREE.Color(CYAN).lerp(new THREE.Color(0xffffff), 0.7)
-  // PointsMaterial.size is only distance-attenuated under a PerspectiveCamera
-  // (three.js checks isPerspectiveMatrix internally) — under this scene's
-  // OrthographicCamera it's raw screen pixels, so this wants to be sized for
-  // the viewport, not the metre-scale world.
-  const material = new THREE.PointsMaterial({
-    map, color: tint, size: 8, sizeAttenuation: false,
-    transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending,
-  })
-  const points = new THREE.Points(geometry, material)
-
-  function update(elapsed) {
-    const pos = geometry.attributes.position.array
-    for (let i = 0; i < RAIN_COUNT; i++) {
-      pos[i * 3 + 1] = RAIN_Y_MAX - ((elapsed * speeds[i] + phases[i]) % RAIN_Y_MAX)
-    }
-    geometry.attributes.position.needsUpdate = true
-  }
-  return { points, update }
 }
 
 // Real failing neon is mostly steady with sudden rapid stutters, not a sine
@@ -239,9 +181,6 @@ export function createAmbient({ reduceMotion = false, flickerMaterials = [], tra
     return { group, update() {}, dispose: () => dispose(flicker) }
   }
 
-  const rain = createRain(rng)
-  group.add(rain.points)
-
   const train = createTrain(trackY)
   group.add(train)
 
@@ -251,7 +190,6 @@ export function createAmbient({ reduceMotion = false, flickerMaterials = [], tra
   const flicker = createFlicker(flickerMaterials, rng)
 
   function update(dt, elapsed) {
-    rain.update(elapsed)
     updateTrain(train, elapsed)
     steam.update(elapsed)
     flicker.update(elapsed)

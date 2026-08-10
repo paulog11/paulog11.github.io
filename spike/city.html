@@ -14,7 +14,7 @@
 <body>
   <canvas id="c" data-scene></canvas>
 <script type="module">
-import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStage, addDaylight } from '../scene/renderer.js'
 import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
@@ -50,7 +50,7 @@ const STATUS = { 'venue-search': 'WIP', 'right-word-japanese': 'WIP', 'bible-hym
 await document.fonts.ready
 
 const stage = createStage(document.getElementById('c'))
-addNightLighting(stage.scene)
+addDaylight(stage.scene)
 
 const show = (name) => !only || only === name
 

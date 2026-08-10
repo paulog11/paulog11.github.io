@@ -90,9 +90,9 @@ const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 42949672
 // screen, behind ordinary filler blocks, where the reference has it plainly
 // lit. These are one step back up from that — still a dark mass, but no longer
 // darker than its neighbours.
-const GLASS    = '#232a3d'   // curtain wall — reference reads #1e2233
-const PIER     = '#4a5166'   // granite pier — reference reads #454b60
-const SPANDREL = '#333b50'   // floor-slab edge: LIGHTER than the glass, as in
+const GLASS    = '#6f8fae'   // curtain wall, daytime sky-reflective blue-glass
+const PIER     = '#9aa3b0'   // granite pier, daylight stone
+const SPANDREL = '#82a0ba'   // floor-slab edge: LIGHTER than the glass, as in
                              // the reference. The old rgba(0,0,0,0.55) band was
                              // darker than its own background and vanished.
 
@@ -193,7 +193,7 @@ function latticeTexture(scale) {
   e.width = w; e.height = h
   const ge = e.getContext('2d')
 
-  g.fillStyle = '#161c28'; g.fillRect(0, 0, w, h)
+  g.fillStyle = '#4a5566'; g.fillRect(0, 0, w, h)
   ge.fillStyle = '#000';   ge.fillRect(0, 0, w, h)
 
   // Lit cells behind the lattice.
@@ -257,7 +257,7 @@ function texturedSlabMaterial(w, h, sxz, sy, opts = {}) {
     opts,
   )
   return new THREE.MeshLambertMaterial({
-    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.5,
+    map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.15,
   })
 }
 
@@ -539,7 +539,7 @@ function createCocoon(scale) {
   const body = new THREE.Mesh(
     new THREE.LatheGeometry(profile, 28),
     new THREE.MeshLambertMaterial({
-      map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.42,
+      map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 0.12,
     }),
   )
   body.scale.z = 0.68        // elliptical in plan, not circular
@@ -608,19 +608,12 @@ function plazaTexture(w, d) {
   const ge = e.getContext('2d')
   ge.fillStyle = '#000'; ge.fillRect(0, 0, cw, ch)
 
-  // Lighter than street.js's GROUND_COLOR (0x080b13) and than the road, which
-  // is the entire point — the precinct has to be legible as a different
-  // surface from a long way out.
-  //
-  // These albedos are roughly double what "a bit lighter than the road" looks
-  // like on paper, because a HORIZONTAL surface catches about half the light a
-  // wall does under this rig: measured off a render, a #1c2130 plaza came back
-  // as #0e1528 while the road beside it sat at #0f1423-#171f32, i.e. the paving
-  // was invisible. Pick ground colours against a rendered sample, not against
-  // the wall colours elsewhere in this file.
-  g.fillStyle = '#3a4152'; g.fillRect(0, 0, cw, ch)
+  // Lighter than street.js's GROUND_COLOR/ASPHALT, which is the entire point —
+  // the precinct has to be legible as a different (paved-stone) surface from a
+  // long way out.
+  g.fillStyle = '#a09a8c'; g.fillRect(0, 0, cw, ch)
 
-  g.fillStyle = '#4a5266'
+  g.fillStyle = '#b0aa9a'
   for (let x = 0; x < cw; x += 4 * px) g.fillRect(x, 0, 1, ch)
   for (let y = 0; y < ch; y += 4 * px) g.fillRect(0, y, cw, 1)
 
@@ -641,21 +634,9 @@ function plazaTexture(w, d) {
     g.strokeRect(ux * cw, uy * ch, uw * cw, uh * ch)
   }
 
-  // Lamp spill, additively-ish faked by just painting it: warm pools around the
-  // perimeter. lightPool.js is deliberately NOT used — it returns one mesh per
-  // pool, so six lamps there would be six draw calls.
-  // Same six positions createPlazaLamps() puts its posts at, so the spill lands
-  // under a lamp rather than beside one.
-  for (const [ux, uy] of LAMP_SPOTS) {
-    const cx = ux * cw, cy = uy * ch, r = 3.2 * px
-    for (const [ctx, a] of [[g, 0.34], [ge, 0.5]]) {
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
-      grad.addColorStop(0, `rgba(242,227,196,${a})`)
-      grad.addColorStop(1, 'rgba(242,227,196,0)')
-      ctx.fillStyle = grad
-      ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
-    }
-  }
+  // Daytime plaza: no lamp-spill glow on the paving. Lamp posts themselves
+  // (createPlazaLamps) still stand, just unlit; ge stays a plain black
+  // canvas, so the emissiveMap contributes nothing.
 
   const tex = (cv) => Object.assign(new THREE.CanvasTexture(cv), {
     colorSpace: THREE.SRGBColorSpace, anisotropy: 8,

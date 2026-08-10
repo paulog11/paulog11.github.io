@@ -21,7 +21,7 @@
 // toggle. There is no bloom, no composer and no crowd any more — the material
 // policy in CLAUDE.md removed all three — so those knobs are gone rather than
 // silently ignored.
-import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStage, addDaylight } from '../scene/renderer.js'
 import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
@@ -55,7 +55,7 @@ await document.fonts.ready
 const stage = createStage(document.getElementById('c'), {
   quality: q.get('quality') ?? undefined,
 })
-addNightLighting(stage.scene)
+addDaylight(stage.scene)
 
 if (on('roads'))  stage.scene.add(createStreets())
 if (on('blocks')) stage.scene.add(createBlocks())

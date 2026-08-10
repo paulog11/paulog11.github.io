@@ -1,5 +1,5 @@
 <template>
-  <div class="relative h-full w-full bg-[#070a12]">
+  <div class="relative h-full w-full bg-[#a9c8ec]">
     <!-- Content inside <canvas> is what assistive tech and crawlers read. -->
     <canvas
       v-if="!failed"
@@ -35,7 +35,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { createStage, addNightLighting } from '../scene/renderer.js'
+import { createStage, addDaylight } from '../scene/renderer.js'
 import { createStreets } from '../scene/street.js'
 import { createBlocks } from '../scene/blocks.js'
 import { createStation } from '../scene/station.js'
@@ -71,7 +71,7 @@ onMounted(() => {
     return
   }
 
-  addNightLighting(stage.scene)
+  addDaylight(stage.scene)
 
   stage.scene.add(createStreets())
   stage.scene.add(createBlocks())
@@ -132,15 +132,10 @@ onMounted(() => {
     register(row.hit, { kind: 'project', project: row.project, hover: row.setHover })
   }
 
-  // Flicker is atmosphere, so it runs on Golden Gai's decorative signage and
-  // NOT on the project signs, which the plan originally targeted. Those signs
-  // are the only thing marking a project's position at zoom 1 — their titles
-  // are deliberately unreadable at that zoom (see projectBuilding.js's measured
-  // budget), so the marker is all you get. Stuttering it costs navigation and
-  // buys nothing the bar signs don't already give.
+  // No flicker in daytime — failing-neon stutter is a night trope. Passing no
+  // flickerMaterials hits createFlicker's built-in empty-array no-op.
   ambient = createAmbient({
     reduceMotion: stage.reduceMotion,
-    flickerMaterials: goldenGai.signMats,
     trackY: station.trackY,
   })
   stage.scene.add(ambient.group)

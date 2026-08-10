@@ -71,26 +71,25 @@ const TARGET_FPS = 30
 const FRAME_SLACK_MS = 8
 
 /**
- * The night sky, used as the visible background. Equirectangular, so canvas-Y
- * runs zenith -> horizon (mid) -> nadir. Tokyo's sky is never black: light
- * pollution puts a warm bloom just above the horizon, which also fills the upper
- * corners of the frame where no ground position can project.
+ * The day sky, used as the visible background. Equirectangular, so canvas-Y
+ * runs zenith -> horizon (mid) -> nadir. Deep blue overhead, paling toward a
+ * hazy horizon the way a real midday sky does.
  *
  * No PMREM environment any more. That existed only so metallic surfaces had
  * something to reflect, and nothing in the scene is metallic since the material
  * policy went unlit/Lambert — generating it was pure startup cost.
  */
-function nightSky() {
+function daySky() {
   const c = document.createElement('canvas')
   c.width = 64; c.height = 256
   const g = c.getContext('2d')
   const grad = g.createLinearGradient(0, 0, 0, 256)
-  grad.addColorStop(0,    '#03050b')   // zenith
-  grad.addColorStop(0.32, '#070b16')
-  grad.addColorStop(0.46, '#141a2e')
-  grad.addColorStop(0.5,  '#3a2740')   // horizon: city glow
-  grad.addColorStop(0.54, '#2a1a22')
-  grad.addColorStop(1,    '#05070d')   // below the horizon
+  grad.addColorStop(0,    '#3d7dd8')   // zenith
+  grad.addColorStop(0.32, '#6fa3e6')
+  grad.addColorStop(0.46, '#a9c8ec')
+  grad.addColorStop(0.5,  '#d8e6ef')   // horizon haze
+  grad.addColorStop(0.54, '#c7c9bd')
+  grad.addColorStop(1,    '#9a9a90')   // below the horizon
   g.fillStyle = grad
   g.fillRect(0, 0, 64, 256)
 
@@ -127,8 +126,8 @@ export function createStage(canvas, opts = {}) {
   // Pushed far out: the camera orbits at radius 160 and the map's far corner is
   // ~126 units from centre, so the old 90-260 range hazed out half the city.
   // This only softens the extreme back corner.
-  scene.fog = new THREE.Fog(0x070a12, 220, 500)
-  scene.background = nightSky()
+  scene.fog = new THREE.Fog(0xc7d3dc, 220, 500)
+  scene.background = daySky()
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000)
   const elevation = 22 * Math.PI / 180
@@ -355,9 +354,9 @@ export function createStage(canvas, opts = {}) {
  * work and every distinct light count compiles another shader program; the
  * emissive maps on the facades do most of the visual work anyway.
  */
-export function addNightLighting(scene) {
-  scene.add(new THREE.AmbientLight(0x4a5578, 2.2))
-  const moon = new THREE.DirectionalLight(0xc2d2f0, 1.8)
-  moon.position.set(-60, 70, 40)
-  scene.add(moon)
+export function addDaylight(scene) {
+  scene.add(new THREE.AmbientLight(0xdbe6f5, 1.6))
+  const sun = new THREE.DirectionalLight(0xfff3d8, 2.0)
+  sun.position.set(-60, 70, 40)
+  scene.add(sun)
 }
