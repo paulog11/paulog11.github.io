@@ -102,7 +102,7 @@ Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 163 | 13,356 | 21 | 65 | 33.3 ms (30 fps) |
+| 164 | 13,360 | 21 | 65 | 33.3 ms (30 fps) |
 
 **The scene is daytime, not night.** It was converted from a fixed night
 setting: `renderer.js`'s `addNightLighting` (blue moonlight) became
@@ -154,6 +154,20 @@ A follow-up pass dropped that to **13,356**: the tree trunk
 invisible (the bottom faces into the ground, the top is buried inside the
 canopy), so `openEnded: true` cuts each trunk from 20 to 10 triangles —
 ~900 triangles off across all 90 trees, with zero visual difference.
+
+**The diamond-cell reskin (`scene/street.js`) added exactly 1 draw call and
+4 triangles** — 163/13,356 -> 164/13,360. `blockEdges()` gives `DIAMOND_CELL`
+4 rotated kerb/tree edges instead of 4 axis-aligned ones, but the edge
+*count* per cell doesn't change (col 0 already had all 4 — only col 1, the
+station column, ever skips edges), so the merged kerb and tree meshes cost
+exactly what they did before; only their orientation did. The one new mesh is
+the corner paving: a `THREE.Shape` for the cell's 46m square with the rotated
+diamond punched out as a `THREE.Path` hole, flat-filled with
+`SIDEWALK_COLOR`. The gap between a square and an inscribed diamond touching
+its edge midpoints decomposes into exactly 4 corner right-triangles, hence
+the +4. Programs held at 21 — the paving mesh's plain, unmapped,
+non-transparent `MeshLambertMaterial` reused an already-compiled program, the
+same reason the street trees did.
 
 `npm test` asserts these as ceilings with headroom. Come in far under and you
 should ratchet `BUDGET` in `test/scene.test.mjs` down; there is no value in slack

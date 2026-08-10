@@ -60,7 +60,13 @@ const ORIGIN = `http://localhost:${PORT}`
 // ground, top is buried inside the canopy), so `openEnded: true` drops each
 // trunk from 20 to 10 triangles — ~900 triangles off across all 90 trees,
 // zero visual change.
-const BUDGET = { calls: 180, triangles: 13656, programs: 22 }
+//
+// 163/13,356 -> 164/13,360 for the diamond-cell reskin: blockEdges() gives
+// DIAMOND_CELL 4 rotated edges instead of 4 axis-aligned ones, same edge
+// count either way, so the merged kerb/tree meshes are unchanged cost — only
+// the new corner-paving mesh (a square with the diamond punched out as a
+// hole, decomposing into exactly 4 corner triangles) added anything.
+const BUDGET = { calls: 168, triangles: 13410, programs: 22 }
 
 // The 30fps cap means a rendered frame lands ~33.3ms apart. The ceiling catches
 // the cap regressing to 20fps (50ms), which is exactly what happened once.

@@ -2,7 +2,10 @@
 // trees all live here; the buildings and station are other modules' concern.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES, CORRIDOR_W } from './cityLayout.js'
+import {
+  BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES, CORRIDOR_W,
+  DIAMOND_CELL, DIAMOND_OUTER_SIDE,
+} from './cityLayout.js'
 import { ASPHALT } from './palette.js'
 
 // Canvas2D wants a CSS string; palette values are hex numbers.
@@ -212,24 +215,51 @@ function buildGround() {
 const KERB_H = 0.16, KERB_T = 0.4
 const KERB_COLOR = 0x2a2c33
 
-// Per-block edge data shared by buildKerbs() and buildTrees(). `axis` is the
-// axis the edge runs ALONG ('x' for a north/south edge, 'z' for east/west);
-// `dir` is the outward sign — away from the block, into the street — along
-// the OTHER axis. col 1 is the station's column (STATION.cells are
-// [0,1],[1,1],[2,1]): its east/west edges now overhang the open rail
-// corridor, so they're skipped there. North/south edges exist for every
-// block.
+// Per-block edge data shared by buildKerbs() and buildTrees(). `angle` is the
+// direction (radians, atan2 convention over x/z) the edge runs ALONG — 0 for a
+// north/south edge, PI/2 for east/west; `ox,oz` is the outward unit vector —
+// away from the block, into the street — replacing the old bare `dir` sign so
+// a rotated edge can point outward along a diagonal too. col 1 is the
+// station's column (STATION.cells are [0,1],[1,1],[2,1]): its east/west edges
+// now overhang the open rail corridor, so they're skipped there. North/south
+// edges exist for every block.
+//
+// DIAMOND_CELL gets 4 rotated edges instead of the usual 4 axis-aligned ones:
+// the diamond's own sides, each DIAMOND_OUTER_SIDE long, connecting corners
+// that sit at the cell's own edge midpoints (so the diamond's points just
+// touch the square it replaces). This is a special case for that one cell —
+// every other block keeps the plain axis-aligned edges above.
 function blockEdges() {
   const half = BLOCK / 2
   const edges = []
   for (const row of [0, 1, 2]) {
     for (const col of [0, 1, 2]) {
       const bx = blockCenter(col), bz = blockCenter(row)
-      edges.push({ axis: 'x', x: bx, z: bz - half, dir: -1 })   // north
-      edges.push({ axis: 'x', x: bx, z: bz + half, dir: 1 })    // south
+      if (row === DIAMOND_CELL[0] && col === DIAMOND_CELL[1]) {
+        const corners = [
+          [bx, bz - half],   // N
+          [bx + half, bz],   // E
+          [bx, bz + half],   // S
+          [bx - half, bz],   // W
+        ]
+        for (let i = 0; i < 4; i++) {
+          const [x1, z1] = corners[i]
+          const [x2, z2] = corners[(i + 1) % 4]
+          const mx = (x1 + x2) / 2, mz = (z1 + z2) / 2
+          edges.push({
+            x: mx, z: mz, len: DIAMOND_OUTER_SIDE,
+            angle: Math.atan2(z2 - z1, x2 - x1),
+            ox: (mx - bx) / (DIAMOND_OUTER_SIDE / 2),
+            oz: (mz - bz) / (DIAMOND_OUTER_SIDE / 2),
+          })
+        }
+        continue
+      }
+      edges.push({ x: bx, z: bz - half, len: BLOCK, angle: 0, ox: 0, oz: -1 })   // north
+      edges.push({ x: bx, z: bz + half, len: BLOCK, angle: 0, ox: 0, oz: 1 })    // south
       if (col !== 1) {
-        edges.push({ axis: 'z', x: bx - half, z: bz, dir: -1 })   // west
-        edges.push({ axis: 'z', x: bx + half, z: bz, dir: 1 })    // east
+        edges.push({ x: bx - half, z: bz, len: BLOCK, angle: Math.PI / 2, ox: -1, oz: 0 })   // west
+        edges.push({ x: bx + half, z: bz, len: BLOCK, angle: Math.PI / 2, ox: 1, oz: 0 })    // east
       }
     }
   }
@@ -239,9 +269,12 @@ function blockEdges() {
 function buildKerbs() {
   const boxes = []
   for (const e of blockEdges()) {
-    const w = e.axis === 'x' ? BLOCK : KERB_T
-    const d = e.axis === 'x' ? KERB_T : BLOCK
-    const geo = new THREE.BoxGeometry(w, KERB_H, d)
+    // Box is built long-axis-along-local-x, then rotated to `angle` (the
+    // edge's running direction) — angle 0 and PI/2 reproduce the old
+    // axis-aligned w/d swap exactly; other angles (the diamond) fall out for
+    // free.
+    const geo = new THREE.BoxGeometry(e.len, KERB_H, KERB_T)
+    geo.rotateY(-e.angle)
     geo.translate(e.x, KERB_H / 2, e.z)
     boxes.push(geo)
   }
@@ -256,21 +289,23 @@ function buildKerbs() {
 const TREE_TRUNK = 0x6b4a34
 const TREE_CANOPY = 0x6fae4a
 const TREE_MARGIN = 4   // inset from each block corner, along the edge
-// 3 evenly-spaced spots per edge, symmetric about the block's midline, with
-// TREE_MARGIN clearance from both corners.
-const TREE_SPOTS = (() => {
-  const half = BLOCK / 2
-  const step = (BLOCK - 2 * TREE_MARGIN) / 2
+// 3 evenly-spaced spots along an edge of length `len`, symmetric about its
+// midline, with TREE_MARGIN clearance from both corners. Same derivation the
+// diamond's rotated edges reuse, just with DIAMOND_OUTER_SIDE in for BLOCK.
+const treeSpots = (len) => {
+  const half = len / 2
+  const step = (len - 2 * TREE_MARGIN) / 2
   return [0, 1, 2].map((i) => -half + TREE_MARGIN + i * step)
-})()
+}
 
 function buildTrees() {
   const trunks = [], canopies = []
   const outset = SIDEWALK_W / 2   // stand centred in the sidewalk band
   for (const e of blockEdges()) {
-    for (const along of TREE_SPOTS) {
-      const x = e.axis === 'x' ? e.x + along : e.x + e.dir * outset
-      const z = e.axis === 'x' ? e.z + e.dir * outset : e.z + along
+    const cosA = Math.cos(e.angle), sinA = Math.sin(e.angle)
+    for (const along of treeSpots(e.len)) {
+      const x = e.x + along * cosA + outset * e.ox
+      const z = e.z + along * sinA + outset * e.oz
       const scale = 0.85 + rnd() * 0.3   // ±15%
       const rot = rnd() * Math.PI * 2
 
@@ -301,6 +336,44 @@ function buildTrees() {
   return group
 }
 
+// ── Diamond corner paving ────────────────────────────────────────────────────
+// The 4 triangular gaps between DIAMOND_CELL's rotated kerb outline and its
+// original 46m square boundary, painted as plaza rather than plain
+// GROUND_COLOR dirt. Same Shape+Path hole-punch technique buildGround() uses
+// for the rail-corridor cutout, just with the winding reversed (fills the
+// square, punches the diamond out) and flat-coloured — SIDEWALK_COLOR only
+// exists baked into the road atlas elsewhere in this file, and generalizing
+// that UV-mapped machinery for 4 flat triangles isn't worth it.
+function buildDiamondPaving() {
+  const [row, col] = DIAMOND_CELL
+  const bx = blockCenter(col), bz = blockCenter(row)
+  const half = BLOCK / 2
+
+  // ShapeGeometry lies in the shape's XY plane; rotateX(-PI/2) below sends it
+  // to world XZ with world z = -shapeY (same convention buildGround() uses),
+  // so every point here is written as (worldX, -worldZ).
+  const outer = new THREE.Shape()
+  outer.moveTo(bx - half, -(bz - half))
+  outer.lineTo(bx + half, -(bz - half))
+  outer.lineTo(bx + half, -(bz + half))
+  outer.lineTo(bx - half, -(bz + half))
+  outer.closePath()
+
+  const hole = new THREE.Path()
+  hole.moveTo(bx, -(bz - half))         // N
+  hole.lineTo(bx + half, -bz)           // E
+  hole.lineTo(bx, -(bz + half))         // S
+  hole.lineTo(bx - half, -bz)           // W
+  hole.closePath()
+  outer.holes.push(hole)
+
+  const geo = new THREE.ShapeGeometry(outer)
+  geo.rotateX(-Math.PI / 2)
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: SIDEWALK_COLOR }))
+  mesh.position.y = -0.02   // above buildGround's -0.04, below the road/kerbs at y>=0
+  return mesh
+}
+
 /** Returns a THREE.Group: ground, roads, kerbs and street trees for the whole
  * map. Ground light pools (fake street-lamp/neon spill) are a night-only
  * effect and don't run in this daytime scene. */
@@ -308,6 +381,7 @@ export function createStreets() {
   const group = new THREE.Group()
   group.add(buildGround())
   group.add(buildRoadNetwork())
+  group.add(buildDiamondPaving())
   group.add(buildKerbs())
   group.add(buildTrees())
   return group
