@@ -69,7 +69,7 @@ Two traps have each produced a confidently wrong number in this repo:
   this is exactly what hid the 20-fps bug above. Time `stage.onFrame` callbacks
   instead; they run only on frames that actually render.
 - **Measure on `spike/perf.html`, not `spike/city.html`.** city.html omits scenery
-  and ambient and under-reports by ~92 draw calls.
+  and ambient and under-reports by ~81 draw calls.
 - **The camera only ever sees a building's +X and +Z faces**, because its
   azimuth is fixed at 45°. So ground detail is visible SOUTH and EAST of a mass
   and permanently hidden north and west of it. A plaza was once built around
@@ -102,7 +102,7 @@ Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 163 | 14,256 | 21 | 65 | 33.3 ms (30 fps) |
+| 163 | 13,356 | 21 | 65 | 33.3 ms (30 fps) |
 
 **The scene is daytime, not night.** It was converted from a fixed night
 setting: `renderer.js`'s `addNightLighting` (blue moonlight) became
@@ -149,6 +149,11 @@ textures, not new geometry — the entire increase is ~90 low-poly street trees,
 merged into 2 draw calls via `mergeGeometries`. Calls only ticked 161 -> 163
 and programs held flat at 21, since the trees' plain `MeshLambertMaterial` has
 no map/emissiveMap/transparent flag and reused an already-compiled program.
+A follow-up pass dropped that to **13,356**: the tree trunk
+`CylinderGeometry` defaulted to closed caps, but both are permanently
+invisible (the bottom faces into the ground, the top is buried inside the
+canopy), so `openEnded: true` cuts each trunk from 20 to 10 triangles —
+~900 triangles off across all 90 trees, with zero visual difference.
 
 `npm test` asserts these as ceilings with headroom. Come in far under and you
 should ratchet `BUDGET` in `test/scene.test.mjs` down; there is no value in slack

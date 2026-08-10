@@ -32,6 +32,7 @@ const SIDEWALK_W = 1.4              // sidewalk band width (m), painted into
                                      // and tree trunks (below) sit centred in
                                      // it — SIDEWALK_W/2 - 0.2 must exceed the
                                      // trunk's 0.16m max radius to clear it.
+const SIDEWALK_COLOR = 0xcbd0d3     // light cool paving grey
 
 function paintDashes(ctx, top, bottom, worldLen) {
   const span = bottom - top
@@ -179,7 +180,6 @@ const GROUND_SIZE = 4 * MAP_HALF   // reaches well past the map edge so the
                                     // backdrop towers and crowd have ground
                                     // under them instead of floating in void
 const GROUND_COLOR = 0x6b6a5f
-const SIDEWALK_COLOR = 0xcbd0d3    // light cool paving grey
 
 function buildGround() {
   // The rail corridor (station.js) sits below this plane in a trench, so cut
@@ -274,7 +274,7 @@ function buildTrees() {
       const scale = 0.85 + rnd() * 0.3   // ±15%
       const rot = rnd() * Math.PI * 2
 
-      const trunk = new THREE.CylinderGeometry(0.12, 0.16, 2.2, 5)
+      const trunk = new THREE.CylinderGeometry(0.12, 0.16, 2.2, 5, 1, true)
       trunk.translate(0, 1.1, 0)   // base on the ground plane
       trunk.scale(scale, scale, scale)
       trunk.rotateY(rot)

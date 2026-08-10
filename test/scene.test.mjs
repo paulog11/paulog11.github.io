@@ -22,7 +22,7 @@
 //    that actually render.
 //
 // Measure on spike/perf.html, never spike/city.html — city.html omits scenery
-// and ambient and under-reports draw calls by ~92.
+// and ambient and under-reports draw calls by ~81.
 
 import { test, before, after, describe } from 'node:test'
 import assert from 'node:assert/strict'
@@ -37,7 +37,7 @@ const ORIGIN = `http://localhost:${PORT}`
 // baseline with headroom; a change that blows past one is a regression worth a
 // human look, and a change that comes in far under should RATCHET THESE DOWN.
 //
-// Measured baseline: 163 calls / 14,256 tris / 21 programs / 65 textures.
+// Measured baseline: 163 calls / 13,356 tris / 21 programs / 65 textures.
 // This is the night -> day conversion: ground light pools (street.js's
 // scatterPools, station.js's buildLightPools, towers.js's plaza lamp-spill
 // texture) were the single biggest cost and are gone outright — daylight
@@ -54,8 +54,13 @@ const ORIGIN = `http://localhost:${PORT}`
 // into 2 draw calls via mergeGeometries) account for the whole increase.
 // calls only ticked 161 -> 163 (the 2 merged tree meshes), well inside the
 // existing ceiling, and programs held flat at 21 — the trees' plain
-// MeshLambertMaterial reused an already-compiled program.
-const BUDGET = { calls: 180, triangles: 14556, programs: 22 }
+// MeshLambertMaterial reused an already-compiled program. A follow-up pass
+// dropped 14,256 to 13,356: the tree trunk CylinderGeometry defaulted to
+// closed caps, but both are permanently invisible (bottom faces into the
+// ground, top is buried inside the canopy), so `openEnded: true` drops each
+// trunk from 20 to 10 triangles — ~900 triangles off across all 90 trees,
+// zero visual change.
+const BUDGET = { calls: 180, triangles: 13656, programs: 22 }
 
 // The 30fps cap means a rendered frame lands ~33.3ms apart. The ceiling catches
 // the cap regressing to 20fps (50ms), which is exactly what happened once.
@@ -290,12 +295,25 @@ describe('occlusion-aware picking (known-open #5h)', () => {
   test('every project has at least one clickable point at the default view', async () => {
     const { page } = await open('/spike/city.html')
     const { points, ids } = await page.evaluate(sampleGrid)
+
+    // If window.__projects were ever empty, `counts` would be `{}` and the loop
+    // below would iterate zero times and pass green having checked nothing —
+    // exactly the silent-pass failure mode this test exists to prevent. Same
+    // reasoning for the id resolution: if the userData shape it's read from
+    // ever changes, every id could silently collapse to `undefined`, merging
+    // all 9 projects into one bogus tally key.
+    assert.equal(ids.length, 9, 'expected 9 registered project hit boxes')
+    assert.ok(ids.every(Boolean), `unresolvable project id in ${JSON.stringify(ids)}`)
+
     const counts = Object.fromEntries(ids.map((id) => [id, 0]))
     for (const p of points) if (!p.phantom) counts[p.id] = (counts[p.id] ?? 0) + 1
 
-    // Threshold is 1: catches total occlusion, not partial coverage.
+    // Threshold is 8, comfortably under the real measured floor (19, on
+    // bible-hymn-kids) so incidental scene changes won't flake it, but high
+    // enough to actually fire if a project loses most of its clickable area —
+    // 1 only proved "not 100% occluded".
     for (const [id, n] of Object.entries(counts)) {
-      assert.ok(n >= 1, `${id}: 0 clickable sample points at the default view — fully occluded`)
+      assert.ok(n >= 8, `${id}: only ${n} clickable sample points at the default view`)
     }
     console.log(`    per-project clickable points: ${JSON.stringify(counts)}`)
     await page.close()
