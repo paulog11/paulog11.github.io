@@ -201,6 +201,47 @@ describe('picking (spike/city.html)', () => {
   })
 })
 
+// Shared by both occlusion tests below via `page.evaluate(sampleGrid)`: casts
+// the same 1280x720 8px-step ray grid against the project hit boxes and
+// classifies each hit as phantom (an opaque, non-transparent object sits
+// nearer than the hit) or clean. Runs inside the page, so it must have no
+// outer (Node-side) closures — only browser globals (window, dynamic import)
+// are used. One copy means the occlusion epsilon and the transparent-material
+// occluder filter can only ever drift out of sync with themselves, not with
+// a second copy elsewhere in this file.
+async function sampleGrid() {
+  const stage = window.__stage
+  const THREE = await import('/node_modules/three/build/three.module.js')
+  const hits = window.__projects.map((b) => b.hit)
+  const hitSet = new Set(hits)
+  const ids = window.__projects.map((b) => b.hit.userData.project?.project?.id ?? b.hit.userData.project?.id)
+
+  const occluders = []
+  stage.scene.traverse((o) => {
+    if (!o.isMesh || hitSet.has(o)) return
+    if ([o.material].flat().some((m) => m?.transparent)) return
+    occluders.push(o)
+  })
+
+  const ray = new THREE.Raycaster()
+  const v = new THREE.Vector2()
+  const W = 1280, H = 720, STEP = 8
+  const points = []
+  for (let py = 0; py < H; py += STEP) {
+    for (let px = 0; px < W; px += STEP) {
+      v.set((px / W) * 2 - 1, -(py / H) * 2 + 1)
+      ray.setFromCamera(v, stage.camera)
+      const t = ray.intersectObjects(hits, false)[0]
+      if (!t) continue
+      const o = ray.intersectObjects(occluders, false)[0]
+      const phantom = !!(o && o.distance < t.distance - 0.01)
+      const id = t.object.userData.project?.project?.id ?? t.object.userData.project?.id
+      points.push({ px, py, id, phantom })
+    }
+  }
+  return { points, ids }
+}
+
 describe('occlusion-aware picking (known-open #5h)', () => {
   // Project hit boxes are as tall as their buildings and project to ~190px
   // screen columns. Raycasting only the registered targets let a filler
@@ -211,49 +252,25 @@ describe('occlusion-aware picking (known-open #5h)', () => {
   // which onPointerMove sets to 'pointer' only when hitTest returned a hit.
   test('a filler building in front of a project blocks the click', async () => {
     const { page } = await open('/spike/city.html')
-    const r = await page.evaluate(async () => {
-      const stage = window.__stage
-      const THREE = await import('/node_modules/three/build/three.module.js')
-      const canvas = stage.renderer.domElement
+    const { points } = await page.evaluate(sampleGrid)
+    const r = await page.evaluate((points) => {
+      const canvas = window.__stage.renderer.domElement
       const rect = canvas.getBoundingClientRect()
-      const hits = window.__projects.map((b) => b.hit)
-      const hitSet = new Set(hits)
-
-      const occluders = []
-      stage.scene.traverse((o) => {
-        if (!o.isMesh || hitSet.has(o)) return
-        if ([o.material].flat().some((m) => m?.transparent)) return
-        occluders.push(o)
-      })
-
-      const ray = new THREE.Raycaster()
-      const v = new THREE.Vector2()
-      const W = 1280, H = 720, STEP = 8
-      const phantom = [], clean = []
-      for (let py = 0; py < H; py += STEP) {
-        for (let px = 0; px < W; px += STEP) {
-          v.set((px / W) * 2 - 1, -(py / H) * 2 + 1)
-          ray.setFromCamera(v, stage.camera)
-          const t = ray.intersectObjects(hits, false)[0]
-          if (!t) continue
-          const o = ray.intersectObjects(occluders, false)[0]
-          ;(o && o.distance < t.distance - 0.01 ? phantom : clean).push([px, py])
-        }
-      }
-
       const probe = (px, py) => {
         canvas.dispatchEvent(new PointerEvent('pointermove', {
           clientX: rect.left + px, clientY: rect.top + py, bubbles: true,
         }))
         return canvas.style.cursor === 'pointer'
       }
+      const phantom = points.filter((p) => p.phantom)
+      const clean = points.filter((p) => !p.phantom)
       return {
         phantom: phantom.length,
         clean: clean.length,
-        stillClickable: phantom.filter(([x, y]) => probe(x, y)).length,
-        lost: clean.filter(([x, y]) => !probe(x, y)).length,
+        stillClickable: phantom.filter((p) => probe(p.px, p.py)).length,
+        lost: clean.filter((p) => !probe(p.px, p.py)).length,
       }
-    })
+    }, points)
 
     assert.ok(r.phantom > 0, 'sampling found no occluded points — the grid is wrong, not the fix')
     assert.equal(r.stillClickable, 0, `${r.stillClickable} of ${r.phantom} occluded points still select a project`)
@@ -272,45 +289,11 @@ describe('occlusion-aware picking (known-open #5h)', () => {
   // were invisible, and only a dedicated per-item assertion caught it.
   test('every project has at least one clickable point at the default view', async () => {
     const { page } = await open('/spike/city.html')
-    const counts = await page.evaluate(async () => {
-      const stage = window.__stage
-      const THREE = await import('/node_modules/three/build/three.module.js')
-      const hits = window.__projects.map((b) => b.hit)
-      const hitSet = new Set(hits)
+    const { points, ids } = await page.evaluate(sampleGrid)
+    const counts = Object.fromEntries(ids.map((id) => [id, 0]))
+    for (const p of points) if (!p.phantom) counts[p.id] = (counts[p.id] ?? 0) + 1
 
-      const occluders = []
-      stage.scene.traverse((o) => {
-        if (!o.isMesh || hitSet.has(o)) return
-        if ([o.material].flat().some((m) => m?.transparent)) return
-        occluders.push(o)
-      })
-
-      const ray = new THREE.Raycaster()
-      const v = new THREE.Vector2()
-      const W = 1280, H = 720, STEP = 8
-      const tally = {}
-      for (const b of window.__projects) {
-        tally[b.hit.userData.project?.project?.id ?? b.hit.userData.project?.id] = 0
-      }
-      for (let py = 0; py < H; py += STEP) {
-        for (let px = 0; px < W; px += STEP) {
-          v.set((px / W) * 2 - 1, -(py / H) * 2 + 1)
-          ray.setFromCamera(v, stage.camera)
-          const t = ray.intersectObjects(hits, false)[0]
-          if (!t) continue
-          const o = ray.intersectObjects(occluders, false)[0]
-          if (o && o.distance < t.distance - 0.01) continue   // occluded, not clean
-          const id = t.object.userData.project?.project?.id ?? t.object.userData.project?.id
-          tally[id] = (tally[id] ?? 0) + 1
-        }
-      }
-      return tally
-    })
-
-    // Threshold is 1, deliberately: this catches total occlusion (a project
-    // with zero visible sample points), not partial coverage. A stricter
-    // minimum would flake on ordinary layout tweaks that shrink a project's
-    // on-screen footprint without actually hiding it.
+    // Threshold is 1: catches total occlusion, not partial coverage.
     for (const [id, n] of Object.entries(counts)) {
       assert.ok(n >= 1, `${id}: 0 clickable sample points at the default view — fully occluded`)
     }
