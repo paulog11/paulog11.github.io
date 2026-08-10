@@ -134,9 +134,20 @@ export const CROSS_DECKS = [
 //
 // `japan-map` and `bible-hymn-kids` used to stand at [2,0] — that cell became
 // the DIAMOND_CELL (see below), whose scaled-down lattice is filler-only, so
-// both were relocated to free lots at [0,0]. `bible-hymn-kids` kept its old
-// relative lot ([0,0]); `japan-map`'s old relative lot ([1,1]) is algo-lab's,
-// so it took [1,0] instead.
+// both were relocated to free lots at [0,0]. `japan-map`'s old relative lot
+// ([1,1]) is algo-lab's, so it took [1,0] instead.
+//
+// `bible-hymn-kids` first landed on its old relative lot ([0,0], the cell's
+// own NW corner) but that lot is fully occluded at the default view: [0,0],
+// [1,1] (algo-lab, h=30) and [2,2] (japanese-dashboard, h=24) all sit on the
+// cell's main diagonal, which this camera's fixed 45° azimuth projects onto
+// a single screen column (screenX depends only on x-z, and every (i,i) lot
+// shares the same x-z within a cell) — and [0,0] is both the shortest (h=20)
+// and the one farthest from the camera on that diagonal, so the other two
+// stack directly in front of it with 0 clickable sample points surviving.
+// Moved to [0,1] instead — off the (i,i) diagonal entirely, so nothing else
+// in this cell shares its screen column; empirically verified via
+// sampleGrid() in test/scene.test.mjs (114 clickable points, up from 0).
 export const PROJECT_SITES = [
   { id: 'algo-lab',            cell: [0, 0], lot: [1, 1], h: 30 },
   { id: 'flip7',               cell: [0, 2], lot: [0, 0], h: 22 },
@@ -146,7 +157,7 @@ export const PROJECT_SITES = [
   { id: 'japan-map',           cell: [0, 0], lot: [1, 0], h: 26 },
   { id: 'right-word-japanese', cell: [1, 2], lot: [2, 2], h: 18 },
   { id: 'japanese-dashboard',  cell: [0, 0], lot: [2, 2], h: 24 },
-  { id: 'bible-hymn-kids',     cell: [0, 0], lot: [0, 0], h: 20 },
+  { id: 'bible-hymn-kids',     cell: [0, 0], lot: [0, 1], h: 20 },
 ]
 
 /** Centre of a GROUP of lots — the mean of each lot's own centre. Only needed
