@@ -1,5 +1,5 @@
-// The road network for the 3x3 block grid. Ground, roads and kerbs all live
-// here; the buildings and station are other modules' concern.
+// The road network for the 3x3 block grid. Ground, roads, kerbs and street
+// trees all live here; the buildings and station are other modules' concern.
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { BLOCK, STREET, MAP_HALF, blockCenter, STREET_LINES, CORRIDOR_W } from './cityLayout.js'
@@ -25,13 +25,20 @@ const DASH_PERIOD_M = 7             // dash+gap rhythm, in world metres — kept
                                      // constant so through-strips and segments
                                      // read at the same rhythm despite the two
                                      // bands having different px-per-metre.
+const SIDEWALK_W = 1.4              // sidewalk band width (m), painted into
+                                     // both edges of the road atlas. Must stay
+                                     // above ~0.72m: KERB_T/2 (0.2m) protrudes
+                                     // into this band from the block-edge line,
+                                     // and tree trunks (below) sit centred in
+                                     // it — SIDEWALK_W/2 - 0.2 must exceed the
+                                     // trunk's 0.16m max radius to clear it.
 
 function paintDashes(ctx, top, bottom, worldLen) {
   const span = bottom - top
   const count = Math.max(1, Math.round(worldLen / DASH_PERIOD_M))
   const cellH = span / count
   const cx = ATLAS_W / 2
-  ctx.fillStyle = 'rgba(224,218,200,0.55)'
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
   for (let i = 0; i < count; i++) {
     // Jittered offset/length so the rhythm reads as painted, not extruded.
     const y = top + i * cellH + (rnd() - 0.5) * cellH * 0.2
@@ -52,14 +59,19 @@ function paintCrossing(ctx, centerY) {
   ctx.fillStyle = 'rgba(255,255,255,0.05)'
   ctx.fillRect(0, top, ATLAS_W, half * 2)
 
-  ctx.fillStyle = 'rgba(230,225,210,0.65)'
-  const barV = half * 0.5
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'
   const barU = ATLAS_W * 0.08
   const inset = half * 0.55
-  // this street's stop lines, perpendicular to its own travel direction
-  ctx.fillRect(0, top + half - inset, ATLAS_W, barV)
-  ctx.fillRect(0, top + half + inset - barV, ATLAS_W, barV)
-  // the crossing street's — its own quad never reaches this square
+  // this street's zebra crossing: repeating stripes across the full square,
+  // same perpendicular orientation the old stop-line bars used
+  const stripeCount = 5
+  const cell = (half * 2) / stripeCount
+  const stripeH = cell * 0.5
+  for (let i = 0; i < stripeCount; i++) {
+    const y = top + i * cell + (cell - stripeH) / 2
+    ctx.fillRect(0, y, ATLAS_W, stripeH)
+  }
+  // the crossing street's stop lines — its own quad never reaches this square
   ctx.fillRect(ATLAS_W / 2 - inset, top, barU, half * 2)
   ctx.fillRect(ATLAS_W / 2 + inset - barU, top, barU, half * 2)
 }
@@ -72,7 +84,14 @@ function buildRoadAtlas() {
   const g = map.getContext('2d')
   const ge = emi.getContext('2d')
 
-  g.fillStyle = hex(ASPHALT); g.fillRect(0, 0, ATLAS_W, ATLAS_H)
+  // Sidewalk band on both edges of the cross-section, asphalt narrowed to the
+  // middle sub-range between them.
+  const sidewalkPx = SIDEWALK_W * (ATLAS_W / STREET)
+  g.fillStyle = hex(SIDEWALK_COLOR)
+  g.fillRect(0, 0, sidewalkPx, ATLAS_H)
+  g.fillRect(ATLAS_W - sidewalkPx, 0, sidewalkPx, ATLAS_H)
+  g.fillStyle = hex(ASPHALT)
+  g.fillRect(sidewalkPx, 0, ATLAS_W - 2 * sidewalkPx, ATLAS_H)
   ge.fillStyle = '#000'; ge.fillRect(0, 0, ATLAS_W, ATLAS_H)
 
   // Worn patches, kept subtle — the light pools carry the scene's real
@@ -160,6 +179,7 @@ const GROUND_SIZE = 4 * MAP_HALF   // reaches well past the map edge so the
                                     // backdrop towers and crowd have ground
                                     // under them instead of floating in void
 const GROUND_COLOR = 0x6b6a5f
+const SIDEWALK_COLOR = 0xcbd0d3    // light cool paving grey
 
 function buildGround() {
   // The rail corridor (station.js) sits below this plane in a trench, so cut
@@ -192,29 +212,38 @@ function buildGround() {
 const KERB_H = 0.16, KERB_T = 0.4
 const KERB_COLOR = 0x2a2c33
 
-function buildKerbs() {
-  const boxes = []
+// Per-block edge data shared by buildKerbs() and buildTrees(). `axis` is the
+// axis the edge runs ALONG ('x' for a north/south edge, 'z' for east/west);
+// `dir` is the outward sign — away from the block, into the street — along
+// the OTHER axis. col 1 is the station's column (STATION.cells are
+// [0,1],[1,1],[2,1]): its east/west edges now overhang the open rail
+// corridor, so they're skipped there. North/south edges exist for every
+// block.
+function blockEdges() {
+  const half = BLOCK / 2
+  const edges = []
   for (const row of [0, 1, 2]) {
     for (const col of [0, 1, 2]) {
       const bx = blockCenter(col), bz = blockCenter(row)
-      const half = BLOCK / 2
-      // col 1 is the station's column (STATION.cells are [0,1],[1,1],[2,1]):
-      // its east/west edges now overhang the open rail corridor, so skip
-      // them there. North/south still sit on solid ground for every block.
-      const edges = [
-        [BLOCK, KERB_T, bx, bz - half],   // north
-        [BLOCK, KERB_T, bx, bz + half],   // south
-        ...(col === 1 ? [] : [
-          [KERB_T, BLOCK, bx - half, bz],   // west
-          [KERB_T, BLOCK, bx + half, bz],   // east
-        ]),
-      ]
-      for (const [w, d, x, z] of edges) {
-        const geo = new THREE.BoxGeometry(w, KERB_H, d)
-        geo.translate(x, KERB_H / 2, z)
-        boxes.push(geo)
+      edges.push({ axis: 'x', x: bx, z: bz - half, dir: -1 })   // north
+      edges.push({ axis: 'x', x: bx, z: bz + half, dir: 1 })    // south
+      if (col !== 1) {
+        edges.push({ axis: 'z', x: bx - half, z: bz, dir: -1 })   // west
+        edges.push({ axis: 'z', x: bx + half, z: bz, dir: 1 })    // east
       }
     }
+  }
+  return edges
+}
+
+function buildKerbs() {
+  const boxes = []
+  for (const e of blockEdges()) {
+    const w = e.axis === 'x' ? BLOCK : KERB_T
+    const d = e.axis === 'x' ? KERB_T : BLOCK
+    const geo = new THREE.BoxGeometry(w, KERB_H, d)
+    geo.translate(e.x, KERB_H / 2, e.z)
+    boxes.push(geo)
   }
   const geometry = mergeGeometries(boxes)
   const material = new THREE.MeshLambertMaterial({
@@ -223,13 +252,63 @@ function buildKerbs() {
   return new THREE.Mesh(geometry, material)
 }
 
-/** Returns a THREE.Group: ground, roads and kerbs for the whole map. Ground
- * light pools (fake street-lamp/neon spill) are a night-only effect and don't
- * run in this daytime scene. */
+// ── Street trees ─────────────────────────────────────────────────────────
+const TREE_TRUNK = 0x6b4a34
+const TREE_CANOPY = 0x6fae4a
+const TREE_MARGIN = 4   // inset from each block corner, along the edge
+// 3 evenly-spaced spots per edge, symmetric about the block's midline, with
+// TREE_MARGIN clearance from both corners.
+const TREE_SPOTS = (() => {
+  const half = BLOCK / 2
+  const step = (BLOCK - 2 * TREE_MARGIN) / 2
+  return [0, 1, 2].map((i) => -half + TREE_MARGIN + i * step)
+})()
+
+function buildTrees() {
+  const trunks = [], canopies = []
+  const outset = SIDEWALK_W / 2   // stand centred in the sidewalk band
+  for (const e of blockEdges()) {
+    for (const along of TREE_SPOTS) {
+      const x = e.axis === 'x' ? e.x + along : e.x + e.dir * outset
+      const z = e.axis === 'x' ? e.z + e.dir * outset : e.z + along
+      const scale = 0.85 + rnd() * 0.3   // ±15%
+      const rot = rnd() * Math.PI * 2
+
+      const trunk = new THREE.CylinderGeometry(0.12, 0.16, 2.2, 5)
+      trunk.translate(0, 1.1, 0)   // base on the ground plane
+      trunk.scale(scale, scale, scale)
+      trunk.rotateY(rot)
+      trunk.translate(x, 0, z)
+      trunks.push(trunk)
+
+      const canopy = new THREE.IcosahedronGeometry(1.6, 0)
+      canopy.translate(0, 2.4, 0)   // caps the trunk
+      canopy.scale(scale, scale, scale)
+      canopy.rotateY(rot)
+      canopy.translate(x, 0, z)
+      canopies.push(canopy)
+    }
+  }
+  const group = new THREE.Group()
+  group.add(new THREE.Mesh(
+    mergeGeometries(trunks),
+    new THREE.MeshLambertMaterial({ color: TREE_TRUNK }),
+  ))
+  group.add(new THREE.Mesh(
+    mergeGeometries(canopies),
+    new THREE.MeshLambertMaterial({ color: TREE_CANOPY }),
+  ))
+  return group
+}
+
+/** Returns a THREE.Group: ground, roads, kerbs and street trees for the whole
+ * map. Ground light pools (fake street-lamp/neon spill) are a night-only
+ * effect and don't run in this daytime scene. */
 export function createStreets() {
   const group = new THREE.Group()
   group.add(buildGround())
   group.add(buildRoadNetwork())
   group.add(buildKerbs())
+  group.add(buildTrees())
   return group
 }

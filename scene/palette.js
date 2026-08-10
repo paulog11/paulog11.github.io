@@ -1,6 +1,6 @@
 // Shinjuku at night. Shared by every scene module so the city reads as one place.
 export const NIGHT   = 0x070a12  // sky / background
-export const ASPHALT = 0x54565c  // dry daytime street
+export const ASPHALT = 0x3a3d44  // dry daytime street
 export const RED     = 0xff2d55  // Kabukichō lanterns and gate
 export const CYAN    = 0x00e5ff  // cold neon
 export const AMBER   = 0xffb347  // lantern warmth (successor to the old #FF7A00)
