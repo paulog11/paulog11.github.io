@@ -32,14 +32,31 @@ export const MAP_HALF = (3 * BLOCK + 4 * STREET) / 2   // 89
 /** Centre of block `i` (0..2) along one axis. */
 export const blockCenter = (i) => (i - 1) * BLOCK_PITCH
 
-/** Centre of lot `j` (0..2) within a block, relative to the block centre. */
-export const lotOffset = (j) => (j - 1) * LOT_PITCH
+// ── The diamond cell ─────────────────────────────────────────────────────────
+// [2,0] gets a 45°-rotated "diamond" treatment. Only the lot LATTICE scales
+// down here — never rotate a lot/building position, that reopens the overlap
+// risk an earlier draft of this plan ran into. Rotation is rendering-only
+// (street.js's kerb/paving geometry, a separate task) and consumes
+// DIAMOND_OUTER_SIDE below; this file never rotates anything.
+export const DIAMOND_CELL = [2, 0]
+export const DIAMOND_LOT_SCALE = 0.5   // BLOCK/2=23m local size, LOT'=7m, LOT_PITCH'=8m
+// Largest 45°-rotated square whose own diagonal is BLOCK (so its corners just
+// touch the cell's own edge midpoints) — rendering-only, consumed by street.js.
+export const DIAMOND_OUTER_SIDE = BLOCK * Math.SQRT1_2   // ≈32.53m
+
+/** Centre of lot `j` (0..2) within a block, relative to the block centre.
+ * `cell` is optional and only scales the lattice down for DIAMOND_CELL —
+ * every other caller omits it and gets the normal 1x scale. */
+export function lotOffset(j, cell) {
+  const scale = (cell && String(cell) === String(DIAMOND_CELL)) ? DIAMOND_LOT_SCALE : 1
+  return (j - 1) * LOT_PITCH * scale
+}
 
 /** World centre of a lot. `cell` and `lot` are both [row, col]. */
 export function lotCenter([row, col], [lotRow, lotCol]) {
   return {
-    x: blockCenter(col) + lotOffset(lotCol),
-    z: blockCenter(row) + lotOffset(lotRow),
+    x: blockCenter(col) + lotOffset(lotCol, [row, col]),
+    z: blockCenter(row) + lotOffset(lotRow, [row, col]),
   }
 }
 
@@ -114,16 +131,22 @@ export const CROSS_DECKS = [
 // specifically took [1,2]'s OUTER lot (col 2, away from the corridor) rather
 // than an inner one, on purpose — it leaves [1,2]'s whole inner column free
 // for the flank buildings STATION_FLANK_SITES claims below.
+//
+// `japan-map` and `bible-hymn-kids` used to stand at [2,0] — that cell became
+// the DIAMOND_CELL (see below), whose scaled-down lattice is filler-only, so
+// both were relocated to free lots at [0,0]. `bible-hymn-kids` kept its old
+// relative lot ([0,0]); `japan-map`'s old relative lot ([1,1]) is algo-lab's,
+// so it took [1,0] instead.
 export const PROJECT_SITES = [
   { id: 'algo-lab',            cell: [0, 0], lot: [1, 1], h: 30 },
   { id: 'flip7',               cell: [0, 2], lot: [0, 0], h: 22 },
   { id: 'machi-koro',          cell: [0, 2], lot: [1, 2], h: 20 },
   { id: 'venue-search',        cell: [1, 0], lot: [1, 0], h: 34 },
   { id: 'reading-buddy',       cell: [1, 2], lot: [1, 2], h: 24 },
-  { id: 'japan-map',           cell: [2, 0], lot: [1, 1], h: 26 },
+  { id: 'japan-map',           cell: [0, 0], lot: [1, 0], h: 26 },
   { id: 'right-word-japanese', cell: [1, 2], lot: [2, 2], h: 18 },
   { id: 'japanese-dashboard',  cell: [0, 0], lot: [2, 2], h: 24 },
-  { id: 'bible-hymn-kids',     cell: [2, 0], lot: [0, 0], h: 20 },
+  { id: 'bible-hymn-kids',     cell: [0, 0], lot: [0, 0], h: 20 },
 ]
 
 /** Centre of a GROUP of lots — the mean of each lot's own centre. Only needed
@@ -211,11 +234,15 @@ export const LANDMARK_SITES = [
 // visible; -Math.PI/2 turns it to face +X for a corner.
 // `koban` and the first `vending` used to stand at [2,1] and [0,1] — both now
 // inside STATION.cells — and were relocated to free lots.
+// The second `vending` and `koban` used to stand at [2,0] — that cell became
+// the DIAMOND_CELL (see above), whose scaled-down lattice is filler-only, so
+// both were relocated to [0,0], keeping their old relative lot ([2,1] and
+// [0,2] respectively, both free there) and unchanged `ry`.
 export const SCENERY_SITES = [
   { id: 'konbini', cell: [1, 2], lot: [2, 0], ry: 0 },          // south edge, east block
-  { id: 'koban',   cell: [2, 0], lot: [2, 1], ry: 0 },
+  { id: 'koban',   cell: [0, 0], lot: [2, 1], ry: 0 },
   { id: 'vending', cell: [0, 2], lot: [2, 2], ry: 0 },
-  { id: 'vending', cell: [2, 0], lot: [0, 2], ry: -Math.PI / 2 },
+  { id: 'vending', cell: [0, 0], lot: [0, 2], ry: -Math.PI / 2 },
 ]
 
 // ── Station flank buildings ──────────────────────────────────────────────────
@@ -299,8 +326,11 @@ export function fillerBuildings() {
         const { x, z } = lotCenter(spec.cell, [lotRow, lotCol])
         const [hMin, hMax] = spec.height
         // Footprints stay inside the lot so buildings never bleed into a street.
-        const w = LOT * (0.62 + rng() * 0.3)
-        const d = LOT * (0.62 + rng() * 0.3)
+        // DIAMOND_CELL's lattice is scaled down (see lotOffset), so its lots
+        // need the scaled budget too, or filler would bleed past the shrunk lot.
+        const cellLotSize = String(spec.cell) === String(DIAMOND_CELL) ? LOT * DIAMOND_LOT_SCALE : LOT
+        const w = cellLotSize * (0.62 + rng() * 0.3)
+        const d = cellLotSize * (0.62 + rng() * 0.3)
         out.push({
           x, z, w, d,
           h: hMin + rng() * (hMax - hMin),

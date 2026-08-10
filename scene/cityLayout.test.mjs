@@ -11,7 +11,7 @@ import {
   STREET_LINES, PROJECT_SITES, LANDMARK_SITES,
   SCENERY_SITES, STATION_FLANK_SITES, lotGroupCenter,
   GOLDEN_GAI_CELL, STATION, CORRIDOR_W, TRACK_SPACING, PLATFORM_XS, PLATFORM_W,
-  fillerBuildings,
+  fillerBuildings, DIAMOND_CELL, DIAMOND_LOT_SCALE, DIAMOND_OUTER_SIDE,
 } from './cityLayout.js'
 
 const inStation = (cell) => STATION.cells.some((c) => String(c) === String(cell))
@@ -27,6 +27,17 @@ assert.equal(MAP_HALF, 89)
 for (const j of [0, 1, 2]) {
   assert.ok(Math.abs(lotOffset(j)) + LOT / 2 <= BLOCK / 2, `lot ${j} escapes its block`)
 }
+
+// ── The diamond cell's scaled-down lattice stays inside its own half-extent ──
+for (const j of [0, 1, 2]) {
+  assert.ok(
+    Math.abs(lotOffset(j, DIAMOND_CELL)) + (LOT * DIAMOND_LOT_SCALE) / 2 <= (BLOCK * DIAMOND_LOT_SCALE) / 2,
+    `diamond lot ${j} escapes its scaled block`,
+  )
+}
+// The outer rendering-only rotated square (Task 2's kerbs/paving) never
+// reaches past the cell's own half-extent into a neighbouring cell.
+assert.ok(DIAMOND_OUTER_SIDE / 2 <= BLOCK / 2, 'DIAMOND_OUTER_SIDE escapes its own cell')
 
 // ── Nothing stands in the road ───────────────────────────────────────────────
 for (const i of [0, 1, 2]) {
@@ -94,6 +105,14 @@ for (const s of STATION_FLANK_SITES) {
   flankLotKeys.add(key)
 }
 
+// ── The diamond cell is filler-only ──────────────────────────────────────────
+// [2,0] (DIAMOND_CELL) hosts no named site — its scaled lattice is generated
+// by fillerBuildings() alone.
+for (const s of [...PROJECT_SITES, ...SCENERY_SITES, ...STATION_FLANK_SITES]) {
+  assert.notEqual(String(s.cell), String(DIAMOND_CELL),
+    `site at ${s.cell}|${s.lot} claims the diamond cell, which must be filler-only`)
+}
+
 // ── No filler ever lands in the Golden Gai block ─────────────────────────────
 // fillerBuildings() is trusted to skip GOLDEN_GAI_CELL entirely (alley.js
 // builds that block itself), but nothing previously asserted it — a real gap
@@ -106,6 +125,25 @@ for (const b of fillerBuildings()) {
     Math.abs(b.x - ggx) > half || Math.abs(b.z - ggz) > half,
     `filler building at (${b.x},${b.z}) lands inside the Golden Gai block`,
   )
+}
+
+// ── Diamond-cell filler never escapes its own scaled half-extent ───────────
+// Tighter than the map-wide/street-overlap checks above: a filler building
+// whose (x,z) falls in DIAMOND_CELL must stay inside that cell's scaled
+// (DIAMOND_LOT_SCALE) half-extent, not just off the street.
+{
+  const { x: dcx, z: dcz } = lotCenter(DIAMOND_CELL, [1, 1])
+  const half = BLOCK / 2
+  const scaledHalf = (BLOCK * DIAMOND_LOT_SCALE) / 2
+  for (const b of fillerBuildings()) {
+    // Only buildings actually generated for the diamond cell — same
+    // block-membership test used for Golden Gai above.
+    if (Math.abs(b.x - dcx) > half || Math.abs(b.z - dcz) > half) continue
+    assert.ok(Math.abs(b.x - dcx) + b.w / 2 <= scaledHalf,
+      `diamond-cell filler at (${b.x},${b.z}) escapes its scaled cell (x)`)
+    assert.ok(Math.abs(b.z - dcz) + b.d / 2 <= scaledHalf,
+      `diamond-cell filler at (${b.x},${b.z}) escapes its scaled cell (z)`)
+  }
 }
 
 // ── The rail corridor packs inside the station's own width ──────────────────
