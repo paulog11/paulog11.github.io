@@ -37,7 +37,7 @@ const ORIGIN = `http://localhost:${PORT}`
 // baseline with headroom; a change that blows past one is a regression worth a
 // human look, and a change that comes in far under should RATCHET THESE DOWN.
 //
-// Measured baseline: 161 calls / 10,656 tris / 21 programs / 65 textures.
+// Measured baseline: 163 calls / 14,256 tris / 21 programs / 65 textures.
 // This is the night -> day conversion: ground light pools (street.js's
 // scatterPools, station.js's buildLightPools, towers.js's plaza lamp-spill
 // texture) were the single biggest cost and are gone outright — daylight
@@ -47,7 +47,15 @@ const ORIGIN = `http://localhost:${PORT}`
 // variant. The old 244/10,820/22/66 baseline predates this and should not be
 // compared against — that was a different scene (lit at night), not a
 // regression measured against this one.
-const BUDGET = { calls: 180, triangles: 11500, programs: 22 }
+//
+// Triangles climbed 10,656 -> 14,256 on top of that from the sidewalk/tree/
+// crosswalk reskin (street.js): the sidewalk band and zebra crosswalks are
+// repainted textures, no new geometry, but ~90 low-poly street trees (merged
+// into 2 draw calls via mergeGeometries) account for the whole increase.
+// calls only ticked 161 -> 163 (the 2 merged tree meshes), well inside the
+// existing ceiling, and programs held flat at 21 — the trees' plain
+// MeshLambertMaterial reused an already-compiled program.
+const BUDGET = { calls: 180, triangles: 14556, programs: 22 }
 
 // The 30fps cap means a rendered frame lands ~33.3ms apart. The ceiling catches
 // the cap regressing to 20fps (50ms), which is exactly what happened once.
@@ -251,6 +259,62 @@ describe('occlusion-aware picking (known-open #5h)', () => {
     assert.equal(r.stillClickable, 0, `${r.stillClickable} of ${r.phantom} occluded points still select a project`)
     assert.equal(r.lost, 0, `${r.lost} of ${r.clean} legitimately visible points stopped being clickable`)
     console.log(`    ${r.phantom} occluded points now rejected, all ${r.clean} visible points still clickable`)
+    await page.close()
+  })
+
+  // The test above proves occluded points get rejected and clean points stay
+  // clickable, but never asks whether those clean points are actually spread
+  // across all 9 projects. If ~90 new street trees fully hid one project from
+  // this view, every one of its "clean" points would just become "phantom"
+  // instead — phantom/clean/lost/stillClickable would all still report 0/pass,
+  // because there is nothing left to lose. This is the departure-board failure
+  // mode from CLAUDE.md: a generic occlusion check passed while 6 of 9 rows
+  // were invisible, and only a dedicated per-item assertion caught it.
+  test('every project has at least one clickable point at the default view', async () => {
+    const { page } = await open('/spike/city.html')
+    const counts = await page.evaluate(async () => {
+      const stage = window.__stage
+      const THREE = await import('/node_modules/three/build/three.module.js')
+      const hits = window.__projects.map((b) => b.hit)
+      const hitSet = new Set(hits)
+
+      const occluders = []
+      stage.scene.traverse((o) => {
+        if (!o.isMesh || hitSet.has(o)) return
+        if ([o.material].flat().some((m) => m?.transparent)) return
+        occluders.push(o)
+      })
+
+      const ray = new THREE.Raycaster()
+      const v = new THREE.Vector2()
+      const W = 1280, H = 720, STEP = 8
+      const tally = {}
+      for (const b of window.__projects) {
+        tally[b.hit.userData.project?.project?.id ?? b.hit.userData.project?.id] = 0
+      }
+      for (let py = 0; py < H; py += STEP) {
+        for (let px = 0; px < W; px += STEP) {
+          v.set((px / W) * 2 - 1, -(py / H) * 2 + 1)
+          ray.setFromCamera(v, stage.camera)
+          const t = ray.intersectObjects(hits, false)[0]
+          if (!t) continue
+          const o = ray.intersectObjects(occluders, false)[0]
+          if (o && o.distance < t.distance - 0.01) continue   // occluded, not clean
+          const id = t.object.userData.project?.project?.id ?? t.object.userData.project?.id
+          tally[id] = (tally[id] ?? 0) + 1
+        }
+      }
+      return tally
+    })
+
+    // Threshold is 1, deliberately: this catches total occlusion (a project
+    // with zero visible sample points), not partial coverage. A stricter
+    // minimum would flake on ordinary layout tweaks that shrink a project's
+    // on-screen footprint without actually hiding it.
+    for (const [id, n] of Object.entries(counts)) {
+      assert.ok(n >= 1, `${id}: 0 clickable sample points at the default view — fully occluded`)
+    }
+    console.log(`    per-project clickable points: ${JSON.stringify(counts)}`)
     await page.close()
   })
 })

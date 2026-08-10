@@ -102,7 +102,7 @@ Current baseline for the full scene (regress against these):
 
 | Draw calls | Triangles | Programs | Textures | Frame median |
 |---:|---:|---:|---:|---:|
-| 161 | 10,656 | 21 | 65 | 33.4 ms (30 fps) |
+| 163 | 14,256 | 21 | 65 | 33.3 ms (30 fps) |
 
 **The scene is daytime, not night.** It was converted from a fixed night
 setting: `renderer.js`'s `addNightLighting` (blue moonlight) became
@@ -142,6 +142,13 @@ is what makes `hitTest` click through the decal and `outline.js` skip it.
 `spike/perf.html` never built the board, so every draw-call number recorded
 before this line understated the scene. Do not compare across that boundary — the
 older "254 / 18,520" was a *bigger* scene measured *without* the board.
+
+**Triangles jumped 10,656 -> 14,256 for the sidewalk/tree/crosswalk reskin**
+(`scene/street.js`). The sidewalk band and zebra crosswalks are repainted
+textures, not new geometry — the entire increase is ~90 low-poly street trees,
+merged into 2 draw calls via `mergeGeometries`. Calls only ticked 161 -> 163
+and programs held flat at 21, since the trees' plain `MeshLambertMaterial` has
+no map/emissiveMap/transparent flag and reused an already-compiled program.
 
 `npm test` asserts these as ceilings with headroom. Come in far under and you
 should ratchet `BUDGET` in `test/scene.test.mjs` down; there is no value in slack
