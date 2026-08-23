@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { MAP_HALF } from './cityLayout.js'
+import { MAP_HALF as DEFAULT_MAP_HALF } from './cityLayout.js'
 
 // 1 world unit = 1 metre. The map is a 178m square (see cityLayout.js), and the
 // camera frames all of it at zoom 1 — on ANY aspect ratio.
@@ -14,10 +14,14 @@ import { MAP_HALF } from './cityLayout.js'
 // asymmetric: roughly -47 to +90. That asymmetry is why the camera target sits
 // above the ground rather than on it — with a ground-level target the city
 // bunches into the top of the frame and the bottom third renders empty.
-const CONTENT_W  = 267       // 252 wide + ~6% margin
-const CONTENT_H  = 145       // 137 tall + ~6% margin
-const CONTENT_CY = 21.3      // screenY centre of the content box
-const TARGET_Y   = CONTENT_CY / 0.927   // ~23m — the world height that centres it
+//
+// These are DEFAULTS, overridable via createStage's opts.content — a caller
+// framing a differently-sized map (see scene/net/) passes its own {w,h,cy} and
+// opts.mapHalf rather than editing these.
+const DEFAULT_CONTENT = { w: 267, h: 145, cy: 21.3 }
+                                             // 252 wide + ~6% margin
+                                             // 137 tall + ~6% margin
+                                             // screenY centre of the content box
 
 const AZIMUTH  = Math.PI / 4 // 45 degrees — the isometric default
 const DRAG_SLOP = 5          // px of pointer travel that still counts as a click
@@ -50,8 +54,21 @@ const MIN_ZOOM = 0.9
  *
  * This changes where you START, not where you can GO: minZoom is still 0.9, so
  * pinching out to see the entire map remains available on every device.
+ *
+ * Deliberately height-only, not clamped against a width-fit candidate. A very
+ * wide, short content box (e.g. scene/net/'s ground-only 750x281, versus
+ * today's 267x145) hits the SAME width-binds-at-zoom-1 condition a portrait
+ * phone hits with today's box, and this formula already, deliberately, zooms
+ * past that point — that's what turns a 267-wide map's 31%-of-height postage
+ * stamp on a 375px phone into 55%. Clamping to "never crop width" would
+ * silently collapse THAT case back to zoom 1 too (verified: phone fill drops
+ * from 55% to 30%, under this repo's own 45% test floor) — it isn't a
+ * width-cropping bug to fix, it's this function's one existing job, now also
+ * visible on ordinary desktop aspects because a ground-only box is unusually
+ * wide. CONTENT_H is parameterised so a caller with a differently-shaped
+ * content box still gets this same, unchanged trade-off.
  */
-const defaultZoom = (frustum) => Math.sqrt(frustum / CONTENT_H)
+const defaultZoom = (frustum, CONTENT_H) => Math.sqrt(frustum / CONTENT_H)
 
 // Render resolution as a fraction of CSS pixels. Below 1 this is a large,
 // near-linear fragment-cost saving, and paired with `image-rendering: pixelated`
@@ -113,6 +130,13 @@ export function createStage(canvas, opts = {}) {
   const low = quality === 'low'
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
 
+  // A caller framing a different-sized map (see scene/net/, MAP_HALF 250 vs
+  // cityLayout.js's 89) passes both of these; every existing caller passes
+  // neither and gets today's exact numbers back out of the derivations below.
+  const mapHalf = opts.mapHalf ?? DEFAULT_MAP_HALF
+  const { w: CONTENT_W, h: CONTENT_H, cy: CONTENT_CY } = opts.content ?? DEFAULT_CONTENT
+  const TARGET_Y = CONTENT_CY / 0.927   // the world height that centres the content box
+
   // antialias off: it fights the pixelated upscale and costs fill rate. The
   // chunky edges are the point.
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false })
@@ -123,15 +147,32 @@ export function createStage(canvas, opts = {}) {
   renderer.toneMapping = THREE.NoToneMapping
 
   const scene = new THREE.Scene()
-  // Pushed far out: the camera orbits at radius 160 and the map's far corner is
-  // ~126 units from centre, so the old 90-260 range hazed out half the city.
-  // This only softens the extreme back corner.
-  scene.fog = new THREE.Fog(0xc7d3dc, 220, 500)
+  const elevation = 22 * Math.PI / 180
+
+  // Ground-plane view depth under this rig is `radius - K*(x+z)`, K = cos(el)*
+  // cos(45deg) (see CLAUDE.md's screenY derivation). Both the camera radius and
+  // the fog far plane are pinned to two INVARIANTS measured off today's known-
+  // good numbers (radius 200, fog 220-500 at MAP_HALF 89), not scaled by a
+  // fitted multiplier — so a bigger map reproduces the same margins instead of
+  // an approximation of them, and MAP_HALF=89 reproduces today's numbers EXACTLY:
+  //   NEAR_BUFFER = camera-to-near-corner gap    (200 - K*2*89 = 83.30)
+  //   FOG_MARGIN  = fog-far beyond the far corner (500 - (200 + K*2*89) = 183.30)
+  // radius = K*2*mapHalf + NEAR_BUFFER keeps the near-corner gap constant at
+  // any map size, which is what stops the near corner clipping behind the
+  // camera on a larger map (verified: at MAP_HALF 250 the near corner would
+  // otherwise sit at view depth -127.8, i.e. behind camera.near).
+  const K = Math.cos(elevation) * Math.SQRT1_2
+  const NEAR_BUFFER = 83.30
+  const FOG_MARGIN = 183.30
+  const radius = K * 2 * mapHalf + NEAR_BUFFER
+  const farCornerDepth = radius + K * 2 * mapHalf
+  // Pushed far out: see the derivation above. This only softens the extreme
+  // back corner, and at MAP_HALF 89 reproduces the literal 220/500 this had
+  // before parameterisation.
+  scene.fog = new THREE.Fog(0xc7d3dc, 220, farCornerDepth + FOG_MARGIN)
   scene.background = daySky()
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 2000)
-  const elevation = 22 * Math.PI / 180
-  const radius = 200
   camera.position.set(
     radius * Math.cos(elevation) * Math.sin(AZIMUTH),
     radius * Math.sin(elevation) + TARGET_Y,
@@ -184,7 +225,7 @@ export function createStage(canvas, opts = {}) {
     // silently throw away wherever the user had zoomed to.
     if (!zoomed) {
       zoomed = true
-      const z = THREE.MathUtils.clamp(defaultZoom(frustum), MIN_ZOOM, controls.maxZoom)
+      const z = THREE.MathUtils.clamp(defaultZoom(frustum, CONTENT_H), MIN_ZOOM, controls.maxZoom)
       camera.zoom = z
       controls.zoom0 = z          // so controls.reset() returns here, not to 1
       camera.updateProjectionMatrix()
@@ -277,9 +318,9 @@ export function createStage(canvas, opts = {}) {
   // framing stays rigid.
   function clampPan() {
     const t = controls.target
-    const dx = THREE.MathUtils.clamp(t.x, -MAP_HALF, MAP_HALF) - t.x
+    const dx = THREE.MathUtils.clamp(t.x, -mapHalf, mapHalf) - t.x
     const dy = TARGET_Y - t.y                        // pivot height is fixed, see CONTENT_CY
-    const dz = THREE.MathUtils.clamp(t.z, -MAP_HALF, MAP_HALF) - t.z
+    const dz = THREE.MathUtils.clamp(t.z, -mapHalf, mapHalf) - t.z
     if (!dx && !dy && !dz) return
     t.set(t.x + dx, t.y + dy, t.z + dz)
     camera.position.set(

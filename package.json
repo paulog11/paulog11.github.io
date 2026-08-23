@@ -8,7 +8,7 @@
     "prebuild": "cp index.source.html index.html",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scene/cityLayout.test.mjs && node --test test/*.test.mjs",
+    "test": "node scene/cityLayout.test.mjs && node scene/net/plan.test.mjs && node --test test/*.test.mjs",
     "deploy": "cp index.source.html index.html && vite build && rm -f assets/index-*.js assets/index-*.css && cp dist/assets/* assets/ && cp dist/index.html index.html"
   },
   "dependencies": {

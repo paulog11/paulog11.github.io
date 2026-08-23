@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spike · Shinjuku street network</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #070a12; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <canvas id="c" data-scene></canvas>
+<script type="module">
+import { createStage, addDaylight } from '../scene/renderer.js'
+import { createOutlines } from '../scene/outline.js'
+import { createStreetNet } from '../scene/net/streets.js'
+import { MAP_HALF } from '../scene/net/shinjukuNet.js'
+import { lots } from '../scene/net/plan.js'
+import * as THREE from 'three'
+
+// Query params mirror spike/city.html's convention so the same Playwright
+// helpers work here.
+const q = new URLSearchParams(location.search)
+const panX = Number(q.get('panx') ?? 0)
+const panZ = Number(q.get('panz') ?? 0)
+const zoom = Number(q.get('zoom') ?? 0)
+const showLots = q.get('lots') === '1'
+
+await document.fonts.ready
+
+// This map is a different size (500m) than the scene/ default (178m) — see
+// renderer.js's opts.mapHalf/opts.content. The content box is ground-only
+// (no buildings on this map yet), hence cy:0 and a much wider/shorter box
+// than the default 267x145: see CLAUDE.md's derivation for why re-deriving
+// this when buildings land is expected, not a bug.
+const stage = createStage(document.getElementById('c'), {
+  mapHalf: MAP_HALF,
+  content: { w: 750, h: 281, cy: 0 },
+})
+addDaylight(stage.scene)
+
+const { group, painted } = createStreetNet(stage.quality)
+stage.scene.add(group)
+
+// Debug view only, never shipped geometry: confirms lots() actually lands on
+// buildable ground and takes its street's own yaw, not inside a road.
+if (showLots) {
+  const geo = new THREE.BoxGeometry(1, 1, 1)
+  geo.translate(0, 0.5, 0)
+  const mat = new THREE.MeshLambertMaterial({ color: 0xff2d55 })
+  const all = lots()
+  const mesh = new THREE.InstancedMesh(geo, mat, all.length)
+  const dummy = new THREE.Object3D()
+  all.forEach((l, i) => {
+    dummy.position.set(l.x, 0, l.z)
+    dummy.rotation.set(0, l.yaw, 0)
+    dummy.scale.set(l.size, 1, l.size)
+    dummy.updateMatrix()
+    mesh.setMatrixAt(i, dummy.matrix)
+  })
+  mesh.instanceMatrix.needsUpdate = true
+  stage.scene.add(mesh)
+}
+
+// Must run last, after every stage.scene.add above (outline.js's own rule).
+// `painted` is skipped or its 4 boundary edges draw a hard rectangle around
+// the whole map perimeter.
+stage.scene.add(createOutlines(stage.scene, { skip: [painted] }))
+
+if (panX || panZ) {
+  stage.controls.target.x += panX
+  stage.controls.target.z += panZ
+  stage.camera.position.x += panX
+  stage.camera.position.z += panZ
+}
+if (zoom) stage.camera.zoom = zoom
+stage.camera.updateProjectionMatrix()
+stage.controls.update()
+stage.invalidate()
+
+stage.start()
+window.__stage = stage
+requestAnimationFrame(() => requestAnimationFrame(() => { window.__ready = true }))
+</script>
+</body>
+</html>
