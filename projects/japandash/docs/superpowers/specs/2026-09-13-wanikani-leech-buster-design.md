@@ -3,6 +3,9 @@
 **Date:** 2026-09-13
 **Status:** Approved, pending implementation plan
 **Scope:** `projects/japandash/` only
+**Revision:** v2 — folds in 4 fixes from an adversarial review (dev-server
+route registration, widget-order-safe registration, radical exclusion,
+and review-statistics query narrowing). See inline callouts below.
 
 ## Problem
 
@@ -86,12 +89,13 @@ WaniKani /v2/subjects (join) ────┘                                    
 
 ### `src/services/wanikani-api.js`
 
-Add `fetchReviewStatistics(token)`:
+Add `fetchReviewStatistics(token, params = {})`, matching `fetchSubjects`'s
+existing `params` signature rather than hardcoding an unfiltered fetch:
 
 ```js
-export async function fetchReviewStatistics(token) {
+export async function fetchReviewStatistics(token, params = {}) {
   const items = []
-  let url = `${BASE_URL}/review_statistics`
+  let url = `${BASE_URL}/review_statistics?${new URLSearchParams(params)}`
   while (url) {
     const data = await fetchJSON(url, token)
     items.push(...data.data)
@@ -105,6 +109,15 @@ Same pagination shape as the existing `fetchSubjects`/`fetchAllAssignments`.
 Each returned item's `.data` carries: `subject_id`, `subject_type`,
 `percentage_correct`, `meaning_correct`, `meaning_incorrect`,
 `reading_correct`, `reading_incorrect`, `hidden`.
+
+**Fix (review finding #4):** call it as
+`fetchReviewStatistics(apiKey.value, { subject_types: 'vocabulary,kanji' })`
+to filter out radicals server-side, the same way `fetchSubjects` already
+takes a `types` param elsewhere in this file — don't fetch and then discard
+the user's full unfiltered review history on top of the already-unfiltered
+`fetchAllAssignments`/`fetchSubjects` calls `refresh()` makes. This can't be
+confirmed against WaniKani's live docs from this environment, so it's a
+best-effort narrowing, not a substitute for the client-side guard below.
 
 ### `src/composables/useWaniKani.js`
 
@@ -122,7 +135,7 @@ const leechError = ref(null)
 
 1. Respect the 24h cache exactly like `fetchLearnedVocabulary` does
    (same `cached.userId === user.value?.username` + timestamp check).
-2. Call `fetchReviewStatistics(apiKey.value)`.
+2. Call `fetchReviewStatistics(apiKey.value, { subject_types: 'vocabulary,kanji' })`.
 3. Filter:
    ```js
    const LEECH_PCT_THRESHOLD = 80   // percentage_correct below this
@@ -130,14 +143,27 @@ const leechError = ref(null)
 
    function isLeech(stat) {
      const d = stat.data
-     if (d.hidden) return false
+     if (d.hidden || d.subject_type === 'radical') return false
      const total = d.meaning_correct + d.meaning_incorrect + d.reading_correct + d.reading_incorrect
      return d.percentage_correct < LEECH_PCT_THRESHOLD && total >= LEECH_MIN_ATTEMPTS
    }
    ```
+   **Fix (review finding #3):** the explicit `d.subject_type === 'radical'`
+   check is a required client-side guard, not redundant with the
+   `subject_types` request param above — belt-and-suspenders, since the
+   param's exact behavior can't be verified offline. Without *some* exclusion
+   here, a radical can reach the join step below with no matching
+   vocabulary/kanji subject, which is exactly what step 4's `.filter(Boolean)`
+   is for.
 4. Join to subject data. Reuse `learnedVocabulary`/`reviewKanji` if already
    populated (fast path — no extra request); for any leech subject IDs not
    found there, fetch just those via `fetchSubjects(apiKey.value, { subject_ids: ids.join(','), types: 'vocabulary,kanji' })`.
+   **Fix (review finding #3):** this join MUST end with the same
+   `.filter(Boolean)` guard `fetchLearnedVocabulary`/`fetchKanjiMnemonics`
+   already use (`useWaniKani.js`'s existing
+   `.map(a => subject ? merge(a, subject) : null).filter(Boolean)` pattern) —
+   a subject ID with no match (radical or otherwise) must be dropped, not
+   pushed into the leech list as a broken/`undefined`-field row.
 5. Tag each leech with `weakAxis`:
    ```js
    function weakAxis(d) {
@@ -223,6 +249,23 @@ export default async function handler(req, res) {
   return res.status(201).json({ item })
 }
 ```
+
+### `vite-plugin-dev-api.js` — required, not optional (review finding #1)
+
+This file is the dev-server router and it is **not** file-based — it's a
+hardcoded 4-entry `routes` array with exact `{ method, path }` matching
+(`mistakes`, `due`, `grade`, `recent`). A new `api/review/leech.js` handler
+file existing on disk does nothing by itself in `npm run dev`; unmatched
+requests fall through to `next()`, i.e. a 404. Add a 5th entry:
+
+```js
+{ method: 'POST', path: '/api/review/leech', handler: () => import('./api/review/leech.js') },
+```
+
+Without this, `POST /api/review/leech` is unreachable locally, and the
+Testing section's "add a leech to practice" step cannot be verified. (Vercel
+production routing is file-based and likely needs no equivalent change, but
+this project's own testing step happens in dev.)
 
 ### `api/review/due.js` — required fix, not optional polish
 
@@ -317,7 +360,39 @@ three widgets):
   `widgetComponents`, add an entry to `WIDGET_LABELS` (icon suggestion: 🩸).
 - `src/composables/useWidgetLayout.js`: add `leech: { area: 'track', size: 'large' }`
   to `WIDGET_META` (grouped with `wanikani`/`kanji`/`review` in the "Track"
-  zone), and append `'leech'` to `DEFAULT_ORDER`.
+  zone).
+
+**Fix (review finding #2) — do not naively append `'leech'` to
+`DEFAULT_ORDER`.** `loadSavedOrder()` only accepts a saved `v2` (or `v1`
+fallback) order when `saved.order.length === DEFAULT_ORDER.length`. Growing
+`DEFAULT_ORDER` from 10 to 11 entries makes that check fail for every
+existing user with a saved layout, silently discarding their drag-arranged
+order back to default — a regression this exact file has a comment
+referencing having hit before (the v1→v2 fallback exists because of it).
+`loadSavedOrder()` needs to reconcile instead of require an exact length
+match:
+
+```js
+function loadSavedOrder() {
+  try {
+    const v2 = localStorage.getItem('japandash:widget-layout-v2')
+    if (v2) {
+      const saved = JSON.parse(v2)
+      if (Array.isArray(saved?.order) && saved.order.every(id => DEFAULT_ORDER.includes(id))) {
+        const missing = DEFAULT_ORDER.filter(id => !saved.order.includes(id))
+        return [...saved.order, ...missing]
+      }
+    }
+    // ...v1 fallback, same reconciliation...
+  } catch {}
+  return [...DEFAULT_ORDER]
+}
+```
+This validates the saved order is a subset of known widget IDs (rather than
+exact-length), then appends any widgets missing from it (i.e. `'leech'` for
+existing users) at the end — preserving their arrangement instead of
+resetting it. `DEFAULT_ORDER` itself still gets `'leech'` appended, for new
+users with no saved order at all.
 
 ## Error handling / edge cases
 
@@ -351,15 +426,16 @@ the established verification method here. Before calling this done:
 
 | File | Change |
 |---|---|
-| `src/services/wanikani-api.js` | Add `fetchReviewStatistics` |
-| `src/composables/useWaniKani.js` | Add `leeches`/`leechLoading`/`leechError`/`fetchLeeches` + `isLeech`/`weakAxis` helpers + self-check |
+| `src/services/wanikani-api.js` | Add `fetchReviewStatistics(token, params)`, narrowed to `subject_types: 'vocabulary,kanji'` |
+| `src/composables/useWaniKani.js` | Add `leeches`/`leechLoading`/`leechError`/`fetchLeeches` + `isLeech`/`weakAxis` helpers (with radical guard) + self-check |
 | `src/services/claude-api.js` | No change — reused as-is |
 | `api/review/leech.js` | **New** — mirrors `api/review/mistakes.js` |
 | `api/review/due.js` | Add optional `type` query filter |
+| `vite-plugin-dev-api.js` | **Required** — add route entry for `POST /api/review/leech`, or it 404s in `npm run dev` |
 | `src/services/apiClient.js` | `due()` takes a `type` param; add `addLeech()` |
 | `src/composables/useReview.js` | Accept a `type` argument |
 | `src/components/widgets/MistakeReviewWidget.vue` | Call `useReview('mistake')` |
 | `src/components/widgets/LeechWidget.vue` | **New** |
 | `src/App.vue` | Register `LeechWidget` |
-| `src/composables/useWidgetLayout.js` | Add `leech` to `WIDGET_META`/`DEFAULT_ORDER` |
+| `src/composables/useWidgetLayout.js` | Add `leech` to `WIDGET_META`; rework `loadSavedOrder()` to reconcile rather than reset on length mismatch; append `leech` to `DEFAULT_ORDER` |
 | `db/schema.js` | No change |
