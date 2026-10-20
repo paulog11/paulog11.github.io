@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chōme — a ward you build</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1117; overscroll-behavior: none; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* The HUD's whole look lives here: @latticekit/ui ships no stylesheet.
+     Both ends of every contrast pair are FIXED rather than taken from
+     --lattice-*, so the ratios do not move with the hour. A palette-derived
+     HUD is legible at noon and fails at dusk with no code changing. */
+  .hud {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px clamp(14px, 3vw, 28px) calc(14px + env(safe-area-inset-bottom));
+    font: 500 15px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #f2f6fb;
+    /* Solid under every row that carries text, fading only ABOVE them. A
+       gradient that is still fading where the readout sits lets the canvas
+       through, and the ward's own paving is light — which is how five HUD
+       rows measured a contrast of 1.05 against a colour that is nowhere in
+       this stylesheet. Anchor one side and the ratio stops moving. */
+    background: linear-gradient(to top, #090d15 0%, #090d15 88%, rgba(9,13,21,0) 100%);
+  }
+  .readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; }
+  .stat { display: flex; align-items: baseline; gap: 7px; }
+  .stat b { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .stat span { font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: #a8b5c6; }
+  .rate { color: #8ee0a8; }
+
+  .shelf { display: flex; flex-wrap: wrap; gap: 9px; }
+  .pick {
+    flex: 1 1 128px; min-width: 112px; display: flex; flex-direction: column; gap: 2px;
+    padding: 9px 13px; text-align: left; cursor: pointer;
+    font: inherit; color: #f2f6fb;
+    background: #1b2432; border: 1.5px solid #33425a; border-radius: 9px;
+    transition: background-color .12s linear, border-color .12s linear, transform .08s ease-out;
+  }
+  .pick:hover { background: #222e3f; }
+  .pick:active { transform: translateY(1px); }
+  .pick.is-on { background: #28384f; border-color: #7fb2ff; }
+  .pick:disabled { cursor: default; opacity: .46; }
+  .pick .name { font-size: 14px; font-weight: 650; }
+  .pick .price { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: #c3d0e0; }
+  .pick.is-on .price { color: #e3ecf8; }
+
+  .hint { margin: 0; font-size: 13px; color: #b4c1d2; }
+
+  /* Toasts. @latticekit/ui writes the structure and the class names — they are
+     `.lattice-layer-toasts`, `.lattice-toast`, `.lattice-toast-<kind>` and the
+     progress `.lattice-toast-bar`, and guessing at them is how a toast ends up
+     a full-width slab across the top of the ward.
+     No `transform`, `filter` or `will-change` on a layer: those re-parent every
+     `position: fixed` descendant, which `auditOverlay` reports as a real bug. */
+  .lattice-layer-toasts { display: flex; flex-direction: column; align-items: center; gap: 7px; padding-top: 14px; }
+  .lattice-toast {
+    position: relative; overflow: hidden; max-width: min(90vw, 460px);
+    padding: 9px 17px 11px; border-radius: 10px;
+    font: 600 13px/1.35 ui-sans-serif, system-ui, sans-serif;
+    color: #f2f6fb; background: #1b2432; border: 1.5px solid #33425a;
+  }
+  .lattice-toast-good { border-color: #4f9e6b; }
+  .lattice-toast-bad { border-color: #a6604f; }
+  .lattice-toast-bar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 2.5px;
+    background: #7fb2ff; transform-origin: left center;
+  }
+  .lattice-toast-good .lattice-toast-bar { background: #6fd396; }
+  .lattice-toast-bad .lattice-toast-bar { background: #d98b74; }
+
+  @media (prefers-reduced-motion: reduce) { .pick { transition: none; } }
+</style>
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
