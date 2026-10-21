@@ -1,10 +1,10 @@
 <template>
-  <ShinjukuScene :projects="apps" @select="open" />
+  <ProjectList :projects="apps" />
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import ShinjukuScene from './components/ShinjukuScene.vue'
+import ProjectList from './components/ProjectList.vue'
 
 const apps = ref([
   {
@@ -125,28 +125,4 @@ const apps = ref([
     github: '',
   },
 ])
-
-// The scene dispatches two payload kinds: a project stall/board row, or a
-// diegetic widget standing in for a link (résumé, profile, contact).
-function open(payload) {
-  if (!payload) return
-
-  if (payload.kind === 'link') {
-    if (payload.download) {
-      const a = document.createElement('a')
-      a.href = payload.url
-      a.download = payload.download
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-    } else {
-      window.open(payload.url, '_blank', 'noopener')
-    }
-    return
-  }
-
-  const entry = payload.project
-  if (!entry || entry.status === 'coming-soon' || !entry.url) return
-  window.open(entry.url, '_blank', 'noopener')
-}
 </script>

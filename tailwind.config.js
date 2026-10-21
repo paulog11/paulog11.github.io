@@ -12,8 +12,7 @@ export default {
         body: ['"DM Sans"', 'sans-serif'],
         mono: ['"DM Mono"', 'monospace'],
       },
-      // Shinjuku at night. Mirrors scene/palette.js so the DOM fallback and the
-      // 3D scene read as the same place.
+      // Night palette.
       colors: {
         night:   '#070A12',  // sky / page background
         asphalt: '#0A0D15',  // wet street
