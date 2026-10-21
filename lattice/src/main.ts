@@ -1,5 +1,5 @@
 /**
- * CHŌME — the boot, and the frame.
+ * SHINJUKU — the boot, and the frame.
  *
  * The order in this file is the whole reason it is not written from memory.
  * Two mistakes here produce no error, no warning and a plausible-looking
@@ -10,11 +10,11 @@
  * because the input takes the loop itself as its step, and `light` is on the
  * `beginFrame` literal because that is the only place it can be.
  */
-import { createScope } from '@latticekit/core';
+import { createScope, v2 } from '@latticekit/core';
 import {
-  DepthSorter, createCamera, tileBounds,
+  DepthSorter, TILE_H, anchorToScreen, anchorVisible, createCamera, footprintAnchor, tileBounds,
 } from '@latticekit/iso';
-import type { Rect, Tile, TileRange } from '@latticekit/iso';
+import type { Anchor, Rect, TileRange } from '@latticekit/iso';
 import {
   LEVEL_H, beginFrame, createCanvas2dSurface, createLightField, createPalette,
   endFrame, isoTile, renderFrame,
@@ -22,31 +22,28 @@ import {
 import type { Passes, Pen, SpriteDef, Variant } from '@latticekit/draw';
 import { browserFrames, createLoop } from '@latticekit/loop';
 import { createInput } from '@latticekit/input';
-import { drive } from '@latticekit/ui';
-import { installFlushTriggers } from '@latticekit/persist';
 
-import { AVENUES, LANE_FAR, LANE_NEAR, LOTS, PITCH, W, avenue, isStreet, keyOf, lotOf, neighbourAt, neighbourLevel, tileOf } from './layout.ts';
-import { KINDS, createWard } from './city.ts';
-import type { Kind, Placed } from './city.ts';
 import {
-  DAY_X, NEIGHBOUR_DEF, NIGHT_X, defOf, drawCar, drawGhost, heightOf, paint,
-  setHour, variantFor,
+  AVENUES, LANDMARKS, LANE_FAR, LANE_NEAR, LOTS, PITCH, RAIL_X0, RAIL_X1, STATION_PIECES, W,
+  avenue, districtAtTile, districtOf, isRail, isStreet, keyOf, neighbourAt, neighbourLevel, tileOf,
+} from './layout.ts';
+import {
+  DAY_X, NIGHT_X, defForLot, drawCar, heightOf, paint, setHour, variantFor,
 } from './sprites.ts';
-import { createHud } from './hud.ts';
-import { openSave } from './save.ts';
-import { audio } from './sound.ts';
+import { landmarkDef } from './landmarks.ts';
+import { paintRail, stationDef } from './station.ts';
 
 // ── the screen ───────────────────────────────────────────────────────────────
 
 const host = document.getElementById('app') ?? document.body;
 const canvas = document.createElement('canvas');
 canvas.style.cssText = 'display:block;width:100%;height:100%';
-canvas.setAttribute('aria-label', 'Chōme — an isometric ward you build, block by block');
+canvas.setAttribute('aria-label', 'Shinjuku — an explorable isometric city; drag to pan, scroll or pinch to zoom');
 host.append(canvas);
 
 const scope = createScope();
 const surface = createCanvas2dSurface(canvas);
-// The DAY stop set, extended with the ward's own six materials. Both sets are
+// The DAY stop set, extended with the ward's own materials. Both sets are
 // hoisted at module scope in sprites.ts: a set rebuilt inside the render
 // callback bumps `Palette.rev` every frame, and `rev` is what every cache in
 // the kit keys on. The symptom is not a wrong colour — it is a frame time that
@@ -55,20 +52,32 @@ const palette = createPalette(DAY_X);
 
 // ── the world, and the camera that has to be told about it ───────────────────
 
-/** The fence: the whole map, plus six storeys of air rather than the tallest
- *  building's. `tileBounds`' height argument extends `minY` UPWARD, and what a
- *  camera clamp does with thirty storeys of that is let the player park the
- *  viewport in the sky above the far corner and still satisfy `keepVisible`. */
+/** The tallest filler: a Nishi tower (`LEVELS.N` tops out at 11, plus
+ *  one storey of crown). The fence is
+ *  the whole map plus THAT much air, not 都庁's. `tileBounds`' height argument
+ *  extends `minY` UPWARD, and what a camera clamp does with an oversized one is
+ *  let the player park the viewport in the sky above the far corner and still
+ *  satisfy `keepVisible`. */
+const TALLEST_FILLER = 12;
 const worldRect: Rect = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-tileBounds(0, 0, W, W, LEVEL_H * 6, worldRect);
+tileBounds(0, 0, W, W, LEVEL_H * TALLEST_FILLER, worldRect);
 
 /** The opening shot is a REGION of the ward, never the whole of it. A fresh
  *  camera looks at world (0,0) — the top corner of the map in a 2:1 projection
  *  — so with no fit at all the first frame is empty sky beside the world.
  *  Fitting `worldRect` is the opposite failure: every corner on screen at once,
- *  which is the diorama. */
+ *  which is the diorama.
+ *
+ *  This one runs from 都庁's west edge (gx 32) to the corridor's east edge
+ *  (gx 92), over gy 72–90. The fit is HEIGHT-limited at desktop sizes, so the
+ *  two numbers that matter are the bottom and the headroom. The bottom is the
+ *  rect's south corner (92, 90), which is level on screen with the south
+ *  deck's (90, 92): both decks and the concourse between them are in frame.
+ *  The headroom is 25 storeys, 都庁's roof (24.2) plus its name plate; less
+ *  sends the plate off the top edge. The rect's own north corner is far below
+ *  都庁's roof, so the height, not gy, is what sets the top. */
 const opening: Rect = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-tileBounds(W * 0.3, W * 0.32, W * 0.4, W * 0.4, LEVEL_H * 6, opening);
+tileBounds(32, 72, 92 - 32, 90 - 72, LEVEL_H * 25, opening);
 
 const camera = createCamera(Math.max(1, innerWidth), Math.max(1, innerHeight), {
   bounds: worldRect,
@@ -92,7 +101,7 @@ const order = new DepthSorter(4096);
 const loop = createLoop({
   clock: { now: () => performance.now() },
   // rAF paints; an interval ticks when the tab is hidden, so `update` keeps
-  // running and the economy and the autosave do not stop existing.
+  // running and the day does not stop turning.
   frames: browserFrames(),
 });
 
@@ -105,52 +114,9 @@ const input = createInput({
   // that never answered: told nothing, `createInput` resolves on z = 0 anyway
   // and files a diagnostic about it.
   terrain: 'flat',
-  actions: { build: ['tap'], cycle: ['key:Space'] },
+  // No `actions`: this is a place to look at, so all the input does is pan and
+  // zoom, which `createInput` binds by default.
 });
-
-// ── the ward ─────────────────────────────────────────────────────────────────
-
-const saved = openSave(loop, () => {
-  const s = ward.snapshot();
-  return { version: 1 as const, coin: s.coin, lots: s.lots };
-});
-const ward = createWard(saved.opened.source === 'save'
-  ? { coin: saved.opened.state.coin, lots: saved.opened.state.lots }
-  : undefined);
-
-scope.add(installFlushTriggers(saved.auto, { visibility: document, page: window }));
-
-let selected: Kind = 'home';
-
-// ── the HUD ──────────────────────────────────────────────────────────────────
-
-const hud = createHud(loop, () => ({
-  coin: ward.coin(),
-  rate: ward.rate(),
-  pop: ward.population(),
-  night: ward.night(),
-  selected,
-  price: ward.price,
-  affordable: (kind) => ward.coin() >= ward.price(kind),
-  owned: ward.owned,
-}), (kind) => {
-  selected = kind;
-  audio.unlock();
-  audio.play('pick');
-});
-scope.add(drive(hud.ui, loop));
-scope.add(hud.destroy);
-
-// A save that may not persist is a toast: the player can do nothing about it
-// and must not be blocked at the door.
-if (!saved.opened.durable) {
-  hud.say('not-durable', 'This browser may not keep your ward between visits.');
-}
-// A save that has STOPPED being written is different in kind — everything from
-// now on is unrecorded — so it is said plainly rather than as a hint.
-if (!saved.opened.writable) {
-  hud.say('not-writable', 'A newer version of this game wrote the save. Nothing from now on is being kept.', 'bad');
-}
 
 // ── one resize handler, so there cannot be two that disagree ─────────────────
 
@@ -178,8 +144,8 @@ fit();
  *
  *  `?day=8` shortens it. That exists because the day runs on `loop.realTime`,
  *  which advances only as frames render — so a harness that fast-forwards the
- *  wall clock gets a fast-forwarded ECONOMY and a ward still standing at noon,
- *  and there is otherwise no way to look at the night without waiting for it. */
+ *  wall clock gets a ward still standing at noon, and there is otherwise no
+ *  way to look at the night without waiting for it. */
 const DAY_SECONDS = (() => {
   const asked = Number(new URLSearchParams(location.search).get('day'));
   return Number.isFinite(asked) && asked >= 4 ? asked : 180;
@@ -193,6 +159,11 @@ interface Build {
   readonly def: SpriteDef;
   readonly gx: number;
   readonly gy: number;
+  /** The SAME w/d the sprite declares — `order.add` is given these, and a
+   *  sorter and a sprite that disagree about a footprint draw in the wrong order
+   *  with no error. */
+  readonly w: number;
+  readonly d: number;
   readonly v: Variant;
   readonly hPx: number;
 }
@@ -208,16 +179,90 @@ const frame: Item[] = [];
  *  Bounded by the lots the camera has actually visited. */
 const views = new Map<number, Build>();
 
-function buildFor(key: number, lx: number, ly: number, placed: Placed | undefined): Build {
+function buildFor(key: number, lx: number, ly: number): Build {
   let b = views.get(key);
   if (b === undefined) {
-    const def = placed === undefined ? NEIGHBOUR_DEF : defOf(placed.kind);
-    const level = placed === undefined ? neighbourLevel(lx, ly) : 2;
-    const v = variantFor(placed === undefined ? (lx * 73856093) ^ (ly * 19349663) : placed.seed, level);
-    b = { def, gx: tileOf(lx), gy: tileOf(ly), v, hPx: heightOf(def, v) };
+    const seed = (lx * 73856093) ^ (ly * 19349663);
+    const def = defForLot(districtOf(lx, ly), seed);
+    const v = variantFor(seed, neighbourLevel(lx, ly));
+    b = { def, gx: tileOf(lx), gy: tileOf(ly), w: def.w, d: def.d, v, hPx: heightOf(def, v) };
     views.set(key, b);
   }
   return b;
+}
+
+/** The landmarks and the station: built once, here, and handed to the sorter
+ *  every frame. About thirty-three items, and the sorter culls the off-screen
+ *  ones, so there is no reason to range-check them ourselves. The footprints are
+ *  the layout's tile rects exactly — nothing is adjusted on the way through. */
+const fixed: Build[] = [];
+
+function fixedBuild(def: SpriteDef, f: { gx: number; gy: number; w: number; d: number }, seed: number): Build {
+  const v = variantFor(seed, 0);
+  const b: Build = { def, gx: f.gx, gy: f.gy, w: f.w, d: f.d, v, hPx: heightOf(def, v) };
+  fixed.push(b);
+  return b;
+}
+
+// ── name plates: DOM over the canvas, not drawn on it ────────────────────────
+//
+// Native CSS text stays crisp at every zoom, which canvas text at 0.4× does not.
+// Each plate holds ONE anchor for its building (never a copy of the building's
+// position) and one scratch Vec2 is shared by all of them: a frame allocates
+// nothing.
+
+interface Plate {
+  readonly el: HTMLDivElement;
+  readonly anchor: Anchor;
+  x: number;
+  y: number;
+  shown: boolean;
+}
+const plates: Plate[] = [];
+const plateAt = v2(0, 0);
+/** Clearance above the roof, in world pixels. */
+const PLATE_LIFT = 14;
+/** Slack at the viewport edge so a plate slides off rather than vanishing. */
+const PLATE_MARGIN = 120;
+
+function addPlate(label: string, b: Build): void {
+  const el = document.createElement('div');
+  el.className = 'plate';
+  el.textContent = label;
+  el.hidden = true;
+  host.append(el);
+  const anchor = footprintAnchor(b, b.hPx + PLATE_LIFT, { gx: 0, gy: 0, zPx: 0 });
+  // NaN, so the first visible frame always writes.
+  plates.push({ el, anchor, x: NaN, y: NaN, shown: false });
+}
+
+LANDMARKS.forEach((m, i) => {
+  addPlate(m.label, fixedBuild(landmarkDef(m.id), m, 0x4c4d0000 + i));
+});
+STATION_PIECES.forEach((p, i) => {
+  const b = fixedBuild(stationDef(p), p, 0x53540000 + i);
+  // Only the concourse deck carries a name.
+  if (p.kind === 'deck' && p.label) addPlate(p.label, b);
+});
+
+/** Called once per render, after the camera has moved. Writes the style only
+ *  when the rounded position changed, because a style write is a layout
+ *  invalidation and a plate on a still camera should cost nothing. */
+function placePlates(): void {
+  for (const p of plates) {
+    const visible = anchorVisible(camera, p.anchor, PLATE_MARGIN);
+    if (visible !== p.shown) { p.el.hidden = !visible; p.shown = visible; }
+    if (!visible) continue;
+    anchorToScreen(camera, p.anchor, plateAt);
+    const x = Math.round(plateAt.x);
+    const y = Math.round(plateAt.y);
+    if (x === p.x && y === p.y) continue;
+    p.x = x;
+    p.y = y;
+    // The individual `translate` property, so the CSS `transform` that centres
+    // the plate above its anchor is left alone.
+    p.el.style.translate = `${x}px ${y}px`;
+  }
 }
 
 const CARS = 64;
@@ -230,7 +275,12 @@ const carAxis = new Uint8Array(CARS);
 function moveCars(t: number): void {
   for (let i = 0; i < CARS; i++) {
     const alongX = (i & 1) === 0;
-    const a = (i * 7 + (i >> 1)) % AVENUES;
+    let a = (i * 7 + (i >> 1)) % AVENUES;
+    // A gx-running car drives down avenue `a` at x = avenue(a) + lane. Avenue 8
+    // is gx 80, the middle of the rail corridor: there is no street there, so
+    // those cars move to avenue 9, 10 or 11 (spread by `i`) and the count
+    // stays 64.
+    if (!alongX && isRail(avenue(a))) a = (a + 1 + ((i >> 2) % 3)) % AVENUES;
     const back = (i & 2) === 0;
     // Both lanes are INSIDE the street's two tiles. Taken from the street's
     // centre instead, the far lane lands on a lot and the car drives through
@@ -245,64 +295,43 @@ function moveCars(t: number): void {
 }
 
 const range: TileRange = { gx0: 0, gy0: 0, gx1: 0, gy1: 0 };
-const hover: Tile = { gx: 0, gy: 0 };
-let hovering = false;
+
+/** How far past the viewport to look for buildings, in tiles. A roof can be on
+ *  screen while its base is below the bottom edge, so this is the tallest filler
+ *  in tile-heights — it was 4 when the ward topped out at four storeys, and a
+ *  Nishi tower would pop in at the bottom of the frame at that. */
+const MARGIN_TILES = Math.ceil((LEVEL_H * TALLEST_FILLER) / TILE_H);
 
 /** Fill the sorter from the visible lots only. Everything off-screen costs
  *  exactly nothing because it was never asked about. */
 function fillFrame(t: number): void {
   order.clear();
-  camera.visibleTileBounds(range, 4);
-  const lx0 = Math.max(0, Math.floor(range.gx0 / PITCH) * 4);
+  camera.visibleTileBounds(range, MARGIN_TILES);
+  // One lot more on the LOW side: a 4×4 tower is anchored on its north corner,
+  // so the anchor can be a lot off-screen while the body is not.
+  const lx0 = Math.max(0, Math.floor(range.gx0 / PITCH) * 4 - 1);
   const lx1 = Math.min(LOTS, (Math.floor(range.gx1 / PITCH) + 1) * 4);
-  const ly0 = Math.max(0, Math.floor(range.gy0 / PITCH) * 4);
+  const ly0 = Math.max(0, Math.floor(range.gy0 / PITCH) * 4 - 1);
   const ly1 = Math.min(LOTS, (Math.floor(range.gy1 / PITCH) + 1) * 4);
 
   for (let ly = ly0; ly < ly1; ly++) {
     for (let lx = lx0; lx < lx1; lx++) {
-      const key = keyOf(lx, ly);
-      const placed = ward.lots.get(key);
-      if (placed === undefined && !neighbourAt(lx, ly)) continue;
-      const b = buildFor(key, lx, ly, placed);
-      frame[order.add(b.gx, b.gy, 2, 2, b.hPx)] = b;
+      if (!neighbourAt(lx, ly)) continue;
+      const b = buildFor(keyOf(lx, ly), lx, ly);
+      frame[order.add(b.gx, b.gy, b.w, b.d, b.hPx)] = b;
     }
   }
 
+  for (const b of fixed) frame[order.add(b.gx, b.gy, b.w, b.d, b.hPx)] = b;
+
   moveCars(t);
   for (let i = 0; i < CARS; i++) {
+    // A car on an east-west street passes UNDER the station: inside the
+    // corridor it is simply not drawn, so it reads as going beneath the decks.
+    if (carAxis[i] === 1 && isRail(carX[i] ?? 0)) continue;
     frame[order.addPoint(carX[i] ?? 0, carY[i] ?? 0, 0, 0.32)] = i;
   }
 }
-
-// ── the taps ─────────────────────────────────────────────────────────────────
-
-input.onAction('build', (e) => {
-  // The audio context cannot exist until a gesture, and this package installs
-  // no listener of its own on purpose.
-  audio.unlock();
-  // `terrain: 'flat'` means `onGround` is always true, but the ward's edges are
-  // not the lattice's, so `refuse` is what actually decides.
-  const why = ward.refuse(selected, e.gx, e.gy);
-  if (why !== undefined) {
-    audio.play('deny');
-    hud.say(`no:${why}`, why, 'bad');
-    return;
-  }
-  const placed = ward.place(selected, e.gx, e.gy);
-  if (placed === undefined) return;
-  audio.play('place');
-  if (ward.owned('park') === 0 && ward.owned('home') === 3) {
-    hud.say('try-a-park', 'Three homes. A pocket park beside them would pay all of them more.', 'good');
-  }
-});
-
-input.onAction('cycle', () => {
-  const next = KINDS[(KINDS.indexOf(selected) + 1) % KINDS.length];
-  if (next === undefined) return;
-  selected = next;
-  audio.unlock();
-  audio.play('pick');
-});
 
 // ── the frame ────────────────────────────────────────────────────────────────
 
@@ -328,50 +357,35 @@ const passes: Passes = {
   terrain(pen, visible) {
     const gx0 = Math.max(0, visible.gx0);
     const gx1 = Math.min(W, visible.gx1);
-    for (let gy = Math.max(0, visible.gy0); gy < Math.min(W, visible.gy1); gy++) {
+    const gy0 = Math.max(0, visible.gy0);
+    const gy1 = Math.min(W, visible.gy1);
+    for (let gy = gy0; gy < gy1; gy++) {
       const streetY = isStreet(gy);
       for (let gx = gx0; gx < gx1; gx++) {
-        isoTile(pen, gx, gy, streetY || isStreet(gx) ? 'road' : 'paving');
+        // The corridor is one call below, not a per-tile case here.
+        if (isRail(gx)) continue;
+        if (streetY || isStreet(gx)) isoTile(pen, gx, gy, 'road');
+        // Gyoen's lots are lawn; its streets stay road.
+        else isoTile(pen, gx, gy, districtAtTile(gx, gy) === 'G' ? 'leaf' : 'paving');
       }
     }
+    paintRail(pen, Math.max(gx0, RAIL_X0), Math.min(gx1, RAIL_X1), gy0, gy1);
   },
   solids(pen, sorted) {
     sheet = pen;
     for (let i = 0; i < sorted.count; i++) paintItem(frame[sorted.indexAt(i)] as Item);
   },
-  placement(pen) {
-    if (!hovering) return;
-    const lx = lotOf(hover.gx);
-    const ly = lotOf(hover.gy);
-    if (lx < 0 || ly < 0) return;
-    drawGhost(pen, tileOf(lx), tileOf(ly), selected,
-      ward.refuse(selected, hover.gx, hover.gy) === undefined);
-  },
 };
 
 loop.onUpdate((_dt, tick) => {
-  // BEFORE the game's update: a handler must see the ward as the player left
-  // it, not one step behind it.
+  // BEFORE anything reads the camera: a pan gesture must have landed first.
   input.tick(tick);
 
   daylight = 0.5 + 0.5 * Math.cos((loop.realTime / DAY_SECONDS) * Math.PI * 2);
-  const dark = daylight < 0.4;
-  if (dark !== ward.night()) {
-    ward.setNight(dark);
-    audio.play('chime');
-    hud.say(dark ? 'dusk' : 'dawn',
-      dark ? 'Dusk. The shops trade better now.' : 'Morning over the ward.');
-  }
-
-  // There is no hover GESTURE — `GestureMap` has six members and none of them
-  // is a pointer with no button down. Asking once per update is the only way,
-  // and it goes through the same picker the tap does, so the ghost cannot
-  // disagree with where the building lands.
-  hovering = input.hoverTile(hover);
 
   // The palette is pushed from UPDATE, never from render: pushed from render it
-  // stops in a backgrounded tab and the player comes back to a night ward under
-  // a noon HUD. `lerp` quantizes `t` internally, so most of these are no-ops.
+  // stops in a backgrounded tab and the viewer comes back to a night ward under
+  // a noon clock. `lerp` quantizes `t` internally, so most of these are no-ops.
   palette.lerp(NIGHT_X, DAY_X, daylight);
   if (palette.rev !== pushedRev) pushedRev = palette.rev;
 });
@@ -379,6 +393,7 @@ loop.onUpdate((_dt, tick) => {
 loop.onRender((_alpha, time, nowMs) => {
   // The camera's glide integrates here, at display rate. It delivers nothing.
   input.frame(nowMs);
+  placePlates();
   setHour(daylight, camera.zoom);
   fillFrame(time);
 
@@ -396,6 +411,15 @@ loop.onRender((_alpha, time, nowMs) => {
   renderFrame(pen, passes, order);
   endFrame(pen);
 });
+
+// `tools/look.mjs --eval` reads this: `order.count` is the density of the last
+// frame, `loop.stats` its cost, `camera` where it was looking.
+declare global {
+  interface Window {
+    __lattice?: { order: DepthSorter; loop: typeof loop; camera: typeof camera };
+  }
+}
+window.__lattice = { order, loop, camera };
 
 // ── teardown, and the one line that saves an hour under Vite ─────────────────
 

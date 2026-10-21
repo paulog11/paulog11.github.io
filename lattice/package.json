@@ -19,14 +19,10 @@
     "vite": "^8.3.4"
   },
   "dependencies": {
-    "@latticekit/audio": "^0.1.1",
     "@latticekit/core": "^0.1.1",
     "@latticekit/draw": "^0.1.1",
     "@latticekit/input": "^0.1.1",
     "@latticekit/iso": "^0.1.1",
-    "@latticekit/loop": "^0.1.1",
-    "@latticekit/persist": "^0.1.1",
-    "@latticekit/sim": "^0.1.1",
-    "@latticekit/ui": "^0.1.1"
+    "@latticekit/loop": "^0.1.1"
   }
 }
