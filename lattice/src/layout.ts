@@ -14,8 +14,9 @@
  *
  * On top of that grid, this file owns four placement tables, all in tiles:
  * `DISTRICTS` (what kind of ground a block is), the rail corridor, `LANDMARKS`
- * (hand-placed buildings that claim lots) and `STATION_PIECES` (the decks,
- * canopies and trains that stand in the corridor). Replace the data, never
+ * (hand-placed buildings that claim lots) and `STATION_PIECES` (the decks and
+ * canopies that stand in the corridor; trains move, so they are `TRAINS`, and
+ * subway entrances are `ENTRANCES`). Replace the data, never
  * hard-code a position in the art.
  */
 import { hash2, toUnit } from '@latticekit/core';
@@ -81,9 +82,10 @@ export function keyOf(lx: number, ly: number): number {
 
 // ── districts ────────────────────────────────────────────────────────────────
 
-/** F fringe residential · N Nishi-Shinjuku towers · K Kabukichō · E east side
- *  (3-chōme) · S south · G Gyoen · R the rail corridor. */
-export type District = 'F' | 'N' | 'K' | 'E' | 'S' | 'G' | 'R';
+/** F fringe residential · N Nishi-Shinjuku towers · K Kabukichō · O Shin-Okubo
+ *  (north of Kabukichō) · E east side (3-chōme shopping, south of Kabukichō) ·
+ *  S south · G Gyoen · R the rail corridor. */
+export type District = 'F' | 'N' | 'K' | 'O' | 'E' | 'S' | 'G' | 'R';
 
 /** THE map. One char per BLOCK: row = block y (`by`, north at the top), column
  *  = block x (`bx`). This is the single source of truth for what kind of ground
@@ -93,11 +95,11 @@ export type District = 'F' | 'N' | 'K' | 'E' | 'S' | 'G' | 'R';
  *  The two R columns (bx 7 and 8) ARE the rail corridor's lots. The corridor
  *  itself (`RAIL_X0..RAIL_X1`) also swallows the avenue between them. */
 export const DISTRICTS: readonly string[] = [
-  'FFFFFFFRRFKKKFFF',
-  'FFNNNNFRRKKKKKFF',
+  'FFFFFFFRRFOOOOFF',
+  'FFNNNNFRROOOOOOF',
   'FNNNNNFRRKKKKKKF',
   'FNNNNNNRRKKKKKKF',
-  'FNNNNNNRREKKKKEF',
+  'FNNNNNNRRKKKKKKF',
   'FNNNNNNRREEEEEEF',
   'FNNNNNNRREEEEEEF',
   'FNNNNNNRREEEEEEF', // ← the concourse row
@@ -164,16 +166,69 @@ export const LANDMARKS: readonly Landmark[] = [
   // The SE quadrant of block (bx 6, by 8): the corner nearest the camera, so no
   // Nishi tower stands between it and the viewer (in the NE quadrant one did,
   // and hid all but its crown).
-  // The reference image puts Cocoon SOUTH-west of the station; in reality it
-  // stands west/north-west of it. Moving it is a one-line edit: change gx/gy to
-  // any 4×4 corner of a block, and `tools/check.mjs` will say if it lands badly.
-  { id: 'cocoon', gx: 66, gy: 86, w: 4, d: 4, label: 'コクーンタワー' },
+  // North-west of the station, as in the reference image and in reality. It is
+  // the SE quadrant of block (bx 6, by 6), the corner nearest the camera.
+  { id: 'cocoon', gx: 66, gy: 66, w: 4, d: 4, label: 'コクーンタワー' },
+
+  // Kabukichō (bx 9–14, by 2–4). The gate is its south mouth, the ward office
+  // its north-west corner, Golden Gai its south-east: a walk through the district
+  // passes all four. All lot-aligned, each inside one block.
+  { id: 'kuyakusho', gx: 92, gy: 22, w: 6, d: 4, label: '新宿区役所' },
+  { id: 'toho', gx: 112, gy: 34, w: 4, d: 4, label: 'TOHOシネマズ新宿' },
+  { id: 'ichibangai', gx: 102, gy: 48, w: 2, d: 2, label: '歌舞伎町一番街' },
+  { id: 'goldengai', gx: 132, gy: 44, w: 4, d: 4, label: 'ゴールデン街' },
+
+  // The 3-chōme shopping streets, east of the station and south of Kabukichō.
+  // Flush with the block's south edge (gy 74–79): at gy 72 a row of filler lots
+  // stood 0.16 tile from its +gy face and hid the storeys a department store
+  // needs to be seen on. Now both visible faces look onto a street.
+  { id: 'isetan', gx: 102, gy: 74, w: 8, d: 6, label: '伊勢丹' },
 ];
 
-/** Does any landmark touch this tile rect? */
+/** The four subway lines that matter here. Tokyo Metro: Marunouchi (M, red),
+ *  Fukutoshin (F, brown). Toei: Shinjuku (S, leaf green), Oedo (E, magenta). */
+export type MetroLine = 'marunouchi' | 'fukutoshin' | 'shinjuku' | 'oedo';
+
+/** A subway entrance. It claims ONE lot (2×2 tiles) and the art makes it a small
+ *  plaza with a stair hood, because every lot is otherwise a building and the
+ *  streets are full-width roadway. Which line serves which spot is illustrative,
+ *  not surveyed. Not in `LANDMARKS`, so it gets no name plate. */
+export interface Entrance {
+  readonly line: MetroLine;
+  readonly gx: number;
+  readonly gy: number;
+}
+
+export const ENTRANCES: readonly Entrance[] = [
+  // West of the station: along the corridor's frontage and into Nishi.
+  { line: 'marunouchi', gx: 68, gy: 62 },
+  { line: 'oedo', gx: 68, gy: 72 },
+  { line: 'shinjuku', gx: 68, gy: 82 },
+  { line: 'marunouchi', gx: 68, gy: 92 },
+  { line: 'oedo', gx: 58, gy: 72 },
+  { line: 'shinjuku', gx: 58, gy: 82 },
+  // East of the station: the 3-chōme shopping side, and Kabukichō's south edge.
+  // Every one is the SE-corner lot of its block (gx and gy both ≡ 8 mod PITCH),
+  // so what stands in front of it, on +gx and +gy, is a two-tile street and not
+  // another building. Mid-block they were buried: a neighbour hides everything
+  // of the entrance below its own roofline, and a sign 3.4 storeys tall cleared
+  // only the top third of it.
+  { line: 'oedo', gx: 98, gy: 48 },
+  { line: 'marunouchi', gx: 98, gy: 58 },
+  { line: 'shinjuku', gx: 98, gy: 68 },
+  { line: 'marunouchi', gx: 98, gy: 78 },
+  { line: 'fukutoshin', gx: 98, gy: 88 },
+  { line: 'fukutoshin', gx: 108, gy: 68 },
+  { line: 'shinjuku', gx: 118, gy: 68 },
+];
+
+/** Does any landmark or entrance touch this tile rect? */
 function claimedRect(gx: number, gy: number, w: number, d: number): boolean {
   for (const m of LANDMARKS) {
     if (gx < m.gx + m.w && gx + w > m.gx && gy < m.gy + m.d && gy + d > m.gy) return true;
+  }
+  for (const e of ENTRANCES) {
+    if (gx < e.gx + LOT && gx + w > e.gx && gy < e.gy + LOT && gy + d > e.gy) return true;
   }
   return false;
 }
@@ -185,7 +240,7 @@ export function isClaimed(lx: number, ly: number): boolean {
 
 // ── the station ──────────────────────────────────────────────────────────────
 
-export type StationKind = 'canopy' | 'deck' | 'train';
+export type StationKind = 'canopy' | 'deck';
 export type Livery = 'jrgreen' | 'chuo';
 
 /** One footprint in the corridor, in tiles. `w` and `d` are the SAME numbers
@@ -197,7 +252,6 @@ export interface StationPiece {
   readonly w: number;
   readonly d: number;
   readonly label?: string;
-  readonly livery?: Livery;
 }
 
 /** Cross-decks: concourses spanning the whole corridor, east to west. They are
@@ -214,15 +268,110 @@ export const DECKS: readonly { readonly gy: number; readonly d: number; readonly
 export const CANOPY_Y0 = 56;
 export const CANOPY_Y1 = 98;
 
-/** Parked trains, each on one TRACK column. Lengths 8–14 tiles. They sit
- *  between the decks, or in the open corridor either side of the station —
- *  never under a deck, which `tools/check.mjs` proves by overlap. */
-export const TRAINS: readonly { readonly gx: number; readonly gy: number; readonly d: number; readonly livery: Livery }[] = [
-  { gx: 74, gy: 65, d: 8, livery: 'jrgreen' }, // between the north and concourse decks
-  { gx: 80, gy: 79, d: 8, livery: 'chuo' }, // between the concourse and south decks
-  { gx: 86, gy: 42, d: 14, livery: 'chuo' }, // open corridor, north of the canopies
-  { gx: 81, gy: 99, d: 12, livery: 'jrgreen' }, // open corridor, south of the canopies
+/** A train that runs the length of the ward on one TRACK column. It is a pure
+ *  function of (run, time), like the cars: no state, nothing to get out of step.
+ *  A car is `CAR` tiles, so a run is 4–7 cars, 8–14 tiles. Under a deck a train
+ *  is not drawn — car by car, so it reads as passing beneath. `dir` is +1 for
+ *  southbound (+gy), −1 northbound; `speed` is the cruise speed in tiles per
+ *  second (1 tile ≈ 10 m, so 1.5 is a station-approach crawl); `phase` is how far
+ *  along its loop it is at t = 0, in tiles at cruise speed, so the six are never
+ *  in step. */
+export interface TrainRun {
+  readonly gx: number;
+  readonly cars: number;
+  readonly livery: Livery;
+  readonly dir: 1 | -1;
+  readonly speed: number;
+  readonly phase: number;
+}
+
+/** Only the tracks with a platform to their WEST: 74, 77, 80, 83, 86, 89. A
+ *  platform canopy is a slab a storey up, and a canopy to a train's EAST is
+ *  nearer the camera and sorts after it, so it hangs over the flank — the cars
+ *  were there, and invisible. A canopy to the west is behind the train. */
+export const TRAINS: readonly TrainRun[] = [
+  { gx: 74, cars: 6, livery: 'jrgreen', dir: 1, speed: 1.5, phase: 0 },
+  { gx: 77, cars: 6, livery: 'jrgreen', dir: -1, speed: 1.5, phase: 70 },
+  { gx: 80, cars: 7, livery: 'chuo', dir: 1, speed: 2.0, phase: 20 },
+  { gx: 83, cars: 7, livery: 'chuo', dir: -1, speed: 2.0, phase: 90 },
+  { gx: 86, cars: 5, livery: 'jrgreen', dir: 1, speed: 1.7, phase: 45 },
+  { gx: 89, cars: 4, livery: 'chuo', dir: -1, speed: 1.8, phase: 120 },
 ];
+
+/** A car is ~20 m: 2 tiles, and the footprint of one car sprite is 1 × `CAR`. */
+export const CAR = 2;
+
+/** Every train stops once per loop on the platform between the concourse deck
+ *  and the next one south: it brakes for `TRAIN_RAMP` seconds, stands for
+ *  `TRAIN_DWELL`, and pulls away for `TRAIN_RAMP`. The FRONT stops `STOP_GAP`
+ *  tiles short of the far deck, so a short train stands wholly in the open and a
+ *  long one has its tail tucked under a deck — which `carVisible` then hides. */
+export const TRAIN_DWELL = 9;
+const TRAIN_RAMP = 3;
+const STOP_GAP = 0.5;
+const CONCOURSE = DECKS.findIndex((k) => k.label !== undefined);
+const PLATFORM_Y0 = (DECKS[CONCOURSE]?.gy ?? 0) + (DECKS[CONCOURSE]?.d ?? 0);
+const PLATFORM_Y1 = DECKS[CONCOURSE + 1]?.gy ?? W;
+
+/** Tiles of one loop: the ward plus the train's own length, so it enters with
+ *  every car still off the north (or south) edge and leaves the same way. */
+function trainLoop(run: TrainRun): number {
+  return W + run.cars * CAR;
+}
+
+/** Seconds for one loop: cruise, two ramps (each covers half what cruise would
+ *  have in the same time) and the dwell. A train repeats exactly after this. */
+export function trainPeriod(run: TrainRun): number {
+  const ramp = (run.speed * TRAIN_RAMP) / 2;
+  return (trainLoop(run) - 2 * ramp) / run.speed + 2 * TRAIN_RAMP + TRAIN_DWELL;
+}
+
+/** How far it has travelled along its loop, in tiles, 0 … `trainLoop`. Position
+ *  is `speed·t` between stops and a constant-deceleration ramp into and out of
+ *  each, so velocity is continuous and the train never lurches. */
+function trainProgress(run: TrainRun, t: number): number {
+  const v = run.speed;
+  const ramp = (v * TRAIN_RAMP) / 2;
+  // Where the front is when it stops, as progress: southbound progress IS the
+  // front's gy; northbound the front is at `W - progress`.
+  const stop = run.dir === 1 ? PLATFORM_Y1 - STOP_GAP : W - PLATFORM_Y0 - STOP_GAP;
+  const period = trainPeriod(run);
+  let s = (t + run.phase / v) % period;
+  if (s < 0) s += period;
+  const brake = (stop - ramp) / v;
+  if (s < brake) return v * s;
+  s -= brake;
+  if (s < TRAIN_RAMP) return stop - ramp + v * s - (v * s * s) / (2 * TRAIN_RAMP);
+  s -= TRAIN_RAMP;
+  if (s < TRAIN_DWELL) return stop;
+  s -= TRAIN_DWELL;
+  if (s < TRAIN_RAMP) return stop + (v * s * s) / (2 * TRAIN_RAMP);
+  return stop + ramp + v * (s - TRAIN_RAMP);
+}
+
+/** The gy of car `k` of a train at time `t`; car 0 is the +gy end, the one the
+ *  camera sees the cab of, whichever way the train is going. Its footprint is
+ *  `[y, y + CAR)` on column `run.gx`. Northbound, progress runs the other way
+ *  and the +gy end is the REAR, so cars are numbered by where they stand and
+ *  not by which one leads. */
+export function trainCarY(run: TrainRun, k: number, t: number): number {
+  const progress = trainProgress(run, t);
+  const end = run.dir === 1 ? progress : trainLoop(run) - progress;
+  return end - (k + 1) * CAR;
+}
+
+/** Is a car whose footprint is `[y, y + CAR)` to be drawn? Not off the ward, and
+ *  NEVER while it overlaps a deck: the sorter is a topological sort over
+ *  footprints, so a car overlapping a deck is a cycle. Not drawing it is also
+ *  what makes it read as passing beneath. */
+export function carVisible(y: number): boolean {
+  if (y < 0 || y + CAR > W) return false;
+  for (let i = 0; i < DECKS.length; i++) {
+    const k = DECKS[i];
+    if (k !== undefined && y < k.gy + k.d && y + CAR > k.gy) return false;
+  }
+  return true;
+}
 
 function stationPieces(): readonly StationPiece[] {
   const out: StationPiece[] = [];
@@ -239,7 +388,6 @@ function stationPieces(): readonly StationPiece[] {
     }
     if (CANOPY_Y1 > y) out.push({ kind: 'canopy', gx, gy: y, w: 1, d: CANOPY_Y1 - y });
   }
-  for (const t of TRAINS) out.push({ kind: 'train', gx: t.gx, gy: t.gy, w: 1, d: t.d, livery: t.livery });
   return out;
 }
 
@@ -262,7 +410,7 @@ export function towerAnchor(lx: number, ly: number): boolean {
 /** Chance that a lot (an anchor, for N) is built. Hashed from `(SEED, lx, ly)`
  *  against this, so raising a number adds buildings without moving the rest.
  *  G is 1: Gyoen is a park, so it has no bare lots (`toUnit` is < 1). */
-const DENSITY: Record<District, number> = { F: 0.55, N: 0.5, K: 0.95, E: 0.85, S: 0.8, G: 1, R: 0 };
+const DENSITY: Record<District, number> = { F: 0.55, N: 0.5, K: 0.95, O: 0.9, E: 0.85, S: 0.8, G: 1, R: 0 };
 
 /** Was this lot built on when the camera arrived? Landmarks and the rail
  *  corridor refuse; Nishi builds only on a tower-site anchor whose whole 4×4
@@ -278,7 +426,7 @@ export function neighbourAt(lx: number, ly: number): boolean {
 
 /** Storeys by district, inclusive. G is 1 because a grove is a ground patch. */
 const LEVELS: Record<District, readonly [number, number]> = {
-  F: [1, 4], N: [6, 11], K: [3, 7], E: [2, 5], S: [2, 5], G: [1, 1], R: [1, 1],
+  F: [1, 4], N: [6, 11], K: [3, 7], O: [2, 5], E: [2, 5], S: [2, 5], G: [1, 1], R: [1, 1],
 };
 
 /** How tall that neighbour is — a second hash, so height and existence are
@@ -290,7 +438,29 @@ const LEVELS: Record<District, readonly [number, number]> = {
  *  on one lot in four, which is what keeps it from being that forest. */
 export function neighbourLevel(lx: number, ly: number): number {
   const [lo, hi] = LEVELS[districtOf(lx, ly)];
-  return lo + Math.floor(toUnit(hash2(SEED ^ 0x9e37, lx, ly)) * (hi - lo + 1));
+  const level = lo + Math.floor(toUnit(hash2(SEED ^ 0x9e37, lx, ly)) * (hi - lo + 1));
+  return Math.min(level, levelCap(lx, ly));
+}
+
+/** Tile rects (half-open) where filler is capped, so a landmark behind them can
+ *  be SEEN. The camera looks from the south-east, so what hides a landmark is the
+ *  lots on its +gx and +gy sides: a filler of H storeys hides about H - 0.2 of
+ *  its face. Found by looking: ゴールデン街 (2 storeys, 4×4) was invisible behind
+ *  five-storey filler, and 新宿区役所's podium and forecourt likewise. */
+const LOW_ZONES: readonly { readonly gx0: number; readonly gy0: number; readonly gx1: number; readonly gy1: number; readonly max: number }[] = [
+  { gx0: 130, gy0: 42, gx1: 144, gy1: 56, max: 2 }, // ゴールデン街 (132,44): its east and south
+  { gx0: 92, gy0: 26, gx1: 106, gy1: 32, max: 3 }, // 新宿区役所 (92,22): the forecourt side
+];
+
+/** The tallest a filler on this lot may be, `Infinity` outside every zone. */
+export function levelCap(lx: number, ly: number): number {
+  const gx = tileOf(lx);
+  const gy = tileOf(ly);
+  let cap = Infinity;
+  for (const z of LOW_ZONES) {
+    if (gx >= z.gx0 && gx < z.gx1 && gy >= z.gy0 && gy < z.gy1) cap = Math.min(cap, z.max);
+  }
+  return cap;
 }
 
 /** A building's own variant seed, so the same lot is always the same building. */
@@ -316,3 +486,103 @@ export const LANE_FAR = 1.6;
 
 /** How many avenues the ward has per axis. */
 export const AVENUES = W / PITCH;
+
+// ── crowds ───────────────────────────────────────────────────────────────────
+//
+// Where people are. There are no sidewalks, so pedestrians use the one place a
+// car does not: a street's margins, the 0.3 tile either side of its two-tile
+// band, outside the car lanes (`LANE_NEAR` / `LANE_FAR`, which are 0.4 and 1.6).
+// The table is DATA ONLY — `crowd.ts` turns it into people, as a pure function of
+// (index, time), exactly as `moveCars` does for the traffic.
+//
+// Streets and the entrances' own forecourts only. A "plaza" in this ward is an
+// empty lot, and every empty lot is either paving nobody has a reason to cross or
+// an entrance, whose forecourt is the walk below. Add a plaza here the day the
+// ward has one worth a crowd; `tools/check.mjs` will say if the rect is wrong.
+
+/** How much of a street's two tiles each margin is. Cars run at +0.4 and +1.6,
+ *  so a person in [0, 0.3] or [1.7, 2] is beside the traffic, not in it. */
+export const WALK_MARGIN = 0.3;
+
+/** One strip of walkable ground. People walk along its LONG side (back and forth,
+ *  half each way) and spread across its short one. A `crossing` is a zebra: the
+ *  long side spans a whole street, so they do walk through the lanes, and the
+ *  cars (which know nothing of them) drive straight over. */
+export interface CrowdStrip {
+  readonly id: string;
+  readonly kind: 'margin' | 'crossing';
+  readonly gx: number;
+  readonly gy: number;
+  readonly w: number;
+  readonly d: number;
+  /** People per tile of the long side, at full density (zoom 1.0 and up). */
+  readonly perTile: number;
+}
+
+/** Both margins of street `a`, from `from` to `to` along it. `axis` 'x' is a
+ *  north–south street (its two tiles are gx `avenue(a)`..+2, and it is walked
+ *  along gy); 'y' is an east–west one. */
+function margins(id: string, axis: 'x' | 'y', a: number, from: number, to: number, perTile: number): CrowdStrip[] {
+  const at = avenue(a);
+  const out: CrowdStrip[] = [];
+  for (const [side, off] of [['a', 0], ['b', 2 - WALK_MARGIN]] as const) {
+    out.push(axis === 'x'
+      ? { id: `${id}.${side}`, kind: 'margin', gx: at + off, gy: from, w: WALK_MARGIN, d: to - from, perTile }
+      : { id: `${id}.${side}`, kind: 'margin', gx: from, gy: at + off, w: to - from, d: WALK_MARGIN, perTile });
+  }
+  return out;
+}
+
+/** A zebra across street `a` at `at` along it: 0.6 tile deep, the street's full 2 wide. */
+function crossing(id: string, axis: 'x' | 'y', a: number, at: number, perTile: number): CrowdStrip {
+  return axis === 'x'
+    ? { id, kind: 'crossing', gx: avenue(a), gy: at, w: 2, d: 0.6, perTile }
+    : { id, kind: 'crossing', gx: at, gy: avenue(a), w: 0.6, d: 2, perTile };
+}
+
+export const CROWDS: readonly CrowdStrip[] = [
+  // The station's two frontages (gx 70–71 west, 90–91 east), the length of the
+  // concourse and a block either side of it. The densest thing in the ward.
+  ...margins('frontage-w', 'x', 7, 64, 92, 2.4),
+  ...margins('frontage-e', 'x', 9, 64, 92, 2.4),
+  // Zebras at the two junctions the concourse sits between (gy 70–71 and 80–81).
+  crossing('zebra-w-n', 'x', 7, 69.2, 3),
+  crossing('zebra-w-s', 'x', 7, 82.1, 3),
+  crossing('zebra-e-n', 'x', 9, 69.2, 3),
+  crossing('zebra-e-s', 'x', 9, 82.1, 3),
+  // Outside 伊勢丹 (gx 102–109, gy 74–79): its south front on gy 80–81, and its
+  // west flank on gx 100–101.
+  ...margins('isetan-s', 'y', 8, 98, 112, 2.6),
+  ...margins('isetan-w', 'x', 10, 70, 84, 2),
+  // The 一番街 gate (102,48) opens on gy 50–51; the approach is that street from
+  // the 3-chōme side, and the gx 100–101 street running up to it.
+  ...margins('ichibangai-s', 'y', 5, 92, 116, 2.6),
+  ...margins('ichibangai-w', 'x', 10, 40, 58, 2),
+];
+
+/** Person-marks per entrance, at full density: half going down, half coming up. */
+export const ENTRANCE_PEOPLE = 6;
+
+/** The walk from an entrance's stair mouth to the street, as four points
+ *  `[x0, y0, x1, y1, x2, y2, x3, y3]`, in tiles:
+ *    0  the mouth, the middle of the hood's +gy face (`OX0..OX1` and `HY1` in entrances.ts)
+ *    1  in front of the hood, still on the forecourt
+ *    2  the street margin it joins
+ *    3  three tiles on along that margin, toward the concourse.
+ *  An entrance whose +gy neighbour is a street steps straight onto it; the west
+ *  ones, whose +gy neighbour is a plaza lot, cross the forecourt to the +gx street.
+ *  Every entrance in `ENTRANCES` is one or the other, and `check.mjs` says so. */
+export function entranceWalk(e: Entrance): readonly number[] {
+  const mx = e.gx + 0.9;
+  const my = e.gy + 1.5;
+  const fy = e.gy + 1.85;
+  if (isStreet(e.gy + 2)) {
+    const sy = e.gy + 2 + WALK_MARGIN / 2;
+    const dx = mx > RAIL_X1 ? -1 : 1;
+    return [mx, my, mx, fy, mx, sy, mx + dx * 3, sy];
+  }
+  const sx = e.gx + 2 + WALK_MARGIN / 2;
+  const concourse = (DECKS[CONCOURSE]?.gy ?? 0) + (DECKS[CONCOURSE]?.d ?? 0) / 2;
+  const dy = e.gy < concourse ? 1 : -1;
+  return [mx, my, mx, fy, sx, fy, sx, fy + dy * 3];
+}

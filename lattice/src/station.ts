@@ -1,19 +1,20 @@
 /**
- * 新宿駅 — the station's art: platform canopies, the cross-decks, parked trains,
- * and the ground of the rail corridor. Placement is NOT here; it is
- * `STATION_PIECES` in layout.ts, and this file only answers "what does that
- * footprint look like?".
+ * 新宿駅 — the station's art: platform canopies, the cross-decks, the cars of the
+ * moving trains, and the ground of the rail corridor. Placement is NOT here; it
+ * is `STATION_PIECES` and `TRAINS` in layout.ts, and this file only answers
+ * "what does that footprint look like?".
  *
  * The contract with main.ts is `stationDef(piece).w/.d === piece.w/.d`: those
  * are the numbers the depth sorter gets, so a def that disagrees with its piece
  * sorts one place and draws in another. That is why the memo below is keyed on
  * the footprint and not just the kind — `SpriteDef.w/d` are fixed per def, and
- * canopies and trains come in many lengths.
+ * canopies come in many lengths. A train car is always 1 × `CAR`, so its def is
+ * keyed on role and livery instead.
  *
  * Only the +gx (east) and +gy (south) faces of anything are ever visible, so
- * signs and detail go there. A train is long in gy, so its visible flank is
+ * signs and detail go there. A car is long in gy, so its visible flank is
  * +gx; a deck is long in gx, so its is +gy. Every piece stays INSIDE its own
- * footprint — a train on a track column abuts a canopy on the platform column.
+ * footprint — a car on a track column abuts a canopy on the platform column.
  *
  * Night is drawn in `animate`, not `massing`, and only when `hourNow()` says it
  * is dusk: by day the lit-window overlays cost nothing.
@@ -21,16 +22,16 @@
 import { GROUND_LIFT, defineSprite, glowDot, isoPatch, isoTile, isoWall, wallText } from '@latticekit/draw';
 import type { Ink, Pen, SpriteDef } from '@latticekit/draw';
 
-import { railTileKind } from './layout.ts';
-import type { StationPiece } from './layout.ts';
+import { CAR, railTileKind } from './layout.ts';
+import type { Livery, StationPiece } from './layout.ts';
 import { hourNow } from './sprites.ts';
 
 const defs = new Map<string, SpriteDef>();
 
 /** The sprite for one station piece, built once per distinct
- *  kind / footprint / livery / label. Ids look like `station.canopy.1x9`. */
+ *  kind / footprint / label. Ids look like `station.canopy.1x9`. */
 export function stationDef(p: StationPiece): SpriteDef {
-  const id = `station.${p.kind}.${p.w}x${p.d}${p.livery ? `.${p.livery}` : ''}${p.label ? `.${p.label}` : ''}`;
+  const id = `station.${p.kind}.${p.w}x${p.d}${p.label ? `.${p.label}` : ''}`;
   let def = defs.get(id);
   if (def === undefined) {
     def = build(id, p);
@@ -74,8 +75,6 @@ function build(id: string, p: StationPiece): SpriteDef {
       return canopy(id, w, d);
     case 'deck':
       return deck(id, w, d, p.label);
-    case 'train':
-      return train(id, w, d, p.livery ?? 'jrgreen');
   }
 }
 
@@ -212,66 +211,79 @@ function deck(id: string, w: number, d: number, label: string | undefined): Spri
   });
 }
 
-// ── train ────────────────────────────────────────────────────────────────────
+// ── trains ───────────────────────────────────────────────────────────────────
 
-/** The body sits inside the track tile with a margin either side, and stops
- *  short of the footprint's ends: both so the footprint is never overrun and so
- *  two trains on one track would not fuse. */
+/** Which car of a train this is, counted from the +gy end the camera sees:
+ *  `cab` has the windscreen and headlights, `tail` the blinking marker, and the
+ *  rest are `mid`. Three roles and two liveries is six sprites for any number of
+ *  trains. */
+export type CarRole = 'cab' | 'mid' | 'tail';
+
+/** One car of a train — its OWN 1 × `CAR` sprite, because a train is a row of
+ *  these, each depth-sorted and each hidden while it is under a deck (see
+ *  `carVisible`). Built once per role and livery. */
+export function trainCarDef(livery: Livery, role: CarRole): SpriteDef {
+  const id = `station.car.${role}.${livery}`;
+  let def = defs.get(id);
+  if (def === undefined) {
+    def = car(id, livery, role);
+    defs.set(id, def);
+  }
+  return def;
+}
+
+/** The body sits inside the track tile with a margin either side. Along gy it
+ *  runs the whole footprint, so two cars of a train meet exactly with no sliver
+ *  of ground between them. */
 const TX0 = 0.14;
 const TX1 = 0.86;
-const TY = 0.04;
 const BODY_H = 0.9;
-/** A car is ~20 m, i.e. 2 tiles. */
-const CAR = 2;
 
-/** A silver commuter train: a granite body, the livery as a stripe along its
- *  +gx flank, a dark window band above it, and a car break every 2 tiles. The
- *  flank is the only long visible face; the +gy end is the cab. */
-function train(id: string, w: number, d: number, livery: Ink): SpriteDef {
-  const len = d - 2 * TY;
-  const cars = Math.max(1, Math.round(len / CAR));
-  const car = len / cars;
-  // Two windows per car with a door pillar between, and a bellows gap between cars.
-  const panes: Span[] = [];
-  for (let k = 0; k < cars; k++) {
-    const y0 = TY + k * car;
-    panes.push([y0 + 0.14, y0 + car / 2 - 0.1], [y0 + car / 2 + 0.1, y0 + car - 0.14]);
-  }
-  const yEnd = d - TY;
+/** Two windows with a door pillar between, and half a bellows gap at each end. */
+const PANES: readonly Span[] = [[0.14, 0.9], [1.1, 1.86]];
+
+/** A silver commuter car: a granite body, the livery as a stripe along its +gx
+ *  flank, a dark window band above it, and a roof air-conditioner. The flank is
+ *  the only long visible face; the +gy end is the cab, on the `cab` car only. */
+function car(id: string, livery: Ink, role: CarRole): SpriteDef {
+  const w = 1;
+  const d = CAR;
   return defineSprite({
     id, w, d,
     massing(s) {
-      s.box(TX0, TY, TX1 - TX0, len, { color: 'granite', h: BODY_H, topColor: 'canopy' });
+      s.box(TX0, 0, TX1 - TX0, d, { color: 'granite', h: BODY_H, topColor: 'canopy' });
       // Flank, painted bottom to top: running gear, livery, windows. A wall is
       // a FLAT colour while a box's +gx face is shaded to 52%, so the silver is
       // laid on as a wall too — left as the box's own face the whole flank
       // reads as dark steel and the windows vanish into it.
-      s.wall(TX1, TY, TX1, yEnd, 0.1, BODY_H, 'canopy');
-      s.wall(TX1, TY, TX1, yEnd, 0, 0.12, 'darkstone');
-      s.wall(TX1, TY, TX1, yEnd, 0.12, 0.42, livery);
-      for (const [a, b] of panes) s.wall(TX1, a, TX1, b, 0.5, 0.8, 'towerglass');
-      // Car breaks: a dark bellows full height, one between each pair of cars.
-      for (let k = 1; k < cars; k++) s.wall(TX1, TY + k * car - 0.05, TX1, TY + k * car + 0.05, 0.1, BODY_H, 'metal');
+      s.wall(TX1, 0, TX1, d, 0.1, BODY_H, 'canopy');
+      s.wall(TX1, 0, TX1, d, 0, 0.12, 'darkstone');
+      s.wall(TX1, 0, TX1, d, 0.12, 0.42, livery);
+      for (const [a, b] of PANES) s.wall(TX1, a, TX1, b, 0.5, 0.8, 'towerglass');
+      // Bellows: a dark strip full height at each joint, half on each car. The
+      // cab has none at its +gy end, nor the tail at its -gy end.
+      if (role !== 'cab') s.wall(TX1, d - 0.05, TX1, d, 0.1, BODY_H, 'metal');
+      if (role !== 'tail') s.wall(TX1, 0, TX1, 0.05, 0.1, BODY_H, 'metal');
       // The cab end, facing +gy: livery over the whole face, a dark windscreen.
-      s.wall(TX0, yEnd, TX1, yEnd, 0.1, BODY_H, livery);
-      s.wall(TX0 + 0.12, yEnd, TX1 - 0.12, yEnd, 0.5, 0.8, 'towerglass');
-      // Roof: one air-conditioning box per car.
-      for (let k = 0; k < cars; k++) {
-        s.box(0.38, TY + (k + 0.5) * car - 0.17, 0.26, 0.34, { color: 'metal', h: 0.1, z: BODY_H });
+      if (role === 'cab') {
+        s.wall(TX0, d, TX1, d, 0.1, BODY_H, livery);
+        s.wall(TX0 + 0.12, d, TX1 - 0.12, d, 0.5, 0.8, 'towerglass');
       }
+      s.box(0.38, d / 2 - 0.17, 0.26, 0.34, { color: 'metal', h: 0.1, z: BODY_H });
     },
     animate(pen, gx, gy) {
       // A tail marker blinking at the far end, day and night.
-      glowDot(pen, gx + TX1, gy + TY + 0.12, 0.3, 'bad', 0.07, (pen.t % 1.4) < 0.5 ? 1 : 0);
+      if (role === 'tail') glowDot(pen, gx + TX1, gy + 0.12, 0.3, 'bad', 0.07, (pen.t % 1.4) < 0.5 ? 1 : 0);
       const n = 1 - hourNow();
       if (n < LIGHTS_ON) return;
-      for (const [a, b] of panes) isoWall(pen, gx + TX1, gy + a, gx + TX1, gy + b, 0.5, 0.8, 'warn');
-      glowDot(pen, gx + 0.3, gy + yEnd, 0.3, 'warn', 0.08, snap(n));
-      glowDot(pen, gx + 0.7, gy + yEnd, 0.3, 'warn', 0.08, snap(n));
-      // One pool per two cars, spilling east onto the platform.
-      for (let k = 0; k < cars; k += 2) {
-        pen.light?.add(gx + 1.3, gy + TY + (k + 1) * car, 0, 2, snap(0.45 * n), 'warn');
+      for (const [a, b] of PANES) isoWall(pen, gx + TX1, gy + a, gx + TX1, gy + b, 0.5, 0.8, 'warn');
+      if (role === 'cab') {
+        glowDot(pen, gx + 0.3, gy + d, 0.3, 'warn', 0.08, snap(n));
+        glowDot(pen, gx + 0.7, gy + d, 0.3, 'warn', 0.08, snap(n));
       }
+      // A pool per car, spilling east onto the platform — and it travels with
+      // the car, which is why this is the sprite's and not the station's.
+      pen.light?.add(gx + 1.3, gy + d / 2, 0, 2, snap(0.45 * n), 'warn');
     },
   });
 }

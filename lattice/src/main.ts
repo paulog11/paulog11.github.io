@@ -24,14 +24,18 @@ import { browserFrames, createLoop } from '@latticekit/loop';
 import { createInput } from '@latticekit/input';
 
 import {
-  AVENUES, LANDMARKS, LANE_FAR, LANE_NEAR, LOTS, PITCH, RAIL_X0, RAIL_X1, STATION_PIECES, W,
-  avenue, districtAtTile, districtOf, isRail, isStreet, keyOf, neighbourAt, neighbourLevel, tileOf,
+  AVENUES, ENTRANCES, LANDMARKS, LANE_FAR, LANE_NEAR, LOT, LOTS, PITCH, RAIL_X0, RAIL_X1, STATION_PIECES, TRAINS, W,
+  avenue, carVisible, districtAtTile, districtOf, isRail, isStreet, keyOf, neighbourAt, neighbourLevel, tileOf, trainCarY,
 } from './layout.ts';
+import type { TrainRun } from './layout.ts';
 import {
-  DAY_X, NIGHT_X, defForLot, drawCar, heightOf, paint, setHour, variantFor,
+  BUS_H, DAY_X, NIGHT_X, defForLot, drawBus, drawCar, heightOf, paint, setHour, variantFor,
 } from './sprites.ts';
 import { landmarkDef } from './landmarks.ts';
-import { paintRail, stationDef } from './station.ts';
+import { shoppingDefFor } from './shopping.ts';
+import { entranceDef } from './entrances.ts';
+import { paintRail, stationDef, trainCarDef } from './station.ts';
+import { drawCrowds, drawEntranceFlow, entranceAt } from './crowd.ts';
 
 // ── the screen ───────────────────────────────────────────────────────────────
 
@@ -183,7 +187,8 @@ function buildFor(key: number, lx: number, ly: number): Build {
   let b = views.get(key);
   if (b === undefined) {
     const seed = (lx * 73856093) ^ (ly * 19349663);
-    const def = defForLot(districtOf(lx, ly), seed);
+    const d = districtOf(lx, ly);
+    const def = shoppingDefFor(d, seed) ?? defForLot(d, seed);
     const v = variantFor(seed, neighbourLevel(lx, ly));
     b = { def, gx: tileOf(lx), gy: tileOf(ly), w: def.w, d: def.d, v, hPx: heightOf(def, v) };
     views.set(key, b);
@@ -245,6 +250,12 @@ STATION_PIECES.forEach((p, i) => {
   if (p.kind === 'deck' && p.label) addPlate(p.label, b);
 });
 
+// Subway entrances are fixed too, but nameless: a plate on each would be a
+// forest of labels, and the sign on the hood is the label.
+ENTRANCES.forEach((e, i) => {
+  fixedBuild(entranceDef(e.line), { gx: e.gx, gy: e.gy, w: LOT, d: LOT }, 0x454e0000 + i);
+});
+
 /** Called once per render, after the camera has moved. Writes the style only
  *  when the rounded position changed, because a style write is a layout
  *  invalidation and a plate on a still camera should cost nothing. */
@@ -269,30 +280,80 @@ const CARS = 64;
 const carX = new Float64Array(CARS);
 const carY = new Float64Array(CARS);
 const carAxis = new Uint8Array(CARS);
+/** +1 when the vehicle is travelling toward +gx / +gy, which is the way the camera
+ *  sees the front of it, and -1 when it is going the other way. */
+const carDir = new Int8Array(CARS);
+
+/** Every eighth vehicle is a bus: 8 of the 64, so the count, and the sorter's, do
+ *  not grow. The test is on the index, like everything else about a vehicle. */
+const isBus = (i: number): boolean => (i & 7) === 3;
+
+/** The bus routes, by rank (`i >> 3`): the avenue each runs on, and (by the rank's
+ *  low bits, in `moveCars`) which axis and which way. They are the streets a bus
+ *  would take in Shinjuku — both station frontages, the cross-streets either side
+ *  of the concourse, Isetan's, and the 一番街 gate's — and not the 4 avenues the
+ *  cars' own formula would give every bus, which are all in Nishi. */
+const BUS_AVENUE: readonly number[] = [8, 7, 7, 9, 5, 10, 6, 11];
 
 /** Traffic with no per-car state: position is a function of (index, time), so
  *  there is nothing to update and nothing to get out of step. */
 function moveCars(t: number): void {
   for (let i = 0; i < CARS; i++) {
-    const alongX = (i & 1) === 0;
-    let a = (i * 7 + (i >> 1)) % AVENUES;
+    const bus = isBus(i);
+    // A bus's low bits are all the same (i & 7 is 3), so left to them every bus
+    // would drive north along a gy street. Its rank (`i >> 3`) is what varies.
+    const k = i >> 3;
+    const alongX = bus ? (k & 1) === 0 : (i & 1) === 0;
+    let a = bus ? (BUS_AVENUE[k] ?? 0) : (i * 7 + (i >> 1)) % AVENUES;
     // A gx-running car drives down avenue `a` at x = avenue(a) + lane. Avenue 8
     // is gx 80, the middle of the rail corridor: there is no street there, so
     // those cars move to avenue 9, 10 or 11 (spread by `i`) and the count
     // stays 64.
     if (!alongX && isRail(avenue(a))) a = (a + 1 + ((i >> 2) % 3)) % AVENUES;
-    const back = (i & 2) === 0;
+    const back = bus ? (k & 2) === 0 : (i & 2) === 0;
     // Both lanes are INSIDE the street's two tiles. Taken from the street's
     // centre instead, the far lane lands on a lot and the car drives through
     // the buildings — see `avenue`.
     const lane = back ? LANE_NEAR : LANE_FAR;
-    const speed = 3.1 + (i % 5) * 0.55;
+    // Buses are slow: 1.9 to 2.5 tiles a second against a car's 3.1 to 5.3.
+    const speed = bus ? 1.9 + (i % 3) * 0.3 : 3.1 + (i % 5) * 0.55;
     const s = (((back ? t : -t) * speed + i * 11.3) % W + W) % W;
     carAxis[i] = alongX ? 1 : 0;
+    carDir[i] = back ? 1 : -1;
     if (alongX) { carX[i] = s; carY[i] = avenue(a) + lane; }
     else { carX[i] = avenue(a) + lane; carY[i] = s; }
   }
 }
+
+// ── trains ───────────────────────────────────────────────────────────────────
+
+/** One car of one train: a `Build` whose `gy` moves. Every car is its own
+ *  sorter item, so a train slides under a deck car by car, and all of them are
+ *  made here once — a frame writes `gy` and allocates nothing. Where a car is
+ *  and whether it is drawn at all is `trainCarY` / `carVisible` in layout.ts. */
+interface TrainCar {
+  readonly def: SpriteDef;
+  readonly gx: number;
+  gy: number;
+  readonly w: number;
+  readonly d: number;
+  readonly v: Variant;
+  readonly hPx: number;
+  readonly run: TrainRun;
+  readonly k: number;
+}
+const trainCars: TrainCar[] = [];
+for (const run of TRAINS) {
+  for (let k = 0; k < run.cars; k++) {
+    // Car 0 is the +gy end: the cab, which is what the camera sees.
+    const def = trainCarDef(run.livery, k === 0 ? 'cab' : k === run.cars - 1 ? 'tail' : 'mid');
+    const v = variantFor(0x54520000 + trainCars.length, 0);
+    trainCars.push({ def, gx: run.gx, gy: 0, w: def.w, d: def.d, v, hPx: heightOf(def, v), run, k });
+  }
+}
+
+/** Half a bus's length, in tiles, for the one place main.ts needs it. */
+const BUS_HALF = 0.95;
 
 const range: TileRange = { gx0: 0, gy0: 0, gx1: 0, gy1: 0 };
 
@@ -324,12 +385,23 @@ function fillFrame(t: number): void {
 
   for (const b of fixed) frame[order.add(b.gx, b.gy, b.w, b.d, b.hPx)] = b;
 
+  // A car under a deck is not added at all: a footprint overlapping a deck's
+  // would be a cycle in the sorter, and its absence is the train passing beneath.
+  for (const c of trainCars) {
+    const y = trainCarY(c.run, c.k, t);
+    if (!carVisible(y)) continue;
+    c.gy = y;
+    frame[order.add(c.gx, y, c.w, c.d, c.hPx)] = c;
+  }
+
   moveCars(t);
   for (let i = 0; i < CARS; i++) {
+    const x = carX[i] ?? 0;
     // A car on an east-west street passes UNDER the station: inside the
     // corridor it is simply not drawn, so it reads as going beneath the decks.
-    if (carAxis[i] === 1 && isRail(carX[i] ?? 0)) continue;
-    frame[order.addPoint(carX[i] ?? 0, carY[i] ?? 0, 0, 0.32)] = i;
+    // A bus is long enough that an end can be in it with the middle outside.
+    if (carAxis[i] === 1 && (isRail(x) || (isBus(i) && (isRail(x - BUS_HALF) || isRail(x + BUS_HALF))))) continue;
+    frame[order.addPoint(x, carY[i] ?? 0, isBus(i) ? BUS_H * LEVEL_H : 0, 0.32)] = i;
   }
 }
 
@@ -343,10 +415,15 @@ function paintItem(item: Item): void {
   const pen = sheet;
   if (pen === undefined) return;
   if (typeof item === 'number') {
-    drawCar(pen, item, carX[item] ?? 0, carY[item] ?? 0, carAxis[item] === 1);
+    if (isBus(item)) drawBus(pen, item, carX[item] ?? 0, carY[item] ?? 0, carAxis[item] === 1, carDir[item] === 1);
+    else drawCar(pen, item, carX[item] ?? 0, carY[item] ?? 0, carAxis[item] === 1);
     return;
   }
   paint(pen, item.def, item.gx, item.gy, item.v);
+  // The people on an entrance's forecourt go right after it, before anything nearer
+  // the camera, because the sprite's own paving would hide them in the terrain pass.
+  const e = entranceAt(item.gx, item.gy);
+  if (e >= 0) drawEntranceFlow(pen, e);
 }
 
 const passes: Passes = {
@@ -370,6 +447,8 @@ const passes: Passes = {
       }
     }
     paintRail(pen, Math.max(gx0, RAIL_X0), Math.min(gx1, RAIL_X1), gy0, gy1);
+    // Last, so the people lie on the road and the rail and under every solid.
+    drawCrowds(pen, visible);
   },
   solids(pen, sorted) {
     sheet = pen;
@@ -413,13 +492,17 @@ loop.onRender((_alpha, time, nowMs) => {
 });
 
 // `tools/look.mjs --eval` reads this: `order.count` is the density of the last
-// frame, `loop.stats` its cost, `camera` where it was looking.
+// frame, `loop.stats` its cost, `camera` where it was looking, `cars` where the
+// traffic is (a bus is `isBus(i)`), so a look can be aimed at one.
 declare global {
   interface Window {
-    __lattice?: { order: DepthSorter; loop: typeof loop; camera: typeof camera };
+    __lattice?: {
+      order: DepthSorter; loop: typeof loop; camera: typeof camera;
+      cars: { x: Float64Array; y: Float64Array; axis: Uint8Array; isBus: (i: number) => boolean };
+    };
   }
 }
-window.__lattice = { order, loop, camera };
+window.__lattice = { order, loop, camera, cars: { x: carX, y: carY, axis: carAxis, isBus } };
 
 // ── teardown, and the one line that saves an hour under Vite ─────────────────
 

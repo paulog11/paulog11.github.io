@@ -1,15 +1,19 @@
 # NEXT: Shinjuku lattice sandbox
 
-State as of 2026-10-20: phase 1 (buildings) is built but **uncommitted** on `shinjuku-landing`.
-`npm run check` and `npm run build` pass. The plan that produced it is
-`~/.claude/plans/using-the-existing-working-golden-pine.md`.
+**Start with `MAP.md`**: what stands where (districts, landmarks, entrances, the station, height caps), which file draws it, and how to look at it.
+
+State as of 2026-10-21: phase 1 (buildings) is committed. The section 3 work below is built but
+**uncommitted** on `shinjuku-landing`. `npm run check`, `npm run build` and `npm run perf` pass.
+`npm run perf` is a headless, software-rendered regression guard, not a real-GPU measurement. The plan
+for phase 1 was `~/.claude/plans/using-the-existing-working-golden-pine.md`.
+`HANDOFF-crowds-buses.md` and `HANDOFF-review-pending.md` are finished and can be deleted.
 
 Effort: **S** is under an hour, **M** is a session, **L** is multi-session.
 
 ## 0. Housekeeping first
 
-- **Commit phase 1.** `lattice/` has 4 deleted files, 2 new ones (`src/station.ts`, `src/landmarks.ts`) and edits to the rest. (S)
-- **Stop committing screenshots.** Commit `3cef2b4` added `.look-build/`, `.look-night/` and `.look-save/`. `lattice/.gitignore` only ignores `.look/` and `dist/`. Add `.look*/`; removing the already-tracked ones is a delete, so ask first. (S)
+- **Commit the section 3 work.** Nothing from it is committed yet. (S)
+- ~~**Stop committing screenshots.**~~ Done: `.gitignore` has `.look*/` and the three tracked folders are untracked (the `git rm --cached` is staged; files are still on disk).
 - **Plates against real gestures.** Drag-pan and pinch were never exercised with the name plates in the page. The plates are `pointer-events: none`, and only that CSS was checked. Verify by hand. (S)
 
 ## 1. Known problems from phase 1
@@ -32,6 +36,16 @@ Effort: **S** is under an hour, **M** is a session, **L** is multi-session.
 - **Cocoon is slim** (about 3.5:1), because its height is fixed relative to 都庁. Revisit if 都庁 gets taller. (S)
 
 ## 3. More Shinjuku (the plan's "out of scope", in rough value order)
+
+**Status, 2026-10-21** (the original list is kept below for the reasoning):
+- **3.1 Moving trains: done.** 6 runs, one per track, per-car so they slide under the decks, each stops at the platform south of the concourse. The runs are on tracks 74/77/80/83/86/89 on purpose: a canopy east of a train sorts after it and hides it, so every train has a platform to its west.
+- **3.2 Kabukichō landmarks: done** (`src/kabukicho.ts`): 区役所, TOHO with the Godzilla head, the 一番街 gate, Golden Gai. The map was re-carved to make room: Shin-Okubo (`O`, rows 0-1) is north of Kabukichō (rows 2-4), shopping (`E`) south. Golden Gai and 区役所 needed `LOW_ZONES` in `layout.ts`: filler on their +gx/+gy sides hid them. Still weak: the gate is small, night pools read as flat discs, the head is boxes with no jaw.
+- **3.3 伊勢丹: done** (`src/shopping.ts`), now flush with its block's south edge (102,74). Also new: `SHOP` filler for `E` and `OKUBO` filler for `O`.
+- **3.4 Cocoon: done**, moved to (66,66), north-west of the station. The old note here said the reference puts it south-west; the reference image puts it north-west.
+- **3.5 Crowds and buses: done** (`src/crowd.ts`, `drawBus` in `sprites.ts`, `CROWDS` at the end of `layout.ts`). 8 of the 64 vehicles are buses. People walk the street margins, the station frontages, outside 伊勢丹, the 一番街 approach, and in and out of every entrance. They are drawn in the terrain pass as world-scaled marks (the first version capped them at 2-4 px and they read as dust beside 200 px towers), heads from zoom 1.1, with a share that grows with zoom. Cost, paired A/B over 4 rounds (software rendering): +0.10 ms opening, +0.13 ms station, +0.13 ms at a zoom-1.0 frontage. Seen in frames: buses day and night on both axes, crowds at zoom 1.0 day and night. At the opening zoom they show only as a faint stipple along the concourse. The check asserts were negative-tested (a strip in the rail corridor, on a lot, and over a car lane each fail). `window.__lattice.cars` exposes the vehicle arrays so a look can follow a bus. Not covered: night cost, real GPU, phone portrait.
+- **3.6 Expressway and curved rail: skipped by decision.**
+- **New: 13 subway entrances** (`ENTRANCES`): lot-claiming plazas with a stair hood and a lit line sign (M/F/S/E). The east ones are block SE-corner lots because anything mid-block was buried by the lots in front. Line assignments are illustrative, not surveyed.
+- **Open question:** the Kabukichō agent reported a ~19 ms/frame cliff in `--disable-gpu` software rendering that the Kabukichō view sat just under, and that it never traced which edit moved the view off it. Night in software is ~33 ms regardless of art. Check on a real GPU before trusting any of these numbers.
 
 1. **Moving trains on the corridor.** The corridor already has tracks, platforms and 4 parked trains; the cars use a pure function of (index, time), so trains can too. This is the cheapest way to get "something moves" at the station. (M)
 2. **Kabukichō landmarks:** TOHO Cinemas with the Godzilla head, the 一番街 gate, 新宿区役所 and Golden Gai. Recipes exist in `scene/` (`alley.js`, `konbini.js`, `streetFurniture.js`). (M each)

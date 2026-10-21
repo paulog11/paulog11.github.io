@@ -28,6 +28,8 @@ import {
 import type { Ink, Pen, SolidWriter, SpriteDef, Variant } from '@latticekit/draw';
 import { HALF_H, HALF_W } from '@latticekit/iso';
 
+import { KABUKICHO_DEFS } from './kabukicho.ts';
+import { ISETAN } from './shopping.ts';
 import { hourNow } from './sprites.ts';
 
 /** Brightness in nine levels. `softEllipse` keys its ramp cache on the colour,
@@ -427,7 +429,9 @@ function drawEgg(pen: Pen, gx: number, gy: number, dn: number): void {
   S.ellipse(cx, yTop - levelsToPx(CAP_H) * cam.zoom, rTop * 0.6, rTop * 0.3, shade(p.get('canopy'), FACE_LEFT));
 }
 
-const BY_ID: ReadonlyMap<string, SpriteDef> = new Map([['tocho', TOCHO], ['cocoon', COCOON]]);
+const BY_ID: ReadonlyMap<string, SpriteDef> = new Map([
+  ['tocho', TOCHO], ['cocoon', COCOON], ['isetan', ISETAN], ...KABUKICHO_DEFS,
+]);
 
 /** The sprite for a `LANDMARKS` entry. Throws on an id it does not know, so a
  *  landmark added to the layout without art fails loudly instead of being a

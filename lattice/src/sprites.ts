@@ -16,7 +16,7 @@
  * The station and the two landmarks live in `station.ts` and `landmarks.ts`
  * and borrow this file's palette.
  *
- * Twenty-three materials of our own go in through `extendStops`, into BOTH stop sets.
+ * Twenty-nine materials of our own go in through `extendStops`, into BOTH stop sets.
  * A slot defined in only one of them is the bug where a single thing stays
  * gold at midnight while everything around it goes dark, and it is silent.
  *
@@ -57,6 +57,11 @@ const MATERIALS_DAY = {
   ballast: 0x7a746bff, rail: 0xa9a69eff, jrgreen: 0x13a057ff, chuo: 0xee5a24ff,
   // Signage. See the note below: these four barely move between the sets.
   neon_red: 0xff2d55ff, neon_cyan: 0x00e5ffff, neon_amber: 0xffb347ff, neon_pink: 0xff6fa8ff,
+  // Subway line signs (Marunouchi, Toei Shinjuku, Oedo, Fukutoshin) and 伊勢丹's
+  // blue: all signage, so near-identical in NIGHT_X. `kaiju` is the Godzilla
+  // head's olive-grey, which is stone-like and does roll down.
+  metro_red: 0xe60012ff, metro_green: 0x6cbb5aff, metro_magenta: 0xb6007aff, metro_brown: 0x9c5e31ff,
+  isetan_blue: 0x1f4aa8ff, kaiju: 0x6b7a6aff,
 };
 const MATERIALS_NIGHT = {
   road: 0x191b20ff, paving: 0x2f2c28ff,
@@ -72,6 +77,8 @@ const MATERIALS_NIGHT = {
   // go as dark as the wall it is bolted to. The light field, not the palette,
   // is what gives them a pool on the ground.
   neon_red: 0xff3860ff, neon_cyan: 0x18e8ffff, neon_amber: 0xffba55ff, neon_pink: 0xff78b0ff,
+  metro_red: 0xff1a2eff, metro_green: 0x7fd16cff, metro_magenta: 0xd1008fff, metro_brown: 0xb5703aff,
+  isetan_blue: 0x3a68d4ff, kaiju: 0x2a322aff,
 };
 
 export const DAY_X = extendStops(DAY, MATERIALS_DAY);
@@ -115,11 +122,11 @@ export function hourNow(): number {
  *  Indices are partitioned so two features never share a roll: 0–2 and 11–40
  *  are the fringe and `litWindow`; 100s ZAKKYO, 140s MIDRISE, 160s OFFICE,
  *  200s GROVE; 300+ are the per-floor lights. */
-function at(v: Variant, i: number): number {
+export function at(v: Variant, i: number): number {
   return toUnit(hashStep(v.seed, i));
 }
 
-function pick<T>(list: readonly T[], u: number): T {
+export function pick<T>(list: readonly T[], u: number): T {
   return list[Math.min(list.length - 1, Math.floor(u * list.length))] as T;
 }
 
@@ -172,7 +179,7 @@ function windows(pen: Pen, gx: number, gy: number, v: Variant, storeys: number):
  *
  *  Below the detail zoom it lights a three-storey run at a time, matching what
  *  `windowRun` built: the far band is allowed to be simpler, not missing. */
-function litBands(
+export function litBands(
   pen: Pen, gx: number, gy: number, v: Variant,
   x0: number, y0: number, x1: number, y1: number, inset: number, east: boolean,
   base: number, f0: number, f1: number, salt: number,
@@ -230,7 +237,7 @@ function neonPool(
  *  storey is 9 px at the opening zoom, and the far band is allowed to be built
  *  of fewer faces. Only decoration changes with the zoom, never a height, so
  *  `heightOf` does not care. */
-function windowRun(s: SolidWriter, ax: number, ay: number, bx: number, by: number, from: number, to: number): void {
+export function windowRun(s: SolidWriter, ax: number, ay: number, bx: number, by: number, from: number, to: number): void {
   if (!detail) {
     for (let st = from - ((from - 1) % 4); st < to - 0.4; st += 4) {
       const lo = Math.max(st, from);
@@ -720,4 +727,71 @@ export function drawCar(pen: Pen, i: number, gx: number, gy: number, alongX: boo
   const d = alongX ? 0.44 : 0.95;
   isoBox(pen, gx - w / 2, gy - d / 2, w, d, { color, h: 0.5 });
   if (daylight < 0.45) pen.light?.add(gx, gy, 13, 0.75, 0.55, 'warn');
+}
+
+// ── a bus, which is a car that is slow and cannot be missed ──────────────────
+
+/** A bus is `BUS_LEN` long, `BUS_WID` wide and `BUS_H` storeys high, which makes it
+ *  about twice a car's length and half again its height. The sorter is given
+ *  `BUS_H` as its height (see main.ts), so the two cannot drift apart. */
+export const BUS_H = 0.8;
+const BUS_LEN = 1.9;
+const BUS_WID = 0.55;
+
+/** Stripes in signage slots, which barely move between the day and night sets: a
+ *  bus's body rolls down with the rest of the ward at night, but its stripe, like
+ *  every other sign, stays itself. */
+const BUS_STRIPES: readonly Ink[] = ['metro_green', 'isetan_blue', 'metro_red', 'neon_amber'];
+
+/** `forward` is whether the bus is travelling toward +gx / +gy. Only the +gx and
+ *  +gy faces are ever on screen, so the end the camera sees is the FRONT of a
+ *  forward bus (headlights, the destination board) and the REAR of one going the
+ *  other way (taillights). Detail on that end waits for `detail`, as windows do. */
+export function drawBus(pen: Pen, i: number, gx: number, gy: number, alongX: boolean, forward: boolean): void {
+  const w = alongX ? BUS_LEN : BUS_WID;
+  const d = alongX ? BUS_WID : BUS_LEN;
+  const x0 = gx - w / 2;
+  const y0 = gy - d / 2;
+  const x1 = x0 + w;
+  const y1 = y0 + d;
+  const k = i >> 3;
+  const lit = daylight < 0.45;
+  // White, with every third one cream. Glass is lit from within once it is dark.
+  isoBox(pen, x0, y0, w, d, { color: k % 3 === 2 ? 'cream' : 'canopy', h: BUS_H });
+  const stripe = BUS_STRIPES[k % BUS_STRIPES.length] ?? 'metro_green';
+  const glass: Ink = lit ? 'warn' : 'towerglass';
+
+  // The long flank is the +gy face of an east-west bus and the +gx face of a
+  // north-south one; the short end is the other. Walls run along the lattice.
+  if (alongX) {
+    isoWall(pen, x0, y1, x1, y1, 0.12, 0.24, stripe);
+    isoWall(pen, x0 + 0.1, y1, x1 - 0.1, y1, 0.4, 0.68, glass);
+  } else {
+    isoWall(pen, x1, y0, x1, y1, 0.12, 0.24, stripe);
+    isoWall(pen, x1, y0 + 0.1, x1, y1 - 0.1, 0.4, 0.68, glass);
+  }
+
+  // The end: a windscreen, a board over it, and a lamp at each corner.
+  if (detail) {
+    const a0 = (alongX ? y0 : x0) + 0.05;
+    const a1 = (alongX ? y1 : x1) - 0.05;
+    if (alongX) {
+      isoWall(pen, x1, a0, x1, a1, 0.4, 0.66, glass);
+      if (forward) isoWall(pen, x1, a0 + 0.06, x1, a1 - 0.06, 0.69, 0.77, lit ? 'neon_amber' : 'ink');
+    } else {
+      isoWall(pen, a0, y1, a1, y1, 0.4, 0.66, glass);
+      if (forward) isoWall(pen, a0 + 0.06, y1, a1 - 0.06, y1, 0.69, 0.77, lit ? 'neon_amber' : 'ink');
+    }
+    if (lit) {
+      const lamp: Ink = forward ? 'warn' : 'bad';
+      glowDot(pen, alongX ? x1 : a0, alongX ? a0 : y1, 0.18, lamp, 0.05, 1);
+      glowDot(pen, alongX ? x1 : a1, alongX ? a1 : y1, 0.18, lamp, 0.05, 1);
+    }
+  }
+  // One pool, as a car has, but a bigger one, and thrown ahead of the bus whichever
+  // way it is going: the headlights of one going away are on the hidden end.
+  if (lit) {
+    const ahead = (forward ? 1 : -1) * (BUS_LEN / 2 + 0.4);
+    pen.light?.add(alongX ? gx + ahead : gx, alongX ? gy : gy + ahead, 13, 1.1, 0.55, 'warn');
+  }
 }
