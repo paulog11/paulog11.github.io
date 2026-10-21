@@ -240,7 +240,7 @@ export function isClaimed(lx: number, ly: number): boolean {
 
 // ── the station ──────────────────────────────────────────────────────────────
 
-export type StationKind = 'canopy' | 'deck';
+export type StationKind = 'canopy' | 'deck' | 'bridge';
 export type Livery = 'jrgreen' | 'chuo';
 
 /** One footprint in the corridor, in tiles. `w` and `d` are the SAME numbers
@@ -262,6 +262,14 @@ export const DECKS: readonly { readonly gy: number; readonly d: number; readonly
   { gy: 62, d: 3 },
   { gy: 74, d: 5, label: '新宿駅' },
   { gy: 88, d: 4 },
+];
+
+/** Road bridges over the corridor, on an east-west street row (`gy % 10` is 0 or
+ *  1, so `d` is the street's two tiles). South of the canopies, so nothing has
+ *  to be cut for them. Like a deck, a bridge is a static box over the tracks, so
+ *  trains are hidden beneath it (`carVisible`). No traffic crosses yet. */
+export const BRIDGES: readonly { readonly gy: number; readonly d: number }[] = [
+  { gy: 100, d: 2 },
 ];
 
 /** The platform canopies run over this gy span, minus the decks. */
@@ -370,6 +378,7 @@ export function carVisible(y: number): boolean {
     const k = DECKS[i];
     if (k !== undefined && y < k.gy + k.d && y + CAR > k.gy) return false;
   }
+  for (const k of BRIDGES) if (y < k.gy + k.d && y + CAR > k.gy) return false;
   return true;
 }
 
@@ -378,6 +387,7 @@ function stationPieces(): readonly StationPiece[] {
   for (const k of DECKS) {
     out.push({ kind: 'deck', gx: RAIL_X0, gy: k.gy, w: RAIL_X1 - RAIL_X0, d: k.d, ...(k.label ? { label: k.label } : {}) });
   }
+  for (const k of BRIDGES) out.push({ kind: 'bridge', gx: RAIL_X0, gy: k.gy, w: RAIL_X1 - RAIL_X0, d: k.d });
   // One canopy per platform column, cut at every deck: 4 segments × 6 platforms.
   for (let gx = RAIL_X0; gx < RAIL_X1; gx++) {
     if (railTileKind(gx) !== 'platform') continue;

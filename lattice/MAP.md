@@ -1,6 +1,6 @@
 # MAP: what stands where in the Shinjuku sandbox
 
-A lookup for agents who need to change a place. The truth is in `src/layout.ts` (data) and the sprite files (art); this file is the index to them. **If you edit `DISTRICTS`, `LANDMARKS`, `ENTRANCES`, `LOW_ZONES`, `DECKS` or `TRAINS`, update this file** (`npm run check` fails if a landmark id or an entrance's coordinates are missing from it).
+A lookup for agents who need to change a place. The truth is in `src/layout.ts` (data) and the sprite files (art); this file is the index to them. **If you edit `DISTRICTS`, `LANDMARKS`, `ENTRANCES`, `LOW_ZONES`, `DECKS`, `BRIDGES` or `TRAINS`, update this file** (`npm run check` fails if a landmark id or an entrance's coordinates are missing from it).
 
 ## 1. Units and directions
 
@@ -82,6 +82,7 @@ Frontage streets stay streets at gx 70-71 (west) and 90-91 (east). There is **no
 | **Track columns** | gx 72, 74, 75, 77, 78, 80, 81, 83, 84, 86, 87, 89 | 12 tracks |
 | **Platform columns** | gx 73, 76, 79, 82, 85, 88 | 6 island platforms, one tile wide |
 | **Decks** (cross-concourses, span the corridor) | north `gy 62-64`; **concourse 新宿駅 `gy 74-78`** (green name plate); south `gy 88-91` | `DECKS`. Trains pass under them (cars hidden). |
+| **Bridges** (road bridges over the corridor) | `gy 100-101`, the east-west street south of the canopies | `BRIDGES`; art `station.ts` `bridge()`. Slab on piers at the platform columns, clear of the trains (underside 1.3 storeys). **Test piece: open ends, no ramps, no traffic crosses.** Trains are hidden beneath it like a deck (`carVisible`). |
 | **Platform canopies** | one per platform column, `gy 56-97` minus the decks | `STATION_PIECES`; art `station.ts` `canopy()` |
 | **Trains** (`TRAINS`) | gx 74 S, 77 N, 80 S, 83 N, 86 S, 89 N (S/N = direction of travel) | 4-7 cars each. Stop 9 s on the platform south of the concourse (gy 79-87). |
 

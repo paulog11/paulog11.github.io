@@ -75,6 +75,8 @@ function build(id: string, p: StationPiece): SpriteDef {
       return canopy(id, w, d);
     case 'deck':
       return deck(id, w, d, p.label);
+    case 'bridge':
+      return bridge(id, w, d);
   }
 }
 
@@ -207,6 +209,52 @@ function deck(id: string, w: number, d: number, label: string | undefined): Spri
       }
       // Pools on the ground in front of the glazing — a few, not one per group.
       for (let x = 3; x < w; x += 6) pen.light?.add(gx + x, gy + d + 0.7, 0, 3.4, snap(0.5 * lum), 'warn');
+    },
+  });
+}
+
+// ── bridge ───────────────────────────────────────────────────────────────────
+
+/** Underside of a road bridge, in storeys: clear of a train's roof (1.0). */
+const BRIDGE_Z = 1.3;
+const SLAB_H = 0.25;
+const KERB_H = 0.3;
+const KERB_W = 0.18;
+const LAMP_H = 0.9;
+
+/** A road bridge over the corridor: a concrete slab on piers that stand on the
+ *  platform columns (never on a track), a road surface with a dashed centre
+ *  line, and a kerb each side with a lamp every six tiles. Its long visible face
+ *  is +gy, so the piers and the slab edge are what the camera reads. The ends
+ *  are open: nothing ramps up to it yet. */
+function bridge(id: string, w: number, d: number): SpriteDef {
+  const top = BRIDGE_Z + SLAB_H;
+  const piers: number[] = [];
+  for (let x = 1.5; x < w; x += 3) piers.push(x);
+  const lamps: number[] = [];
+  for (let x = 2.5; x < w; x += 6) lamps.push(x);
+  return defineSprite({
+    id, w, d,
+    massing(s) {
+      s.shadow(0, 0, w, d);
+      for (const x of piers) {
+        s.post(x, 0.4, 0, BRIDGE_Z, 'concrete', 0.2);
+        s.post(x, d - 0.4, 0, BRIDGE_Z, 'concrete', 0.2);
+      }
+      s.box(0, 0, w, d, { color: 'concrete', h: SLAB_H, z: BRIDGE_Z, topColor: 'road' });
+      // Back to front: the north kerb, the road marking, then the south kerb.
+      s.box(0, 0, w, KERB_W, { color: 'concrete', h: KERB_H, z: top });
+      for (let x = 0.6; x < w - 1; x += 1.6) s.box(x, d / 2 - 0.03, 0.8, 0.06, { color: 'paving', h: 0.01, z: top });
+      for (const x of lamps) s.post(x, d - KERB_W / 2, top, LAMP_H, 'metal', 0.06);
+      s.box(0, d - KERB_W, w, KERB_W, { color: 'concrete', h: KERB_H, z: top });
+    },
+    animate(pen, gx, gy) {
+      const n = 1 - hourNow();
+      if (n < LIGHTS_ON) return;
+      for (const x of lamps) {
+        glowDot(pen, gx + x, gy + d - KERB_W / 2, top + LAMP_H + 0.05, 'warn', 0.07, snap(n));
+        pen.light?.add(gx + x, gy + d, 0, 3, snap(0.45 * n), 'warn');
+      }
     },
   });
 }

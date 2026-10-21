@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  AVENUES, BLOCKS, CANOPY_Y0, CANOPY_Y1, DECKS, DISTRICTS, ENTRANCES, LANDMARKS, LANE_FAR,
+  AVENUES, BLOCKS, BRIDGES, CANOPY_Y0, CANOPY_Y1, DECKS, DISTRICTS, ENTRANCES, LANDMARKS, LANE_FAR,
   LANE_NEAR, LOTS, LOT, PITCH, RAIL_X0, RAIL_X1, STATION_PIECES, TOWER_TILES,
   TRAINS, TRAIN_DWELL, W, CAR, CROWDS, ENTRANCE_PEOPLE, WALK_MARGIN, entranceWalk,
   avenue, carVisible, trainCarY, trainPeriod, districtAtTile, districtOf, isClaimed, isRail, isStreet, keyOf,
@@ -209,7 +209,9 @@ const decks = STATION_PIECES.filter((p) => p.kind === 'deck');
 const canopies = STATION_PIECES.filter((p) => p.kind === 'canopy');
 ok(decks.length === DECKS.length && decks.length === 3, `3 decks, got ${decks.length}`);
 ok(canopies.length === 24, `4 canopy segments on each of 6 platforms, got ${canopies.length}`);
-ok(decks.length + canopies.length === STATION_PIECES.length, 'every standing piece is a deck or canopy (trains move: they are TRAINS)');
+const bridges = STATION_PIECES.filter((p) => p.kind === 'bridge');
+ok(bridges.length === BRIDGES.length, `${BRIDGES.length} bridge(s), got ${bridges.length}`);
+ok(decks.length + canopies.length + bridges.length === STATION_PIECES.length, 'every standing piece is a deck, canopy or bridge (trains move: they are TRAINS)');
 // Trains are runs, not pieces: each on its own track column, 4–7 cars, moving.
 const usedTracks = new Set();
 for (const t of TRAINS) {
@@ -246,7 +248,7 @@ for (const t of TRAINS) {
       visible++;
       // Never drawn while overlapping a deck, whatever `carVisible` says about why.
       if (yk < 0 || yk + CAR > W) bad ||= `a drawn car at ${yk} is off the ward`;
-      for (const d of DECKS) if (yk < d.gy + d.d && yk + CAR > d.gy) bad ||= `a drawn car at ${yk} overlaps the deck at ${d.gy}`;
+      for (const d of [...DECKS, ...BRIDGES]) if (yk < d.gy + d.d && yk + CAR > d.gy) bad ||= `a drawn car at ${yk} overlaps the deck or bridge at ${d.gy}`;
     }
     // Continuous: at most `speed` per second, forward only, and the one jump
     // allowed is the wrap, by exactly a loop (the ward plus the train's length).
@@ -286,8 +288,11 @@ for (const p of STATION_PIECES) {
     ok(p.w === 1 && railTileKind(p.gx) === 'platform', `${name} sits on a platform column`);
     ok(p.gy >= CANOPY_Y0 && p.gy + p.d <= CANOPY_Y1, `${name} is inside the canopy span`);
   }
-  if (p.kind === 'deck') {
+  if (p.kind === 'deck' || p.kind === 'bridge') {
     ok(p.gx === RAIL_X0 && p.w === RAIL_X1 - RAIL_X0, `${name} spans the whole corridor`);
+  }
+  if (p.kind === 'bridge') {
+    ok(isStreet(p.gy) && isStreet(p.gy + p.d - 1) && p.d === 2, `${name} sits on an east-west street row`);
   }
 }
 ok(decks.filter((p) => p.label === '新宿駅').length === 1, 'exactly one deck carries the station name');
