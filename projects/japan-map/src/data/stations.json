@@ -123,7 +123,8 @@
     "lat": 35.6896,
     "lng": 139.7006,
     "operator": "jr",
-    "lines": ["yamanote", "chuo-rapid", "chuo-sobu", "marunouchi", "oedo", "keio"]
+    "lines": ["yamanote", "chuo-rapid", "chuo-sobu", "marunouchi", "oedo", "keio"],
+    "history": "Shinjuku takes its name from Naitō-Shinjuku, a 'new post station' established in 1698 on the Kōshū Kaidō highway, one stop past Nihonbashi. The area remained a minor suburb until the early 20th century, when it grew into one of Tokyo's busiest rail hubs."
   },
   {
     "id": "shin-okubo",
@@ -231,7 +232,8 @@
     "lat": 35.7141,
     "lng": 139.7774,
     "operator": "jr",
-    "lines": ["yamanote", "keihin-tohoku", "ginza"]
+    "lines": ["yamanote", "keihin-tohoku", "ginza"],
+    "history": "Ueno ('upper field') became the terminus for railways arriving from northern Japan after the station opened in 1883. The nearby hill was also the site of the 1868 Battle of Ueno, a key Boshin War clash near Kan'ei-ji temple."
   },
   {
     "id": "okachimachi",
@@ -555,7 +557,8 @@
     "lat": 35.7114,
     "lng": 139.7966,
     "operator": "metro",
-    "lines": ["ginza"]
+    "lines": ["ginza"],
+    "history": "Asakusa grew up around Sensō-ji, a Buddhist temple with legendary origins in 628 CE and Tokyo's oldest temple. The Ginza Line station here, opened in 1927, was Japan's first subway station."
   },
   {
     "id": "otemachi",
